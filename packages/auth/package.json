@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@workspace/db": "workspace:*",
     "better-auth": "^1.5.4"
   },
   "devDependencies": {
