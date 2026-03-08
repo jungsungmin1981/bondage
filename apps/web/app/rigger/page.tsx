@@ -2,6 +2,7 @@ import { auth } from "@workspace/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import {
+  applyCurrentUserToRigger,
   SAMPLE_RIGGERS,
   TIER_ORDER,
 } from "@/lib/rigger-sample";
@@ -27,7 +28,9 @@ export default async function RiggerPage() {
           <RiggerTierSection
             key={tier}
             tier={tier}
-            riggers={SAMPLE_RIGGERS.filter((r) => r.tier === tier)}
+            riggers={SAMPLE_RIGGERS.filter((r) => r.tier === tier).map((r) =>
+              applyCurrentUserToRigger(r, session.user.id, session.user),
+            )}
           />
         ))}
       </div>
