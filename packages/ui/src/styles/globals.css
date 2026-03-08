@@ -2,6 +2,15 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* 넥슨 메이플스토리 Bold (리거 카드 닉네임용) */
+@font-face {
+  font-family: "Maplestory Bold";
+  src: url("https://cdn.jsdelivr.net/gh/fontbee/font@main/Nexon/MaplestoryOTFBold.woff") format("woff");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 @custom-variant dark (&:is(.dark *));
 @source "../../../apps/**/*.{ts,tsx}";
 @source "../../../components/**/*.{ts,tsx}";

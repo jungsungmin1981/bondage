@@ -1,9 +1,11 @@
+import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import "@workspace/ui/globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { cn } from "@workspace/ui/lib/utils";
 import { UserMenu } from "./user-menu";
+import { MainNav } from "@/components/main-nav";
 
 const fontSans = Geist({
   subsets: ["latin"],
@@ -29,8 +31,13 @@ export default function RootLayout({
       <body>
         <ThemeProvider>
           <div className="flex min-h-svh flex-col">
-            <header className="flex items-center justify-between border-b px-6 py-3">
-              <span className="text-sm font-medium">Bondage</span>
+            <header className="flex items-center justify-between gap-4 border-b px-4 py-3 sm:px-6">
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                <Link href="/" className="shrink-0 text-sm font-medium">
+                  Bondage
+                </Link>
+                <MainNav />
+              </div>
               <UserMenu />
             </header>
             <main className="flex-1">{children}</main>
