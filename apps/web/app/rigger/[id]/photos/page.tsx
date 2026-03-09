@@ -3,6 +3,7 @@ import { auth } from "@workspace/auth";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { getRiggerById, getRiggerIdForUserId } from "@/lib/rigger-sample";
+import { PhotoUploadForm } from "./photo-upload-form";
 
 export default async function RiggerPhotosPage({
   params,
@@ -30,11 +31,9 @@ export default async function RiggerPhotosPage({
       >
         ← 프로필로 돌아가기
       </Link>
-      <div className="mx-auto max-w-2xl rounded-xl border bg-card p-6 shadow-sm">
-        <h1 className="text-xl font-semibold">사진 등록</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          사진 등록 기능은 준비 중입니다.
-        </p>
+
+      <div className="mx-auto max-w-2xl">
+        <PhotoUploadForm riggerId={id} />
       </div>
     </div>
   );

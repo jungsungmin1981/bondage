@@ -12,6 +12,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "browser-image-compression": "^2.0.2",
+    "sharp": "^0.33.5",
     "@workspace/ui": "workspace:*",
     "@workspace/auth": "workspace:*",
     "@workspace/db": "workspace:*",

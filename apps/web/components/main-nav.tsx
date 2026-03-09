@@ -32,6 +32,7 @@ const navItems = [
   },
   { label: "기타", href: "/etc" },
   { label: "뽐내기", href: "/showoff" },
+  { label: "워터마크", href: "/watermark" },
 ] as const;
 
 const navLinkClass =

@@ -3,6 +3,7 @@ import { Fragment } from "react";
 import { auth } from "@workspace/auth";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
+import { getRiggerPhotoPosts } from "@workspace/db";
 import { Button } from "@workspace/ui/components/button";
 import {
   applyCurrentUserToRigger,
@@ -33,6 +34,9 @@ export default async function RiggerDetailPage({
 
   const tierLabel = TIER_LABELS[rigger.tier];
   const isOwnProfile = getRiggerIdForUserId(session.user.id) === rigger.id;
+  const posts = await getRiggerPhotoPosts(id);
+  const RECENT_POSTS = 6;
+  const recentPosts = posts.slice(0, RECENT_POSTS);
 
   const pair = (label: string, value: string | null | undefined) => ({ label, value: value?.trim() ? value : "-" });
   const row1 = [pair("닉네임", rigger.name), pair("등급", tierLabel)];
@@ -125,6 +129,61 @@ export default async function RiggerDetailPage({
           </dl>
           </div>
         </div>
+      </div>
+
+      {/* 하단: 사진 섹션 (트위터 스타일) */}
+      <div className="mx-auto mt-8 max-w-4xl">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-sm font-medium text-muted-foreground">사진</h2>
+          {posts.length > 0 && (
+            <Button asChild variant="ghost" size="sm" className="shrink-0 text-xs">
+              <Link href={`/rigger/${encodeURIComponent(rigger.id)}/photos`}>
+                사진 더보기
+              </Link>
+            </Button>
+          )}
+        </div>
+        {recentPosts.length === 0 ? (
+          <p className="mt-2 text-sm text-muted-foreground">등록된 사진이 없습니다.</p>
+        ) : (
+          <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+            {recentPosts.map((post) => (
+              <li key={post.postId}>
+                <Link
+                  href={`/rigger/${encodeURIComponent(rigger.id)}/photos`}
+                  className="block overflow-hidden rounded-2xl border border-border bg-card p-2 shadow-sm transition hover:shadow-md"
+                >
+                  <p className="text-[10px] text-muted-foreground">
+                    {post.createdAt
+                      ? new Date(post.createdAt).toLocaleString("ko-KR", {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })
+                      : ""}
+                  </p>
+                  <div
+                    className={`mt-2 grid max-h-40 gap-0.5 overflow-hidden rounded-xl bg-muted sm:max-h-44 ${post.photos.length === 1 ? "grid-cols-1" : post.photos.length === 2 ? "grid-cols-2" : post.photos.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}
+                  >
+                    {post.photos.map((photo) => (
+                      <div key={photo.id} className="relative aspect-square overflow-hidden bg-muted">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={photo.imagePath}
+                          alt={post.caption ?? "등록된 사진"}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <p className="mt-2 line-clamp-2 text-xs text-foreground">
+                    {post.caption?.trim() || "제목 없음"}
+                  </p>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );

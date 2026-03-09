@@ -10,6 +10,11 @@ const betterAuthReactPath = path.resolve(
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "10mb",
+    },
+  },
   transpilePackages: ["@workspace/ui", "better-auth"],
   webpack: (config) => {
     config.resolve.alias = {
