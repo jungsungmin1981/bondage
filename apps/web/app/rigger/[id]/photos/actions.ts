@@ -9,6 +9,10 @@ import path from "path";
 import { randomUUID } from "crypto";
 import sharp from "sharp";
 import { getRiggerIdForUserId } from "@/lib/rigger-sample";
+import {
+  getWatermarkConfig,
+  resolvePublicFileSync,
+} from "@/lib/watermark-config";
 
 const UPLOAD_BASE_DIR = "public/uploads/rigger";
 const MAX_PHOTOS = 4;
@@ -29,17 +33,82 @@ function getExt(file: File | Blob): string {
   return ".jpg";
 }
 
+function escapeXml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+async function applyWatermark(jpegBuffer: Buffer): Promise<Buffer> {
+  try {
+    const config = await getWatermarkConfig();
+    const meta = await sharp(jpegBuffer).metadata();
+    const w = meta.width ?? 1280;
+    const h = meta.height ?? 720;
+
+    if (config.type === "image" && config.imagePath) {
+      const rel = config.imagePath.replace(/^\//, "");
+      const overlayPath = resolvePublicFileSync(rel);
+      const overlayBuf = await fs.readFile(overlayPath).catch(() => null);
+      if (!overlayBuf) {
+        console.warn(
+          "[watermark] 오버레이 이미지를 읽을 수 없습니다:",
+          overlayPath,
+        );
+        return jpegBuffer;
+      }
+      const scale = config.scale ?? 1;
+      const overlayW = Math.max(16, Math.round(w * 0.18 * scale));
+      const overlay = await sharp(overlayBuf)
+        .resize(overlayW, null, { withoutEnlargement: false })
+        .ensureAlpha()
+        .png()
+        .toBuffer();
+      const om = await sharp(overlay).metadata();
+      const ow = om.width ?? 0;
+      const oh = om.height ?? 0;
+      const left = Math.max(0, Math.round(w * config.positionX - ow / 2));
+      const top = Math.max(0, Math.round(h * config.positionY - oh / 2));
+      return await sharp(jpegBuffer)
+        .composite([{ input: overlay, left, top, blend: "over" }])
+        .jpeg({ quality: SERVER_RESIZE.jpegQuality })
+        .toBuffer();
+    }
+
+    if (config.type === "text" && config.text?.trim()) {
+      const fontSize = Math.max(12, Math.round(22 * (config.scale ?? 1)));
+      const x = Math.round(w * config.positionX);
+      const y = Math.round(h * config.positionY);
+      const svg = `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg"><text x="${x}" y="${y}" font-size="${fontSize}" fill="white" fill-opacity="${config.opacity}" text-anchor="middle" dominant-baseline="middle">${escapeXml(config.text.trim())}</text></svg>`;
+      const overlay = await sharp(Buffer.from(svg)).png().toBuffer();
+      return await sharp(jpegBuffer)
+        .composite([{ input: overlay, left: 0, top: 0, blend: "over" }])
+        .jpeg({ quality: SERVER_RESIZE.jpegQuality })
+        .toBuffer();
+    }
+  } catch (e) {
+    console.warn(
+      "[watermark] 합성 중 오류 — 워터마크 없이 저장:",
+      e instanceof Error ? e.message : e,
+    );
+  }
+  return jpegBuffer;
+}
+
 async function processImage(
   input: Buffer,
   originalExt: string,
 ): Promise<{ buffer: Buffer; ext: string }> {
   try {
     const size = SERVER_RESIZE.maxWidthOrHeight;
-    const out = await sharp(input)
+    let out = await sharp(input)
       .rotate()
       .resize(size, size, { fit: "inside", withoutEnlargement: true })
       .jpeg({ quality: SERVER_RESIZE.jpegQuality })
       .toBuffer();
+    out = await applyWatermark(out);
     return { buffer: out, ext: ".jpg" };
   } catch {
     return { buffer: input, ext: originalExt };
@@ -74,8 +143,16 @@ export async function uploadPhoto(
     const files: (File | Blob)[] = [];
     for (let i = 0; i < MAX_PHOTOS; i++) {
       const f = formData.get(`image_${i}`);
-      if (f instanceof File) files.push(f);
-      else if (f && typeof (f as Blob).arrayBuffer === "function") files.push(f as Blob);
+      if (f instanceof File) {
+        files.push(f);
+      } else if (
+        f !== null &&
+        typeof f === "object" &&
+        "arrayBuffer" in f &&
+        typeof (f as Blob).arrayBuffer === "function"
+      ) {
+        files.push(f as Blob);
+      }
     }
 
     if (files.length === 0) {

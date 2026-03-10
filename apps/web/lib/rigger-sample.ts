@@ -184,7 +184,7 @@ export function getRiggerById(id: string): Rigger | undefined {
  * (샘플: 치우천왕(rigger-0)을 현재 로그인 사용자로 고정. 실제 서비스에서는 DB rigger.userId 등으로 조회)
  */
 export function getRiggerIdForUserId(_userId: string): string {
-  return SAMPLE_RIGGERS[0].id;
+  return SAMPLE_RIGGERS[0]?.id ?? "rigger-0";
 }
 
 /** 로그인 사용자에게 매핑된 리거일 때 이름·아바타만 현재 로그인 정보로 덮어씁니다. 상세정보(성별·구분 등)는 샘플 데이터 유지. */

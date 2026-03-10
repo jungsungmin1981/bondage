@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, or } from "drizzle-orm";
 import { db } from "../client/node";
 import * as schema from "../schema";
 
@@ -47,4 +47,19 @@ export function groupPhotosByPost(photos: RiggerPhotoRow[]): RiggerPhotoPost[] {
 export async function getRiggerPhotoPosts(riggerId: string): Promise<RiggerPhotoPost[]> {
   const photos = await getRiggerPhotos(riggerId);
   return groupPhotosByPost(photos);
+}
+
+/**
+ * 해당 postId(또는 post_id 없는 예전 글의 사진 id)가 주어진 userId 소유인지
+ * — 본인 게시물 좋아요 방지 등에 사용
+ */
+export async function isPostOwnedByUser(postId: string, userId: string): Promise<boolean> {
+  const rows = await db
+    .select({ userId: schema.riggerPhotos.userId })
+    .from(schema.riggerPhotos)
+    .where(
+      or(eq(schema.riggerPhotos.postId, postId), eq(schema.riggerPhotos.id, postId)),
+    )
+    .limit(1);
+  return rows[0]?.userId === userId;
 }

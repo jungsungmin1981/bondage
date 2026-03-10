@@ -51,10 +51,10 @@ export const auth = betterAuth({
                 tokenUrl: "https://kauth.kakao.com/oauth/token",
                 userInfoUrl: "https://kapi.kakao.com/v2/user/me",
                 scopes: ["profile_nickname", "profile_image", "account_email"],
-                getUserInfo: async (tokens) => {
+                getUserInfo: async (tokens: { accessToken?: string }) => {
                   const res = await fetch("https://kapi.kakao.com/v2/user/me", {
                     headers: {
-                      Authorization: `Bearer ${tokens.accessToken}`,
+                      Authorization: `Bearer ${tokens.accessToken ?? ""}`,
                     },
                   });
                   if (!res.ok) return null;
@@ -109,12 +109,12 @@ export const auth = betterAuth({
                       tokenUrl: "https://nid.naver.com/oauth2.0/token",
                       userInfoUrl: "https://openapi.naver.com/v1/nid/me",
                       scopes: ["name", "email", "profile_image"],
-                      getUserInfo: async (tokens) => {
+                      getUserInfo: async (tokens: { accessToken?: string }) => {
                         const res = await fetch(
                           "https://openapi.naver.com/v1/nid/me",
                           {
                             headers: {
-                              Authorization: `Bearer ${tokens.accessToken}`,
+                              Authorization: `Bearer ${tokens.accessToken ?? ""}`,
                             },
                           },
                         );

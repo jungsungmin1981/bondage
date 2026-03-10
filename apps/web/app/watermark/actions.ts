@@ -4,17 +4,17 @@ import { headers } from "next/headers";
 import { auth } from "@workspace/auth";
 import fs from "fs/promises";
 import path from "path";
-import type { WatermarkConfig } from "@/lib/watermark-config";
-
-const CONFIG_PATH = "public/watermark-config.json";
-const WATERMARK_IMAGE_PATH = "public/watermark.png";
+import {
+  getPublicDirSync,
+  type WatermarkConfig,
+} from "@/lib/watermark-config";
 
 function getConfigFilePath(): string {
-  return path.join(process.cwd(), CONFIG_PATH);
+  return path.join(getPublicDirSync(), "watermark-config.json");
 }
 
 function getWatermarkImagePath(): string {
-  return path.join(process.cwd(), WATERMARK_IMAGE_PATH);
+  return path.join(getPublicDirSync(), "watermark.png");
 }
 
 export async function saveWatermarkConfig(

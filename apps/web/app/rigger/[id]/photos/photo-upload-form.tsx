@@ -72,12 +72,16 @@ export function PhotoUploadForm({ riggerId }: Props) {
       try {
         const { default: imageCompression } = await import("browser-image-compression");
         for (let i = 0; i < list.length; i++) {
-          const compressed = await imageCompression(list[i], COMPRESSION_OPTIONS);
+          const file = list[i];
+          if (!file) continue;
+          const compressed = await imageCompression(file, COMPRESSION_OPTIONS);
           formData.append(`image_${i}`, compressed);
         }
       } catch {
         for (let i = 0; i < list.length; i++) {
-          formData.append(`image_${i}`, list[i]);
+          const file = list[i];
+          if (!file) continue;
+          formData.append(`image_${i}`, file);
         }
       }
 
@@ -185,7 +189,7 @@ export function PhotoUploadForm({ riggerId }: Props) {
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-[11px] text-muted-foreground sm:text-xs">
-            등록 후에는 워터마크가 적용된 이미지가 피드에 표시됩니다. (워터마크 적용은 업로드 플로우 통합 후 활성화 예정)
+            등록 시 /watermark 에서 설정한 워터마크가 이미지에 합성되어 저장됩니다.
           </p>
           <Button
             type="submit"

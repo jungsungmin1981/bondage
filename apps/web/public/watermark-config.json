@@ -1,9 +1,9 @@
 {
   "type": "text",
-  "text": "정성민",
-  "positionX": 0.85,
-  "positionY": 0.85,
+  "text": "워터마크 ",
+  "positionX": 0.5,
+  "positionY": 0.5,
   "opacity": 1,
   "scale": 3,
-  "rotation": 315
+  "rotation": 0
 }

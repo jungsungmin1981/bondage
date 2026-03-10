@@ -6,21 +6,24 @@
   "scripts": {
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:seed-post-likes": "tsx scripts/seed-post-likes.ts",
     "db:studio": "drizzle-kit studio --host localhost --port 4983",
     "lint": "eslint",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "dotenv": "^17.3.1",
     "drizzle-orm": "^0.38.0",
     "postgres": "^3.4.4"
   },
   "devDependencies": {
-    "drizzle-kit": "^0.30.0",
+    "@types/node": "^25.1.0",
     "@workspace/eslint-config": "workspace:*",
     "@workspace/typescript-config": "workspace:*",
-    "@types/node": "^25.1.0",
+    "drizzle-kit": "^0.30.0",
     "eslint": "^9.39.2",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }
 }
