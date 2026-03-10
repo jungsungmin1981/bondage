@@ -6,7 +6,7 @@ export type SerializedPhotoRow = {
   userId: string;
   imagePath: string;
   caption: string | null;
-  visibility: "public" | "private";
+  visibility: "public" | "private" | "pending";
   createdAt: string | null;
 };
 
@@ -15,4 +15,10 @@ export type SerializedPost = {
   createdAt: string;
   caption: string | null;
   photos: SerializedPhotoRow[];
+  /** 버니별 승인 상태 (pending/approved/rejected) */
+  bunnyApprovals?: {
+    name: string;
+    email: string;
+    status: "pending" | "approved" | "rejected";
+  }[];
 };

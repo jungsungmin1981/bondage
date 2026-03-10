@@ -3,7 +3,7 @@
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { auth } from "@workspace/auth";
-import { db, schema } from "@workspace/db";
+import { db, schema, getUserIdListByEmails } from "@workspace/db";
 import fs from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
@@ -128,14 +128,31 @@ export async function uploadPhoto(
     const rawCaption = (formData.get("caption") ?? "") as string;
     const caption = rawCaption.trim();
     const rawVisibility = (formData.get("visibility") ?? "") as string;
-    const visibility: "public" | "private" =
-      rawVisibility === "private" ? "private" : "public";
+    const rawModel = (formData.get("model") ?? "") as string;
+    const model =
+      rawModel === "bunny" || rawModel === "object" || rawModel === "self"
+        ? rawModel
+        : null;
+    const bunnyEmails = (formData.getAll("bunnyEmail") as string[]).filter(
+      (e): e is string => typeof e === "string" && e.trim().length > 0,
+    );
 
     if (!riggerId || typeof riggerId !== "string") {
       return { ok: false, error: "잘못된 요청입니다." };
     }
     if (!caption) {
       return { ok: false, error: "제목을 입력해 주세요." };
+    }
+    if (model === "bunny" && bunnyEmails.length === 0) {
+      return { ok: false, error: "버니를 1명 이상 선택해 주세요." };
+    }
+
+    // 기본 공개/비공개는 폼 값 사용.
+    // 단, 모델이 버니인 경우에는 버니 승인 전까지 항상 승인대기(pending) 상태로 유지한다.
+    let visibility: "public" | "private" | "pending" =
+      rawVisibility === "private" ? "private" : "public";
+    if (model === "bunny") {
+      visibility = "pending";
     }
 
     const ownRiggerId = getRiggerIdForUserId(session.user.id);
@@ -202,6 +219,18 @@ export async function uploadPhoto(
         caption: captionTrim,
         visibility,
       });
+    }
+
+    if (model === "bunny" && bunnyEmails.length > 0) {
+      const bunnyUserIds = await getUserIdListByEmails(bunnyEmails);
+      for (const bunnyUserId of bunnyUserIds) {
+        await db.insert(schema.bunnyApprovals).values({
+          id: randomUUID(),
+          postId,
+          bunnyUserId,
+          status: "pending",
+        });
+      }
     }
 
     revalidatePath(`/rigger/${encodeURIComponent(riggerId)}`);

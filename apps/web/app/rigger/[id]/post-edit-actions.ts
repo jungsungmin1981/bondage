@@ -49,7 +49,10 @@ export async function updateOwnRiggerPostVisibility(
       visibility,
     );
     if (updatedCount === 0) {
-      return { ok: false, error: "변경할 게시물이 없거나 권한이 없습니다." };
+      return {
+        ok: false,
+        error: "변경할 게시물이 없거나 권한이 없거나, 승인 대기 중인 게시물입니다.",
+      };
     }
     revalidatePath(`/rigger/${encodeURIComponent(riggerId)}`);
     revalidatePath(`/rigger/${encodeURIComponent(riggerId)}/photos`);

@@ -43,6 +43,13 @@
       "when": 1773400000000,
       "tag": "0005_add_visibility_to_rigger_photos",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1773500000000,
+      "tag": "0006_bunny_approvals",
+      "breakpoints": true
     }
   ]
 }

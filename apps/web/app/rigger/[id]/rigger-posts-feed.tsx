@@ -57,8 +57,12 @@ function PostCard({
   const router = useRouter();
   const [detailOpen, setDetailOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
-  const [visibility, setVisibility] = useState<"public" | "private">("public");
-  const [initialVisibility, setInitialVisibility] = useState<"public" | "private">("public");
+  const [visibility, setVisibility] = useState<"public" | "private" | "pending">(
+    "public",
+  );
+  const [initialVisibility, setInitialVisibility] = useState<
+    "public" | "private" | "pending"
+  >("public");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [photoIndex, setPhotoIndex] = useState(0);
@@ -66,9 +70,23 @@ function PostCard({
   const createdAt = post.createdAt ? new Date(post.createdAt) : null;
   const totalPhotos = post.photos.length;
   const isOwnPost = post.photos[0]?.userId === sessionUserId;
-  const postVisibility: "public" | "private" =
-    post.photos[0]?.visibility === "private" ? "private" : "public";
+  const postVisibility: "public" | "private" | "pending" =
+    post.photos[0]?.visibility === "private"
+      ? "private"
+      : post.photos[0]?.visibility === "pending"
+        ? "pending"
+        : "public";
   const isPrivate = postVisibility === "private";
+  const isPending = postVisibility === "pending";
+  const approvals = post.bunnyApprovals ?? [];
+  const approvalCount = approvals.length;
+  const approvedCount = approvals.filter(
+    (a) => a.status === "approved",
+  ).length;
+  const isRejected =
+    isPending && approvals.some((a) => a.status === "rejected");
+  const showPendingBunnyStatus =
+    isPending && isOwnPost && approvalCount > 0 && !isRejected;
   const canGoPrev = totalPhotos > 1 && photoIndex > 0;
   const canGoNext = totalPhotos > 1 && photoIndex < totalPhotos - 1;
 
@@ -196,15 +214,48 @@ function PostCard({
                 </div>
               )}
             </div>
-            {isPrivate && (
+            {isRejected ? (
               <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/lock-private.png"
-                  alt="비공개 게시물"
-                  className="h-40 w-40 invert drop-shadow-[0_2px_10px_rgba(0,0,0,0.45)] sm:h-48 sm:w-48"
+                  src="/approve-reject-icon.png"
+                  alt="승인 거절된 게시물"
+                  className="h-32 w-auto max-w-[70%] opacity-95 drop-shadow-[0_2px_16px_rgba(0,0,0,0.85)] sm:h-40"
                 />
               </div>
+            ) : showPendingBunnyStatus ? (
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                <div className="relative h-56 w-80 sm:h-64 sm:w-96">
+                  <div className="absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 transform flex-col items-center gap-3">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="/approve-request-icon.png"
+                      alt="버니 승인 요청 아이콘"
+                      className="h-40 w-40 opacity-100 drop-shadow-[0_2px_18px_rgba(0,0,0,0.9)] brightness-0 invert sm:h-48 sm:w-48"
+                    />
+                    {approvalCount > 1 && (
+                      <span className="rounded-full bg-black/85 px-3 py-1 text-center text-base font-bold leading-tight text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)] sm:text-lg">
+                        {approvedCount} / {approvalCount}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              (isPrivate || isPending) && (
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={isPending ? "/approve-request-icon.png" : "/lock-private.png"}
+                    alt={isPending ? "승인 대기중 게시물" : "비공개 게시물"}
+                    className={
+                      isPending
+                        ? "h-[26rem] w-[26rem] opacity-100 drop-shadow-[0_2px_18px_rgba(0,0,0,0.9)] sm:h-128 sm:w-128 brightness-0 invert"
+                        : "h-40 w-40 invert opacity-80 drop-shadow-[0_2px_10px_rgba(0,0,0,0.45)] sm:h-48 sm:w-48"
+                    }
+                  />
+                </div>
+              )
             )}
           </div>
         </button>
@@ -302,6 +353,26 @@ function PostCard({
                           draggable={false}
                         />
                       </div>
+                      {isRejected && (
+                        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src="/approve-reject-icon.png"
+                            alt="승인 거절된 게시물"
+                            className="h-40 w-auto max-w-[75%] opacity-95 drop-shadow-[0_3px_24px_rgba(0,0,0,0.85)] sm:h-52"
+                          />
+                        </div>
+                      )}
+                      {isPending && !isRejected && (
+                        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src="/approve-request-icon.png"
+                            alt="승인 대기중 게시물"
+                            className="h-40 w-40 opacity-100 drop-shadow-[0_3px_20px_rgba(0,0,0,1)] brightness-0 invert sm:h-52 sm:w-52"
+                          />
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -349,25 +420,35 @@ function PostCard({
               </DialogHeader>
 
               <div className="space-y-4">
-                <div>
-                  <p className="mb-2 text-sm font-medium">공개유무</p>
-                  <ToggleGroup
-                    type="single"
-                    value={visibility}
-                    onValueChange={(v) => {
-                      if (v === "public" || v === "private") setVisibility(v);
-                    }}
-                    variant="outline"
-                    className="w-full"
-                  >
-                    <ToggleGroupItem value="public" className="flex-1 justify-center">
-                      공개
-                    </ToggleGroupItem>
-                    <ToggleGroupItem value="private" className="flex-1 justify-center">
-                      비공개
-                    </ToggleGroupItem>
-                  </ToggleGroup>
-                </div>
+                {postVisibility !== "pending" ? (
+                  <div>
+                    <p className="mb-2 text-sm font-medium">공개유무</p>
+                    <ToggleGroup
+                      type="single"
+                      value={visibility}
+                      onValueChange={(v) => {
+                        if (v === "public" || v === "private") setVisibility(v);
+                      }}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      <ToggleGroupItem value="public" className="flex-1 justify-center">
+                        공개
+                      </ToggleGroupItem>
+                      <ToggleGroupItem
+                        value="private"
+                        className="flex-1 justify-center"
+                      >
+                        비공개
+                      </ToggleGroupItem>
+                    </ToggleGroup>
+                  </div>
+                ) : (
+                  <div className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
+                    버니 승인 대기중인 게시물입니다. 승인 완료 전에는 공개/비공개를
+                    변경할 수 없으며, 삭제만 가능합니다.
+                  </div>
+                )}
 
                 <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
                   <p className="text-sm font-medium text-destructive">삭제</p>
@@ -437,7 +518,7 @@ function PostCard({
               </div>
 
               <div className="mt-4 flex flex-col items-center gap-2">
-                {visibility !== initialVisibility && (
+                {postVisibility !== "pending" && visibility !== initialVisibility && (
                   <Button
                     type="button"
                     className="w-full max-w-xs bg-blue-600 text-white hover:bg-blue-700"
@@ -449,7 +530,7 @@ function PostCard({
                         const res = await updateOwnRiggerPostVisibility(
                           riggerId,
                           post.postId,
-                          visibility,
+                          visibility === "pending" ? "private" : visibility,
                         );
                         if (!res.ok) {
                           alert(res.error);

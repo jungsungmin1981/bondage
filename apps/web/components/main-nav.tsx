@@ -34,6 +34,7 @@ const navItems = [
   { label: "뽐내기", href: "/showoff" },
   { label: "워터마크", href: "/watermark" },
   { label: "버니", href: "/bunnies" },
+  { label: "버니 승인요청", href: "/bunny-approvals" },
 ] as const;
 
 const navLinkClass =

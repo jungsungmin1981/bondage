@@ -8,6 +8,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:seed-post-likes": "tsx scripts/seed-post-likes.ts",
     "db:seed-bunny-users": "tsx scripts/seed-bunny-users.ts",
+    "db:clear-bunny-approvals": "tsx scripts/clear-bunny-approvals.ts",
     "db:studio": "drizzle-kit studio --host localhost --port 4983",
     "lint": "eslint",
     "format": "prettier --write \"**/*.{ts,tsx}\"",

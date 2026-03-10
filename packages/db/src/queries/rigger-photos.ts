@@ -1,4 +1,4 @@
-import { and, desc, eq, or } from "drizzle-orm";
+import { and, desc, eq, ne, or } from "drizzle-orm";
 import { db } from "../client/node";
 import * as schema from "../schema";
 
@@ -72,6 +72,11 @@ export async function deleteRiggerPostOwnedByUser(
   postId: string,
   userId: string,
 ): Promise<number> {
+  // 먼저 해당 postId에 대한 버니 승인요청(bunny_approvals)을 정리한다.
+  await db
+    .delete(schema.bunnyApprovals)
+    .where(eq(schema.bunnyApprovals.postId, postId));
+
   const deleted = await db
     .delete(schema.riggerPhotos)
     .where(
@@ -98,9 +103,26 @@ export async function updateRiggerPostVisibilityOwnedByUser(
       and(
         eq(schema.riggerPhotos.riggerId, riggerId),
         eq(schema.riggerPhotos.userId, userId),
+        ne(schema.riggerPhotos.visibility, "pending"),
         or(eq(schema.riggerPhotos.postId, postId), eq(schema.riggerPhotos.id, postId)),
       ),
     )
+    .returning({ id: schema.riggerPhotos.id });
+  return updated.length;
+}
+
+/**
+ * postId 기준으로 해당 게시물(사진들)의 visibility 일괄 업데이트.
+ * 버니 승인 완료 시 전체 공개로 전환할 때 사용.
+ */
+export async function setRiggerPostVisibilityByPostId(
+  postId: string,
+  visibility: "public" | "private",
+): Promise<number> {
+  const updated = await db
+    .update(schema.riggerPhotos)
+    .set({ visibility })
+    .where(eq(schema.riggerPhotos.postId, postId))
     .returning({ id: schema.riggerPhotos.id });
   return updated.length;
 }

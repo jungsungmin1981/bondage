@@ -1,4 +1,5 @@
 import {
+  getBunnyApprovalStatusesByPostIds,
   getCommentsByPhotoIdsWithAuthorGrouped,
   getPostLikesStateForPostIds,
   getRiggerPhotoPosts,
@@ -22,7 +23,12 @@ function serializePost(p: RiggerPhotoPost): SerializedPost {
       userId: ph.userId,
       imagePath: ph.imagePath,
       caption: ph.caption,
-      visibility: (ph as any).visibility === "private" ? "private" : "public",
+      visibility:
+        (ph as any).visibility === "private"
+          ? "private"
+          : (ph as any).visibility === "pending"
+            ? "pending"
+            : "public",
       createdAt: ph.createdAt
         ? ph.createdAt instanceof Date
           ? ph.createdAt.toISOString()
@@ -52,7 +58,7 @@ export async function fetchRiggerPostsSlice(
   const visibleAll = all.filter((p) => {
     const first: any = p.photos[0];
     const visibility = String(first?.visibility ?? "public");
-    if (visibility !== "private") return true;
+    if (visibility !== "private" && visibility !== "pending") return true;
     return first?.userId === userId;
   });
   const totalCount = visibleAll.length;
@@ -60,6 +66,23 @@ export async function fetchRiggerPostsSlice(
   const serialized = slice.map(serializePost);
 
   const postIds = slice.map((p) => p.postId);
+  const bunnyApprovalsByPostId =
+    postIds.length > 0
+      ? await getBunnyApprovalStatusesByPostIds(postIds)
+      : new Map<string, any[]>();
+
+  for (const post of serialized) {
+    const rows = bunnyApprovalsByPostId.get(post.postId);
+    if (!rows || rows.length === 0) continue;
+    post.bunnyApprovals = rows.map((row) => ({
+      name:
+        (row.name && String(row.name).trim()) ||
+        (row.email ? row.email.replace(/@.*$/, "") : "버니"),
+      email: row.email,
+      status: row.status as "pending" | "approved" | "rejected",
+    }));
+  }
+
   const likeStateMap =
     postIds.length > 0
       ? await getPostLikesStateForPostIds(postIds, userId)
