@@ -7,6 +7,8 @@ export const riggerPhotos = pgTable("rigger_photos", {
   userId: text("user_id").notNull(),
   imagePath: text("image_path").notNull(),
   caption: text("caption"),
+  /** 공개/비공개 (post 단위로 동일 값) */
+  visibility: text("visibility").notNull().default("public"),
   likeCount: integer("like_count").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

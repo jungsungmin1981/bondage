@@ -14,6 +14,8 @@ export type Rigger = {
   /** 구분: 리거 / 버니 / 리거 & 버니 */
   division?: string | null;
   bunnyRecruit?: string | null;
+  /** 활동지역 */
+  activityRegion?: string | null;
   bondageRating?: string | null;
   style?: string | null;
   bio?: string | null;
@@ -36,6 +38,16 @@ const BRONZE_NAMES = [
 const SAMPLE_GENDERS = ["남", "여", "남", "여", "기타"] as const;
 const SAMPLE_DIVISIONS = ["리거", "버니", "리거 & 버니"] as const;
 const SAMPLE_BUNNY_RECRUIT = ["YES", "NO", "YES", "YES", "NO", "YES", "NO", "YES"] as const;
+const SAMPLE_ACTIVITY_REGIONS = [
+  "서울",
+  "경기",
+  "서울·경기",
+  "부산",
+  "대구",
+  "인천",
+  "수도권",
+  "협의",
+] as const;
 const SAMPLE_BONDAGE_RATING = ["YES", "NO", "YES", "YES", "NO", "YES", "NO", "YES"] as const;
 const SAMPLE_STYLES = [
   "로프 위주, 가벼운 구속",
@@ -58,12 +70,22 @@ const SAMPLE_BIOS = [
   "다양한 스타일 시도 중이에요. 제안 환영합니다.",
 ] as const;
 
-function getSampleProfile(index: number): Pick<Rigger, "gender" | "division" | "bunnyRecruit" | "bondageRating" | "style" | "bio"> {
+function getSampleProfile(index: number): Pick<
+  Rigger,
+  | "gender"
+  | "division"
+  | "bunnyRecruit"
+  | "activityRegion"
+  | "bondageRating"
+  | "style"
+  | "bio"
+> {
   if (index === 0) {
     return {
       gender: "남",
       division: "리거",
       bunnyRecruit: "YES",
+      activityRegion: "서울",
       bondageRating: "YES",
       style: "아트",
       bio: "아트 본디져 입니다.",
@@ -73,6 +95,8 @@ function getSampleProfile(index: number): Pick<Rigger, "gender" | "division" | "
     gender: SAMPLE_GENDERS[index % SAMPLE_GENDERS.length],
     division: SAMPLE_DIVISIONS[index % SAMPLE_DIVISIONS.length],
     bunnyRecruit: SAMPLE_BUNNY_RECRUIT[index % SAMPLE_BUNNY_RECRUIT.length],
+    activityRegion:
+      SAMPLE_ACTIVITY_REGIONS[index % SAMPLE_ACTIVITY_REGIONS.length],
     bondageRating: SAMPLE_BONDAGE_RATING[index % SAMPLE_BONDAGE_RATING.length],
     style: SAMPLE_STYLES[index % SAMPLE_STYLES.length],
     bio: SAMPLE_BIOS[index % SAMPLE_BIOS.length],
@@ -159,7 +183,15 @@ function withMarks<T extends { id: string }>(riggers: T[], startIndex: number): 
 
 export const DEFAULT_MARK_IMAGE_URL = MARK_IMAGES[0];
 
-const MARK_LEGEND_URL = "/marks/mark-legend.png";
+export const MARK_LEGEND_URL = "/marks/mark-legend.png";
+
+/** 등급별 마크 선택 목록 (레전드는 전용 마크 포함) */
+export function getMarkPickerUrls(tier: RiggerTier): readonly string[] {
+  if (tier === "legend") {
+    return [MARK_LEGEND_URL, ...MARK_IMAGES] as const;
+  }
+  return MARK_IMAGES;
+}
 
 const _rawRiggers: Rigger[] = [
   ...buildRiggers(LEGEND_NAMES, "legend", 0).map((r, i) =>

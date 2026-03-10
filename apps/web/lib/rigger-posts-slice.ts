@@ -22,6 +22,7 @@ function serializePost(p: RiggerPhotoPost): SerializedPost {
       userId: ph.userId,
       imagePath: ph.imagePath,
       caption: ph.caption,
+      visibility: (ph as any).visibility === "private" ? "private" : "public",
       createdAt: ph.createdAt
         ? ph.createdAt instanceof Date
           ? ph.createdAt.toISOString()
@@ -47,8 +48,15 @@ export async function fetchRiggerPostsSlice(
   userId: string,
 ): Promise<SliceResult> {
   const all = await getRiggerPhotoPosts(riggerId);
-  const totalCount = all.length;
-  const slice = all.slice(offset, offset + limit);
+  // 비공개 글은 작성자에게만 노출
+  const visibleAll = all.filter((p) => {
+    const first: any = p.photos[0];
+    const visibility = String(first?.visibility ?? "public");
+    if (visibility !== "private") return true;
+    return first?.userId === userId;
+  });
+  const totalCount = visibleAll.length;
+  const slice = visibleAll.slice(offset, offset + limit);
   const serialized = slice.map(serializePost);
 
   const postIds = slice.map((p) => p.postId);

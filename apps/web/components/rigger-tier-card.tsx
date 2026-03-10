@@ -1,10 +1,147 @@
 "use client";
 
+import { useState } from "react";
 import { Star } from "lucide-react";
 import { cn } from "@workspace/ui/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@workspace/ui/components/avatar";
+import { Button } from "@workspace/ui/components/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@workspace/ui/components/popover";
 import type { Rigger, RiggerTier } from "@/lib/rigger-sample";
 import { TIER_STARS } from "@/lib/rigger-sample";
+
+/** 카드 내 원형 마크 공통 래퍼 + 편집 시 Popover(신규 사진 파일 선택) */
+function TierMarkCircle({
+  rigger,
+  markImageUrl,
+  ringClassName,
+  ringStyle,
+  fallbackClassName,
+  onChooseImage,
+}: {
+  rigger: Rigger;
+  markImageUrl: string | null | undefined;
+  ringClassName: string;
+  ringStyle: React.CSSProperties;
+  fallbackClassName: string;
+  /** 파일 선택 시 콜백(미리보기는 부모에서 blob URL 등으로 처리) */
+  onChooseImage?: (file: File) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const showImg = Boolean(markImageUrl?.trim());
+
+  const inner = (
+    <div className="absolute inset-0 overflow-hidden rounded-full">
+      {showImg ? (
+        <img
+          src={markImageUrl!}
+          alt=""
+          className="h-full w-full object-cover object-center"
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center">
+          <Avatar className="h-[70%] w-[70%]" size="lg">
+            <AvatarImage src={rigger.avatarUrl ?? undefined} alt="" />
+            <AvatarFallback
+              className={cn("text-base font-medium sm:text-lg", fallbackClassName)}
+            >
+              {rigger.avatarFallback}
+            </AvatarFallback>
+          </Avatar>
+        </div>
+      )}
+    </div>
+  );
+
+  const circleShell = (
+    <div
+      className={cn(
+        "relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-black/90 shadow-inner ring-2",
+        ringClassName,
+      )}
+      style={{
+        width: "61cqw",
+        aspectRatio: "1",
+        borderWidth: "max(2px, 0.5cqw)",
+        borderStyle: "solid",
+        ...ringStyle,
+      }}
+    >
+      {inner}
+    </div>
+  );
+
+  if (onChooseImage) {
+    return (
+      <div
+        className="absolute left-0 right-0 flex justify-center"
+        style={{ top: "41%", transform: "translateY(-50%)" }}
+      >
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className="cursor-pointer rounded-full border-0 bg-transparent p-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label="마크 사진 변경"
+            >
+              {circleShell}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-64" align="center">
+            <p className="mb-2 text-xs font-medium text-muted-foreground">
+              마크로 쓸 사진을 선택하세요
+            </p>
+            <p className="mb-3 text-xs text-muted-foreground">
+              저장 버튼을 눌러야 서버에 반영됩니다.
+            </p>
+            {/* 파일 선택 : 취소 = 3 : 1 폭 비율, 높이 동일 h-7 */}
+            <div className="grid h-7 grid-cols-4 items-center gap-2">
+              <label className="col-span-3 flex h-7 min-w-0 cursor-pointer">
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="sr-only"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) {
+                      onChooseImage(f);
+                      setOpen(false);
+                    }
+                    e.target.value = "";
+                  }}
+                />
+                <span className="flex h-7 w-full items-center justify-center rounded-md border border-input bg-background px-3 text-sm font-medium leading-none hover:bg-muted">
+                  파일 선택
+                </span>
+              </label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="col-span-1 h-7 w-full min-w-0 px-2"
+                onClick={() => setOpen(false)}
+              >
+                취소
+              </Button>
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="absolute left-0 right-0 flex justify-center"
+      style={{ top: "41%", transform: "translateY(-50%)" }}
+    >
+      {circleShell}
+    </div>
+  );
+}
 
 const TIER_STYLES: Record<
   RiggerTier,
@@ -36,8 +173,17 @@ const TIER_STYLES: Record<
   },
 };
 
+export type RiggerTierCardProps = {
+  rigger: Rigger;
+  /** 마크 클릭 시 선택 목록·콜백 (본인 편집용) */
+  markPick?: { onChooseImage: (file: File) => void };
+};
+
 /** 레전드 카드 이미지 배경: 원형 마크·닉네임만 표시 (별 없음), 레전드(퍼플) 테마 */
-function LegendCardWithImage({ rigger }: { rigger: Rigger }) {
+function LegendCardWithImage({
+  rigger,
+  markPick,
+}: RiggerTierCardProps) {
   return (
     <article
       className="@container relative flex w-full min-w-0 flex-col overflow-hidden rounded-xl border-2 border-purple-500/80 shadow-lg shadow-purple-500/20 ring-2 ring-purple-500/30"
@@ -49,42 +195,18 @@ function LegendCardWithImage({ rigger }: { rigger: Rigger }) {
       aria-label={`${rigger.name}, 레전드 등급`}
     >
       <div className="relative aspect-[3/4] min-h-[190px] w-full min-w-0 pb-12 py-3 sm:min-h-[210px] sm:pb-14 sm:py-4">
-        {/* 1. 원형 링: 마크 */}
-        <div
-          className="absolute left-0 right-0 flex justify-center"
-          style={{ top: "41%", transform: "translateY(-50%)" }}
-        >
-          <div
-            className="relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-black/90 shadow-inner ring-2 ring-purple-500/60"
-            style={{
-              width: "61cqw",
-              aspectRatio: "1",
-              borderWidth: "max(2px, 0.5cqw)",
-              borderStyle: "solid",
-              borderColor: "rgba(168, 85, 247, 0.95)",
-              boxShadow: "inset 0 1px 2px rgba(0,0,0,0.5), 0 0 0 1px rgba(168, 85, 247, 0.4)",
-            }}
-          >
-            <div className="absolute inset-0 overflow-hidden rounded-full">
-              {rigger.markImageUrl ? (
-                <img
-                  src={rigger.markImageUrl}
-                  alt=""
-                  className="h-full w-full object-cover object-center"
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center">
-                  <Avatar className="h-[70%] w-[70%]" size="lg">
-                    <AvatarImage src={rigger.avatarUrl ?? undefined} alt="" />
-                    <AvatarFallback className="text-base font-medium text-purple-200/90 sm:text-lg">
-                      {rigger.avatarFallback}
-                    </AvatarFallback>
-                  </Avatar>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <TierMarkCircle
+          rigger={rigger}
+          markImageUrl={rigger.markImageUrl}
+          ringClassName="ring-purple-500/60"
+          ringStyle={{
+            borderColor: "rgba(168, 85, 247, 0.95)",
+            boxShadow:
+              "inset 0 1px 2px rgba(0,0,0,0.5), 0 0 0 1px rgba(168, 85, 247, 0.4)",
+          }}
+          fallbackClassName="text-purple-200/90"
+          onChooseImage={markPick?.onChooseImage}
+        />
         {/* 2. 닉네임 */}
         <div
           className="absolute left-0 right-0 flex justify-center px-[4cqw]"
@@ -109,7 +231,7 @@ function LegendCardWithImage({ rigger }: { rigger: Rigger }) {
 }
 
 /** 골드 카드 이미지 배경: 원형 마크·닉네임·별 동일 레이아웃, 골드 테마 */
-function GoldCardWithImage({ rigger }: { rigger: Rigger }) {
+function GoldCardWithImage({ rigger, markPick }: RiggerTierCardProps) {
   const starCount = rigger.stars ?? TIER_STARS.gold;
   return (
     <article
@@ -122,42 +244,18 @@ function GoldCardWithImage({ rigger }: { rigger: Rigger }) {
       aria-label={`${rigger.name}, 골드 등급`}
     >
       <div className="relative aspect-[3/4] min-h-[190px] w-full min-w-0 pb-12 py-3 sm:min-h-[210px] sm:pb-14 sm:py-4">
-        {/* 1. 원형 링: 마크 */}
-        <div
-          className="absolute left-0 right-0 flex justify-center"
-          style={{ top: "41%", transform: "translateY(-50%)" }}
-        >
-          <div
-            className="relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-black/90 shadow-inner ring-2 ring-amber-500/60"
-            style={{
-              width: "61cqw",
-              aspectRatio: "1",
-              borderWidth: "max(2px, 0.5cqw)",
-              borderStyle: "solid",
-              borderColor: "rgba(245, 158, 11, 0.95)",
-              boxShadow: "inset 0 1px 2px rgba(0,0,0,0.5), 0 0 0 1px rgba(245, 158, 11, 0.4)",
-            }}
-          >
-            <div className="absolute inset-0 overflow-hidden rounded-full">
-              {rigger.markImageUrl ? (
-                <img
-                  src={rigger.markImageUrl}
-                  alt=""
-                  className="h-full w-full object-cover object-center"
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center">
-                  <Avatar className="h-[70%] w-[70%]" size="lg">
-                    <AvatarImage src={rigger.avatarUrl ?? undefined} alt="" />
-                    <AvatarFallback className="text-base font-medium text-amber-200/90 sm:text-lg">
-                      {rigger.avatarFallback}
-                    </AvatarFallback>
-                  </Avatar>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <TierMarkCircle
+          rigger={rigger}
+          markImageUrl={rigger.markImageUrl}
+          ringClassName="ring-amber-500/60"
+          ringStyle={{
+            borderColor: "rgba(245, 158, 11, 0.95)",
+            boxShadow:
+              "inset 0 1px 2px rgba(0,0,0,0.5), 0 0 0 1px rgba(245, 158, 11, 0.4)",
+          }}
+          fallbackClassName="text-amber-200/90"
+          onChooseImage={markPick?.onChooseImage}
+        />
         {/* 2. 닉네임 */}
         <div
           className="absolute left-0 right-0 flex justify-center px-[4cqw]"
@@ -197,7 +295,7 @@ function GoldCardWithImage({ rigger }: { rigger: Rigger }) {
 }
 
 /** 실버 카드 이미지 배경: 원형 마크·닉네임·별 동일 레이아웃, 실버 테마 */
-function SilverCardWithImage({ rigger }: { rigger: Rigger }) {
+function SilverCardWithImage({ rigger, markPick }: RiggerTierCardProps) {
   const starCount = rigger.stars ?? TIER_STARS.silver;
   return (
     <article
@@ -210,42 +308,18 @@ function SilverCardWithImage({ rigger }: { rigger: Rigger }) {
       aria-label={`${rigger.name}, 실버 등급`}
     >
       <div className="relative aspect-[3/4] min-h-[190px] w-full min-w-0 pb-12 py-3 sm:min-h-[210px] sm:pb-14 sm:py-4">
-        {/* 1. 원형 링: 마크 */}
-        <div
-          className="absolute left-0 right-0 flex justify-center"
-          style={{ top: "41%", transform: "translateY(-50%)" }}
-        >
-          <div
-            className="relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-black/90 shadow-inner ring-2 ring-slate-400/60"
-            style={{
-              width: "61cqw",
-              aspectRatio: "1",
-              borderWidth: "max(2px, 0.5cqw)",
-              borderStyle: "solid",
-              borderColor: "rgba(148, 163, 184, 0.95)",
-              boxShadow: "inset 0 1px 2px rgba(0,0,0,0.5), 0 0 0 1px rgba(148, 163, 184, 0.4)",
-            }}
-          >
-            <div className="absolute inset-0 overflow-hidden rounded-full">
-              {rigger.markImageUrl ? (
-                <img
-                  src={rigger.markImageUrl}
-                  alt=""
-                  className="h-full w-full object-cover object-center"
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center">
-                  <Avatar className="h-[70%] w-[70%]" size="lg">
-                    <AvatarImage src={rigger.avatarUrl ?? undefined} alt="" />
-                    <AvatarFallback className="text-base font-medium text-slate-200/90 sm:text-lg">
-                      {rigger.avatarFallback}
-                    </AvatarFallback>
-                  </Avatar>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <TierMarkCircle
+          rigger={rigger}
+          markImageUrl={rigger.markImageUrl}
+          ringClassName="ring-slate-400/60"
+          ringStyle={{
+            borderColor: "rgba(148, 163, 184, 0.95)",
+            boxShadow:
+              "inset 0 1px 2px rgba(0,0,0,0.5), 0 0 0 1px rgba(148, 163, 184, 0.4)",
+          }}
+          fallbackClassName="text-slate-200/90"
+          onChooseImage={markPick?.onChooseImage}
+        />
         {/* 2. 닉네임 */}
         <div
           className="absolute left-0 right-0 flex justify-center px-[4cqw]"
@@ -285,7 +359,7 @@ function SilverCardWithImage({ rigger }: { rigger: Rigger }) {
 }
 
 /** 브론즈 카드 이미지 배경: 기존 텍스트/별 영역을 덮고 닉네임·별 개수만 표시 */
-function BronzeCardWithImage({ rigger }: { rigger: Rigger }) {
+function BronzeCardWithImage({ rigger, markPick }: RiggerTierCardProps) {
   const starCount = rigger.stars ?? TIER_STARS.bronze;
   return (
     <article
@@ -298,42 +372,18 @@ function BronzeCardWithImage({ rigger }: { rigger: Rigger }) {
       aria-label={`${rigger.name}, 브론즈 등급`}
     >
       <div className="relative aspect-[3/4] min-h-[190px] w-full min-w-0 pb-12 py-3 sm:min-h-[210px] sm:pb-14 sm:py-4">
-        {/* 1. 원형 링: 마크 - 카드 기준 비율 위치·크기 (리사이즈 시에도 동일 비율 유지) */}
-        <div
-          className="absolute left-0 right-0 flex justify-center"
-          style={{ top: "41%", transform: "translateY(-50%)" }}
-        >
-          <div
-            className="relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-black/90 shadow-inner ring-2 ring-amber-800/60"
-            style={{
-              width: "61cqw",
-              aspectRatio: "1",
-              borderWidth: "max(2px, 0.5cqw)",
-              borderStyle: "solid",
-              borderColor: "rgba(180, 115, 51, 0.95)",
-              boxShadow: "inset 0 1px 2px rgba(0,0,0,0.5), 0 0 0 1px rgba(180, 115, 51, 0.4)",
-            }}
-          >
-            <div className="absolute inset-0 overflow-hidden rounded-full">
-              {rigger.markImageUrl ? (
-                <img
-                  src={rigger.markImageUrl}
-                  alt=""
-                  className="h-full w-full object-cover object-center"
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center">
-                  <Avatar className="h-[70%] w-[70%]" size="lg">
-                    <AvatarImage src={rigger.avatarUrl ?? undefined} alt="" />
-                    <AvatarFallback className="text-base font-medium text-amber-200/90 sm:text-lg">
-                      {rigger.avatarFallback}
-                    </AvatarFallback>
-                  </Avatar>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <TierMarkCircle
+          rigger={rigger}
+          markImageUrl={rigger.markImageUrl}
+          ringClassName="ring-amber-800/60"
+          ringStyle={{
+            borderColor: "rgba(180, 115, 51, 0.95)",
+            boxShadow:
+              "inset 0 1px 2px rgba(0,0,0,0.5), 0 0 0 1px rgba(180, 115, 51, 0.4)",
+          }}
+          fallbackClassName="text-amber-200/90"
+          onChooseImage={markPick?.onChooseImage}
+        />
         {/* 2. 닉네임 - 카드 기준 비율 위치·크기로 고정 (리사이즈 시에도 동일 비율 유지) */}
         <div
           className="absolute left-0 right-0 flex justify-center px-[4cqw]"
@@ -372,22 +422,22 @@ function BronzeCardWithImage({ rigger }: { rigger: Rigger }) {
   );
 }
 
-export function RiggerTierCard({ rigger }: { rigger: Rigger }) {
+export function RiggerTierCard({ rigger, markPick }: RiggerTierCardProps) {
   const tier = rigger.tier;
   const styles = TIER_STYLES[tier];
   const starCount = TIER_STARS[tier];
 
   if (tier === "legend") {
-    return <LegendCardWithImage rigger={rigger} />;
+    return <LegendCardWithImage rigger={rigger} markPick={markPick} />;
   }
   if (tier === "bronze") {
-    return <BronzeCardWithImage rigger={rigger} />;
+    return <BronzeCardWithImage rigger={rigger} markPick={markPick} />;
   }
   if (tier === "silver") {
-    return <SilverCardWithImage rigger={rigger} />;
+    return <SilverCardWithImage rigger={rigger} markPick={markPick} />;
   }
   if (tier === "gold") {
-    return <GoldCardWithImage rigger={rigger} />;
+    return <GoldCardWithImage rigger={rigger} markPick={markPick} />;
   }
 
   return (

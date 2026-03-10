@@ -127,6 +127,9 @@ export async function uploadPhoto(
     const riggerId = formData.get("riggerId");
     const rawCaption = (formData.get("caption") ?? "") as string;
     const caption = rawCaption.trim();
+    const rawVisibility = (formData.get("visibility") ?? "") as string;
+    const visibility: "public" | "private" =
+      rawVisibility === "private" ? "private" : "public";
 
     if (!riggerId || typeof riggerId !== "string") {
       return { ok: false, error: "잘못된 요청입니다." };
@@ -197,6 +200,7 @@ export async function uploadPhoto(
         userId: session.user.id,
         imagePath: publicPath,
         caption: captionTrim,
+        visibility,
       });
     }
 

@@ -29,6 +29,20 @@
       "when": 1773300000000,
       "tag": "0003_post_likes",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1773128157835,
+      "tag": "0004_mute_midnight",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1773400000000,
+      "tag": "0005_add_visibility_to_rigger_photos",
+      "breakpoints": true
     }
   ]
 }

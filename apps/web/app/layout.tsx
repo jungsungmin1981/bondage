@@ -28,7 +28,10 @@ export default function RootLayout({
       suppressHydrationWarning
       className={cn("antialiased", fontMono.variable, "font-sans", fontSans.variable)}
     >
-      <body>
+      <body
+        suppressHydrationWarning
+        style={{ WebkitTextSizeAdjust: "100%" }}
+      >
         <ThemeProvider>
           <div className="flex min-h-svh flex-col">
             <header className="flex items-center justify-between gap-4 border-b px-4 py-3 sm:px-6">

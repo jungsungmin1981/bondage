@@ -14,7 +14,11 @@ import {
 import { INITIAL_SIZE } from "@/lib/rigger-posts-constants";
 import { fetchRiggerPostsSlice } from "@/lib/rigger-posts-slice";
 import { RiggerTierCard } from "@/components/rigger-tier-card";
+import { OwnProfileTierColumn } from "./own-profile-tier-column";
+import { getRiggerOverride } from "@/lib/rigger-overrides";
 import { RiggerPostsFeed } from "./rigger-posts-feed";
+import { BioPreview } from "./bio-preview";
+import { RiggerProfileInline } from "./rigger-profile-inline";
 
 export default async function RiggerDetailPage({
   params,
@@ -29,8 +33,17 @@ export default async function RiggerDetailPage({
   const { id } = await params;
   const riggerRaw = getRiggerById(id);
   if (!riggerRaw) notFound();
+  const override = await getRiggerOverride(id);
+  const mergedRaw = override
+    ? {
+        ...riggerRaw,
+        ...Object.fromEntries(
+          Object.entries(override).filter(([, v]) => v != null && v !== ""),
+        ),
+      }
+    : riggerRaw;
   const rigger = applyCurrentUserToRigger(
-    riggerRaw,
+    mergedRaw,
     session.user.id,
     session.user,
   );
@@ -59,13 +72,11 @@ export default async function RiggerDetailPage({
     pair("버니구인", rigger.bunnyRecruit),
     pair("본러팅", rigger.bondageRating),
   ];
-  const styleValue = rigger.style?.trim() ? rigger.style : "-";
-  const BIO_MAX_LENGTH = 300;
+  const row4 = [
+    pair("활동지역", rigger.activityRegion),
+    pair("스타일", rigger.style),
+  ];
   const rawBio = rigger.bio?.trim() ? rigger.bio : "-";
-  const bioValue =
-    rawBio.length > BIO_MAX_LENGTH
-      ? `${rawBio.slice(0, BIO_MAX_LENGTH)}…`
-      : rawBio;
 
   return (
     <div className="min-h-[calc(100svh-3.5rem)] p-4 sm:p-6">
@@ -80,20 +91,7 @@ export default async function RiggerDetailPage({
         className={`mx-auto grid max-w-4xl gap-6 sm:grid-cols-[minmax(0,280px)_1fr] lg:gap-10 ${isOwnProfile ? "sm:grid-rows-[auto_auto] sm:gap-x-6 lg:gap-x-10" : ""}`}
       >
         {isOwnProfile ? (
-          <div className="flex flex-col gap-1 sm:col-start-1 sm:row-span-2 sm:row-start-1 sm:justify-end">
-            <div className="w-full max-w-[280px]">
-              <RiggerTierCard rigger={rigger} />
-            </div>
-            <Button
-              asChild
-              className="w-full max-w-[280px] sm:w-full"
-              size="sm"
-            >
-              <Link href={`/rigger/${encodeURIComponent(rigger.id)}/photos`}>
-                사진 등록
-              </Link>
-            </Button>
-          </div>
+          <OwnProfileTierColumn rigger={rigger} />
         ) : (
           <div className="flex justify-center sm:col-start-1 sm:row-start-1 sm:justify-start">
             <div className="w-full max-w-[280px]">
@@ -108,56 +106,77 @@ export default async function RiggerDetailPage({
           <div
             className={`p-6 ${!isOwnProfile ? "sm:absolute sm:inset-0 sm:overflow-y-auto sm:rounded-xl" : ""}`}
           >
-            <dl className="grid grid-cols-[5rem_1fr_5rem_1fr] gap-x-3 gap-y-1.5 items-baseline">
-              {[row1, row2, row3].map((pairs, rowIndex) => (
-                <Fragment key={rowIndex}>
-                  {pairs.map(({ label, value }) => (
-                    <Fragment key={label}>
-                      <dt className="shrink-0 text-sm font-medium text-muted-foreground">
-                        {label}
-                      </dt>
-                      <dd className="min-w-0 text-lg font-medium">{value}</dd>
+            {isOwnProfile ? (
+              <RiggerProfileInline
+                riggerId={rigger.id}
+                tierLabel={tierLabel}
+                name={rigger.name}
+                gender={rigger.gender}
+                division={rigger.division}
+                bunnyRecruit={rigger.bunnyRecruit}
+                bondageRating={rigger.bondageRating}
+                activityRegion={rigger.activityRegion}
+                style={rigger.style}
+                bio={rigger.bio}
+              />
+            ) : (
+              <>
+                <dl className="grid grid-cols-[5rem_1fr_5rem_1fr] gap-x-3 gap-y-1.5 items-baseline">
+                  {[row1, row2, row3, row4].map((pairs, rowIndex) => (
+                    <Fragment key={rowIndex}>
+                      {pairs.map(({ label, value }) => (
+                        <Fragment key={label}>
+                          <dt className="shrink-0 text-sm font-medium text-muted-foreground">
+                            {label}
+                          </dt>
+                          <dd
+                            className={
+                              label === "활동지역"
+                                ? "min-w-0 overflow-hidden text-lg font-medium"
+                                : "min-w-0 text-lg font-medium"
+                            }
+                            title={
+                              label === "활동지역" && value !== "-"
+                                ? value
+                                : undefined
+                            }
+                          >
+                            {label === "활동지역" ? (
+                              <span className="block truncate">{value}</span>
+                            ) : (
+                              value
+                            )}
+                          </dd>
+                        </Fragment>
+                      ))}
                     </Fragment>
                   ))}
-                </Fragment>
-              ))}
-              <dt className="shrink-0 text-sm font-medium text-muted-foreground">
-                스타일
-              </dt>
-              <dd className="min-w-0 text-lg font-medium col-span-3">
-                {styleValue}
-              </dd>
-            </dl>
-            <dl className="mt-4 border-t pt-4 grid grid-cols-[5rem_1fr] gap-x-3 gap-y-1.5 items-baseline">
-              <dt className="shrink-0 text-sm font-medium text-muted-foreground">
-                자기소개
-              </dt>
-              <dd className="min-w-0 flex items-center gap-2 flex-wrap">
-                {!isOwnProfile && (
-                  <Button asChild size="sm" className="shrink-0">
-                    <Link
-                      href={`/messages/new?to=${encodeURIComponent(rigger.id)}`}
-                    >
-                      쪽지 보내기
-                    </Link>
-                  </Button>
-                )}
-                {isOwnProfile && (
-                  <Button asChild size="sm" className="shrink-0">
-                    <Link
-                      href={`/rigger/${encodeURIComponent(rigger.id)}/edit`}
-                    >
-                      정보수정
-                    </Link>
-                  </Button>
-                )}
-              </dd>
-              <dd className="col-start-2 min-w-0">
-                <p className="min-w-0 max-w-full overflow-hidden text-lg font-medium whitespace-pre-wrap break-words">
-                  {bioValue}
-                </p>
-              </dd>
-            </dl>
+                </dl>
+                <dl className="mt-4 grid grid-cols-[5rem_1fr] gap-x-3 gap-y-1.5 items-baseline border-t pt-4">
+                  <dt className="shrink-0 text-sm font-medium text-muted-foreground">
+                    자기소개
+                  </dt>
+                  <dd className="min-w-0 flex flex-wrap items-center gap-2">
+                    <Button asChild size="sm" className="shrink-0">
+                      <Link
+                        href={`/messages/new?to=${encodeURIComponent(rigger.id)}`}
+                      >
+                        쪽지 보내기
+                      </Link>
+                    </Button>
+                  </dd>
+                  <dd className="col-start-2 min-w-0">
+                    <BioPreview
+                      fullText={
+                        rawBio === "-"
+                          ? "-"
+                          : (rigger.bio?.trim() ?? "")
+                      }
+                    />
+                  </dd>
+                </dl>
+              </>
+            )}
           </div>
         </div>
       </div>

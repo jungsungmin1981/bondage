@@ -1,4 +1,4 @@
-import { desc, eq, or } from "drizzle-orm";
+import { and, desc, eq, or } from "drizzle-orm";
 import { db } from "../client/node";
 import * as schema from "../schema";
 
@@ -62,4 +62,45 @@ export async function isPostOwnedByUser(postId: string, userId: string): Promise
     )
     .limit(1);
   return rows[0]?.userId === userId;
+}
+
+/**
+ * 본인 게시물 삭제 (postId 기준, 레거시: post_id 없는 경우 id도 허용)
+ */
+export async function deleteRiggerPostOwnedByUser(
+  riggerId: string,
+  postId: string,
+  userId: string,
+): Promise<number> {
+  const deleted = await db
+    .delete(schema.riggerPhotos)
+    .where(
+      and(
+        eq(schema.riggerPhotos.riggerId, riggerId),
+        eq(schema.riggerPhotos.userId, userId),
+        or(eq(schema.riggerPhotos.postId, postId), eq(schema.riggerPhotos.id, postId)),
+      ),
+    )
+    .returning({ id: schema.riggerPhotos.id });
+  return deleted.length;
+}
+
+export async function updateRiggerPostVisibilityOwnedByUser(
+  riggerId: string,
+  postId: string,
+  userId: string,
+  visibility: "public" | "private",
+): Promise<number> {
+  const updated = await db
+    .update(schema.riggerPhotos)
+    .set({ visibility })
+    .where(
+      and(
+        eq(schema.riggerPhotos.riggerId, riggerId),
+        eq(schema.riggerPhotos.userId, userId),
+        or(eq(schema.riggerPhotos.postId, postId), eq(schema.riggerPhotos.id, postId)),
+      ),
+    )
+    .returning({ id: schema.riggerPhotos.id });
+  return updated.length;
 }

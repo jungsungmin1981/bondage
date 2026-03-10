@@ -6,6 +6,7 @@ export type SerializedPhotoRow = {
   userId: string;
   imagePath: string;
   caption: string | null;
+  visibility: "public" | "private";
   createdAt: string | null;
 };
 
