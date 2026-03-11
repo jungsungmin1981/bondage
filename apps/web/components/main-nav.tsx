@@ -32,11 +32,8 @@ const navItems = [
   },
   { label: "기타", href: "/etc" },
   { label: "뽐내기", href: "/showoff" },
-  { label: "워터마크", href: "/watermark" },
   { label: "버니", href: "/bunnies" },
   { label: "승인 요청", href: "/bunny-approvals" },
-  { label: "리거 승인", href: "/admin/riggers" },
-  { label: "회원 종류 선택", href: "/onboarding" },
 ] as const;
 
 const navLinkClass =

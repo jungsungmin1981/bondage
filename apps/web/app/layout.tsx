@@ -98,6 +98,14 @@ export default async function RootLayout({
                 <MainNav pendingBunnyApprovalsCount={pendingBunnyApprovalsCount} />
               </div>
               <div className="flex items-center gap-2">
+                {session && isAdmin(session) && (
+                  <Link
+                    href="/admin"
+                    className="inline-flex min-h-[44px] items-center justify-center rounded-lg border bg-muted/30 px-3 text-xs font-semibold shadow-sm shadow-black/5 transition hover:bg-muted/60 sm:text-sm"
+                  >
+                    관리자
+                  </Link>
+                )}
                 <Link
                   href="/messages"
                   className="relative inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border bg-muted/30 px-2 shadow-sm shadow-black/5 transition hover:bg-muted/60"

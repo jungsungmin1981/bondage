@@ -100,7 +100,7 @@ export default async function RiggerDetailPage({
           <OwnProfileTierColumn rigger={rigger} />
         ) : (
           <div className="flex justify-center sm:col-start-1 sm:row-start-1 sm:justify-start">
-            <div className="w-full max-w-[280px]">
+            <div className="w-full max-w-[360px] sm:max-w-[400px]">
               <RiggerTierCard rigger={rigger} />
             </div>
           </div>

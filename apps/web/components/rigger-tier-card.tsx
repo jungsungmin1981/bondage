@@ -177,18 +177,21 @@ export type RiggerTierCardProps = {
   rigger: Rigger;
   /** 마크 클릭 시 선택 목록·콜백 (본인 편집용) */
   markPick?: { onChooseImage: (file: File) => void };
+  /** 등급 카드 배경 이미지를 임시로 덮어쓸 때 사용 (관리자 미리보기용) */
+  backgroundOverrideUrl?: string;
 };
 
 /** 레전드 카드 이미지 배경: 원형 마크·닉네임만 표시 (별 없음), 레전드(퍼플) 테마 */
 function LegendCardWithImage({
   rigger,
   markPick,
+  backgroundOverrideUrl,
 }: RiggerTierCardProps) {
   return (
     <article
       className="@container relative flex w-full min-w-0 flex-col overflow-hidden rounded-xl border-2 border-purple-500/80 shadow-lg shadow-purple-500/20 ring-2 ring-purple-500/30"
       style={{
-        backgroundImage: "url(/rigger-card-legend.png)",
+        backgroundImage: `url(${backgroundOverrideUrl ?? "/rigger-card-legend.png"})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
       }}
@@ -231,13 +234,17 @@ function LegendCardWithImage({
 }
 
 /** 골드 카드 이미지 배경: 원형 마크·닉네임·별 동일 레이아웃, 골드 테마 */
-function GoldCardWithImage({ rigger, markPick }: RiggerTierCardProps) {
+function GoldCardWithImage({
+  rigger,
+  markPick,
+  backgroundOverrideUrl,
+}: RiggerTierCardProps) {
   const starCount = rigger.stars ?? TIER_STARS.gold;
   return (
     <article
       className="@container relative flex w-full min-w-0 flex-col overflow-hidden rounded-xl border-2 border-amber-500/80 shadow-lg shadow-amber-500/20 ring-2 ring-amber-500/30"
       style={{
-        backgroundImage: "url(/rigger-card-gold.png)",
+        backgroundImage: `url(${backgroundOverrideUrl ?? "/rigger-card-gold.png"})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
       }}
@@ -295,13 +302,17 @@ function GoldCardWithImage({ rigger, markPick }: RiggerTierCardProps) {
 }
 
 /** 실버 카드 이미지 배경: 원형 마크·닉네임·별 동일 레이아웃, 실버 테마 */
-function SilverCardWithImage({ rigger, markPick }: RiggerTierCardProps) {
+function SilverCardWithImage({
+  rigger,
+  markPick,
+  backgroundOverrideUrl,
+}: RiggerTierCardProps) {
   const starCount = rigger.stars ?? TIER_STARS.silver;
   return (
     <article
       className="@container relative flex w-full min-w-0 flex-col overflow-hidden rounded-xl border-2 border-slate-400/80 shadow-lg shadow-slate-400/20 ring-2 ring-slate-400/30"
       style={{
-        backgroundImage: "url(/rigger-card-silver.png)",
+        backgroundImage: `url(${backgroundOverrideUrl ?? "/rigger-card-silver.png"})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
       }}
@@ -359,13 +370,17 @@ function SilverCardWithImage({ rigger, markPick }: RiggerTierCardProps) {
 }
 
 /** 브론즈 카드 이미지 배경: 기존 텍스트/별 영역을 덮고 닉네임·별 개수만 표시 */
-function BronzeCardWithImage({ rigger, markPick }: RiggerTierCardProps) {
+function BronzeCardWithImage({
+  rigger,
+  markPick,
+  backgroundOverrideUrl,
+}: RiggerTierCardProps) {
   const starCount = rigger.stars ?? TIER_STARS.bronze;
   return (
     <article
       className="@container relative flex w-full min-w-0 flex-col overflow-hidden rounded-xl border-2 border-amber-700/80 shadow-lg shadow-amber-800/20 ring-2 ring-amber-700/30"
       style={{
-        backgroundImage: "url(/rigger-card-bronze.png)",
+        backgroundImage: `url(${backgroundOverrideUrl ?? "/rigger-card-bronze.png"})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
       }}
@@ -422,22 +437,50 @@ function BronzeCardWithImage({ rigger, markPick }: RiggerTierCardProps) {
   );
 }
 
-export function RiggerTierCard({ rigger, markPick }: RiggerTierCardProps) {
+export function RiggerTierCard({
+  rigger,
+  markPick,
+  backgroundOverrideUrl,
+}: RiggerTierCardProps) {
   const tier = rigger.tier;
   const styles = TIER_STYLES[tier];
   const starCount = TIER_STARS[tier];
 
   if (tier === "legend") {
-    return <LegendCardWithImage rigger={rigger} markPick={markPick} />;
+    return (
+      <LegendCardWithImage
+        rigger={rigger}
+        markPick={markPick}
+        backgroundOverrideUrl={backgroundOverrideUrl}
+      />
+    );
   }
   if (tier === "bronze") {
-    return <BronzeCardWithImage rigger={rigger} markPick={markPick} />;
+    return (
+      <BronzeCardWithImage
+        rigger={rigger}
+        markPick={markPick}
+        backgroundOverrideUrl={backgroundOverrideUrl}
+      />
+    );
   }
   if (tier === "silver") {
-    return <SilverCardWithImage rigger={rigger} markPick={markPick} />;
+    return (
+      <SilverCardWithImage
+        rigger={rigger}
+        markPick={markPick}
+        backgroundOverrideUrl={backgroundOverrideUrl}
+      />
+    );
   }
   if (tier === "gold") {
-    return <GoldCardWithImage rigger={rigger} markPick={markPick} />;
+    return (
+      <GoldCardWithImage
+        rigger={rigger}
+        markPick={markPick}
+        backgroundOverrideUrl={backgroundOverrideUrl}
+      />
+    );
   }
 
   return (

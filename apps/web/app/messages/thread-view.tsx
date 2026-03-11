@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@workspace/ui/components/button";
@@ -19,12 +20,16 @@ export function ThreadView({
   initialMessages,
   otherNickname,
   otherMarkImageUrl,
+  otherProfileId,
+  otherMemberType,
 }: {
   threadId: string;
   sessionUserId: string;
   initialMessages: ThreadMessage[];
   otherNickname?: string | null;
   otherMarkImageUrl?: string | null;
+  otherProfileId?: string | null;
+  otherMemberType?: string | null;
 }) {
   const router = useRouter();
   const [messages, setMessages] = useState<ThreadMessage[]>(initialMessages);
@@ -101,6 +106,13 @@ export function ThreadView({
     bottomRef.current?.scrollIntoView({ block: "end" });
   }, [messages.length]);
 
+  const profileHref =
+    otherProfileId && otherMemberType === "rigger"
+      ? `/rigger/${encodeURIComponent(otherProfileId)}`
+      : otherProfileId && otherMemberType === "bunny"
+        ? `/bunnies/${encodeURIComponent(otherProfileId)}`
+        : null;
+
   return (
     <div className="flex h-[calc(100dvh-7rem)] flex-col">
       <div className="flex items-center justify-between border-b px-4 py-3">
@@ -125,9 +137,11 @@ export function ThreadView({
             </p>
           </div>
         </div>
-        <Button variant="outline" size="sm">
-          프로필 보기
-        </Button>
+        {profileHref ? (
+          <Button asChild variant="outline" size="sm">
+            <Link href={profileHref}>프로필 보기</Link>
+          </Button>
+        ) : null}
       </div>
       <div className="flex-1 overflow-y-auto px-4 py-4">
         <div className="space-y-2">

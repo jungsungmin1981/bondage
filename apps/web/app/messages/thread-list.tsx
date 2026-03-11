@@ -31,14 +31,6 @@ export function ThreadList({ threads }: { threads: Thread[] }) {
           검색 (추후)
         </div>
       </div>
-      <div className="mb-3 flex gap-2">
-        <button className="rounded-full bg-muted px-3 py-1 text-xs font-semibold">
-          전체
-        </button>
-        <button className="rounded-full px-3 py-1 text-xs font-semibold text-muted-foreground">
-          요청
-        </button>
-      </div>
       <ul className="space-y-1">
         {threads.map((t) => {
           const isActive = activeId && decodeURIComponent(activeId) === t.threadId;
@@ -73,11 +65,6 @@ export function ThreadList({ threads }: { threads: Thread[] }) {
                   <div className="flex items-center justify-between gap-2">
                     <p className="truncate text-sm font-semibold">
                       {t.otherNickname ?? "상대"}
-                      {t.otherMemberType && (
-                        <span className="ml-1 align-middle rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
-                          {t.otherMemberType === "rigger" ? "리거" : "버니"}
-                        </span>
-                      )}
                     </p>
                     <div className="flex items-center gap-2">
                       {t.unreadCount > 0 && (

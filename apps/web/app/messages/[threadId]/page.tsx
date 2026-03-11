@@ -47,6 +47,8 @@ export default async function ThreadPage({
       initialMessages={messages}
       otherNickname={meta?.otherNickname ?? null}
       otherMarkImageUrl={otherMarkImageUrl}
+      otherProfileId={meta?.otherProfileId ?? null}
+      otherMemberType={meta?.otherMemberType ?? null}
     />
   );
 }

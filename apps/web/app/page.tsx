@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { LayoutDashboard, Users, Settings } from "lucide-react";
+import { getMainBackgroundUrl } from "@/lib/main-background-config";
 
 export default async function MainPage() {
   const session = await auth.api.getSession({
@@ -14,13 +15,14 @@ export default async function MainPage() {
   }
 
   const displayName = session.user.name ?? session.user.email ?? "회원";
+  const mainBackgroundUrl = (await getMainBackgroundUrl()) ?? "/main-bg.png";
 
   return (
     <div className="relative min-h-[calc(100svh-3.5rem)] overflow-hidden">
       {/* 배경 이미지 */}
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: "url(/main-bg.png)" }}
+        style={{ backgroundImage: `url(${mainBackgroundUrl})` }}
         aria-hidden
       />
       {/* 어두운 오버레이 - 텍스트 가독성 */}
