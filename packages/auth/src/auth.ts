@@ -1,7 +1,7 @@
 import { db, schema } from "@workspace/db";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { genericOAuth } from "better-auth/plugins";
+import { genericOAuth, username } from "better-auth/plugins";
 import { nextCookies } from "better-auth/next-js";
 
 const kakaoClientId = process.env.KAKAO_CLIENT_ID ?? "";
@@ -13,6 +13,16 @@ const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET ?? "";
 
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
+  user: {
+    additionalFields: {
+      memberType: {
+        type: "string",
+        required: false,
+        input: false,
+        fieldName: "member_type",
+      },
+    },
+  },
   database: drizzleAdapter(db, {
     provider: "pg",
     schema: {
@@ -37,6 +47,9 @@ export const auth = betterAuth({
   },
   plugins: [
     nextCookies(),
+    username({
+      usernameValidator: (id) => /^[a-zA-Z0-9]+$/.test(id),
+    }),
     ...((kakaoClientId && kakaoClientSecret) || (naverClientId && naverClientSecret)
       ? [
           genericOAuth({

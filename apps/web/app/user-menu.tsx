@@ -1,12 +1,50 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@workspace/ui/components/button";
 
 export function UserMenu() {
   const router = useRouter();
   const { data: session, isPending } = authClient.useSession();
+  const pathname = usePathname();
+  const [nickname, setNickname] = useState<string | null>(null);
+  const [profileLink, setProfileLink] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!session?.user?.id) {
+      setNickname(null);
+      setProfileLink(null);
+      return;
+    }
+    fetch("/api/me/profile")
+      .then((res) => res.json())
+      .then(
+        (data: {
+          nickname?: string;
+          memberType?: string;
+          profileId?: string;
+          hasProfile?: boolean;
+        }) => {
+          setNickname(data.nickname ?? null);
+          if (data.memberType === "rigger" && data.profileId) {
+            setProfileLink(`/rigger/${encodeURIComponent(data.profileId)}`);
+          } else if (data.memberType === "bunny" && data.profileId) {
+            setProfileLink(`/bunnies/${encodeURIComponent(data.profileId)}`);
+          } else if (data.hasProfile) {
+            setProfileLink("/profile/edit");
+          } else {
+            setProfileLink(null);
+          }
+        },
+      )
+      .catch(() => {
+        setNickname(null);
+        setProfileLink(null);
+      });
+  }, [session?.user?.id, pathname]);
 
   if (isPending) {
     return null;
@@ -15,10 +53,19 @@ export function UserMenu() {
   if (!session) {
     return (
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="sm" onClick={() => router.push("/login")}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.push("/login")}
+          className="min-h-[44px] min-w-[44px] px-3 sm:min-h-9 sm:min-w-0"
+        >
           로그인
         </Button>
-        <Button size="sm" onClick={() => router.push("/register")}>
+        <Button
+          size="sm"
+          onClick={() => router.push("/register")}
+          className="min-h-[44px] px-4 sm:min-h-9"
+        >
           회원가입
         </Button>
       </div>
@@ -30,10 +77,30 @@ export function UserMenu() {
     router.push("/login");
   };
 
+  /** 닉네임 작성 완료 후에는 닉네임, 미완료 시 이메일(회원가입 아이디) 표시 */
+  const displayName = nickname ?? session.user.email ?? "";
+
   return (
-    <div className="flex items-center gap-3 text-sm">
-      <span className="text-muted-foreground">{session.user.email}</span>
-      <Button variant="outline" size="sm" onClick={handleSignOut}>
+    <div className="flex items-center gap-2 text-sm sm:gap-3">
+      <Button
+        variant="ghost"
+        size="sm"
+        asChild
+        className="max-w-[90px] min-h-[44px] min-w-[44px] shrink-0 truncate px-3 text-muted-foreground sm:max-w-[140px] sm:min-h-9 sm:min-w-0 md:max-w-[180px]"
+      >
+        <Link
+          href={profileLink ?? pathname ?? "/"}
+          title={profileLink ? "내 상세정보로 이동" : "현재 페이지로 이동"}
+        >
+          {displayName}
+        </Link>
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleSignOut}
+        className="min-h-[44px] min-w-[44px] shrink-0 px-3 sm:min-h-9 sm:min-w-0"
+      >
         로그아웃
       </Button>
     </div>

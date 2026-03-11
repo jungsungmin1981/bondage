@@ -1,6 +1,7 @@
 import {
   getBunnyApprovalStatusesByPostIds,
   getCommentsByPhotoIdsWithAuthorGrouped,
+  getPostIdsWhereUserIsRequestedBunny,
   getPostLikesStateForPostIds,
   getRiggerPhotoPosts,
 } from "@workspace/db";
@@ -54,12 +55,20 @@ export async function fetchRiggerPostsSlice(
   userId: string,
 ): Promise<SliceResult> {
   const all = await getRiggerPhotoPosts(riggerId);
-  // 비공개 글은 작성자에게만 노출
+  const allPostIds = all.map((p) => p.postId);
+  const requestedBunnyPostIds =
+    allPostIds.length > 0
+      ? await getPostIdsWhereUserIsRequestedBunny(allPostIds, userId)
+      : new Set<string>();
+  // 비공개(private)는 작성자에게만, 승인대기(pending)는 작성자 또는 승인 요청된 버니에게 노출
   const visibleAll = all.filter((p) => {
     const first: any = p.photos[0];
     const visibility = String(first?.visibility ?? "public");
     if (visibility !== "private" && visibility !== "pending") return true;
-    return first?.userId === userId;
+    if (first?.userId === userId) return true;
+    if (visibility === "pending" && requestedBunnyPostIds.has(p.postId))
+      return true;
+    return false;
   });
   const totalCount = visibleAll.length;
   const slice = visibleAll.slice(offset, offset + limit);

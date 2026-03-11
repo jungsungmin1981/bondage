@@ -6,9 +6,35 @@ import { auth } from "@workspace/auth";
 import {
   approveBunnyPostRequest,
   approveBunnyPostRequestAsAdmin,
+  getPhotosByPostId,
+  getPostIdsWhereUserIsRequestedBunny,
   rejectBunnyPostRequest,
   rejectBunnyPostRequestAsAdmin,
 } from "@workspace/db";
+import { isAdmin } from "@/lib/admin";
+
+export async function getPostDetailForApproval(
+  postId: string,
+): Promise<
+  | { ok: true; photos: { imagePath: string }[]; caption: string | null }
+  | { ok: false; error: string }
+> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) return { ok: false, error: "로그인이 필요합니다." };
+
+  const allowed = await getPostIdsWhereUserIsRequestedBunny(
+    [postId],
+    session.user.id,
+  );
+  if (!allowed.has(postId)) {
+    return { ok: false, error: "해당 게시물을 볼 수 있는 권한이 없습니다." };
+  }
+
+  const rows = await getPhotosByPostId(postId);
+  const photos = rows.map((r) => ({ imagePath: r.imagePath }));
+  const caption = rows[0]?.caption ?? null;
+  return { ok: true, photos, caption };
+}
 
 export async function approveBunnyPost(
   approvalId: string,
@@ -17,13 +43,7 @@ export async function approveBunnyPost(
   if (!session) return { ok: false, error: "로그인이 필요합니다." };
 
   try {
-    const adminEmail = process.env.ADMIN_EMAIL;
-    const isAdmin =
-      typeof adminEmail === "string" &&
-      adminEmail.length > 0 &&
-      session.user.email === adminEmail;
-
-    const result = isAdmin
+    const result = isAdmin(session)
       ? await approveBunnyPostRequestAsAdmin(approvalId)
       : await approveBunnyPostRequest(approvalId, session.user.id);
     if (!result.ok) return result;
@@ -45,13 +65,7 @@ export async function rejectBunnyPost(
   if (!session) return { ok: false, error: "로그인이 필요합니다." };
 
   try {
-    const adminEmail = process.env.ADMIN_EMAIL;
-    const isAdmin =
-      typeof adminEmail === "string" &&
-      adminEmail.length > 0 &&
-      session.user.email === adminEmail;
-
-    const result = isAdmin
+    const result = isAdmin(session)
       ? await rejectBunnyPostRequestAsAdmin(approvalId)
       : await rejectBunnyPostRequest(approvalId, session.user.id);
     if (!result.ok) return result;

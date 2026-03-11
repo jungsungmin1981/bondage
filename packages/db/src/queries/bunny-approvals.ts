@@ -1,7 +1,35 @@
-import { and, asc, desc, eq, inArray, ne } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { db } from "../client/node";
 import * as schema from "../schema";
-import { setRiggerPostVisibilityByPostId } from "./rigger-photos";
+import {
+  getVisibilityAfterApprovalByPostId,
+  setRiggerPostVisibilityByPostId,
+} from "./rigger-photos";
+
+/** 버니용: pending 승인요청 건수 */
+export async function getPendingApprovalsCountForBunny(
+  bunnyUserId: string,
+): Promise<number> {
+  const rows = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(schema.bunnyApprovals)
+    .where(
+      and(
+        eq(schema.bunnyApprovals.bunnyUserId, bunnyUserId),
+        eq(schema.bunnyApprovals.status, "pending"),
+      ),
+    );
+  return Number(rows[0]?.count ?? 0);
+}
+
+/** 관리자용: pending 승인요청 전체 건수 */
+export async function getAllPendingApprovalsCount(): Promise<number> {
+  const rows = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(schema.bunnyApprovals)
+    .where(eq(schema.bunnyApprovals.status, "pending"));
+  return Number(rows[0]?.count ?? 0);
+}
 
 /**
  * postId별로 승인 요청된 버니의 닉네임(또는 이름) 목록을 반환.
@@ -52,6 +80,27 @@ export type BunnyApprovalStatus = {
 };
 
 /**
+ * 주어진 userId가 승인 요청된 버니인 postId 집합을 반환.
+ * (pending 게시물을 해당 버니에게도 노출할 때 사용)
+ */
+export async function getPostIdsWhereUserIsRequestedBunny(
+  postIds: string[],
+  bunnyUserId: string,
+): Promise<Set<string>> {
+  if (postIds.length === 0) return new Set();
+  const rows = await db
+    .select({ postId: schema.bunnyApprovals.postId })
+    .from(schema.bunnyApprovals)
+    .where(
+      and(
+        inArray(schema.bunnyApprovals.postId, postIds),
+        eq(schema.bunnyApprovals.bunnyUserId, bunnyUserId),
+      ),
+    );
+  return new Set(rows.map((r) => r.postId));
+}
+
+/**
  * postId 배열에 대해 각 버니의 승인 상태 전체(pending/approved/rejected)를 조회.
  */
 export async function getBunnyApprovalStatusesByPostIds(
@@ -93,9 +142,34 @@ export type PendingApprovalRow = {
   riggerId: string | null;
 };
 
+/** 승인 목록용: status, updatedAt, riggerNickname 포함 (pending / approved / rejected) */
+export type BunnyApprovalListItem = PendingApprovalRow & {
+  status: "pending" | "approved" | "rejected";
+  updatedAt: Date | null;
+  riggerNickname: string | null;
+};
+
+type ApprovalRowInput = {
+  approvalId: string;
+  postId: string;
+  createdAt: Date | null;
+  updatedAt?: Date | null;
+  status?: string;
+};
+
 async function mapApprovalsToRows(
-  approvals: { approvalId: string; postId: string; createdAt: Date | null }[],
+  approvals: ApprovalRowInput[],
 ): Promise<PendingApprovalRow[]> {
+  return mapApprovalsToRowsWithStatus(approvals).then((rows) =>
+    rows.map(
+      ({ status: _s, updatedAt: _u, riggerNickname: _n, ...rest }) => rest,
+    ),
+  );
+}
+
+async function mapApprovalsToRowsWithStatus(
+  approvals: ApprovalRowInput[],
+): Promise<BunnyApprovalListItem[]> {
   if (approvals.length === 0) return [];
 
   const postIds = [...new Set(approvals.map((a) => a.postId))];
@@ -117,15 +191,44 @@ async function mapApprovalsToRows(
     if (!firstByPostId.has(key)) firstByPostId.set(key, p);
   }
 
+  const riggerIds = [
+    ...new Set(
+      photos.map((p) => p.riggerId).filter((id): id is string => id != null),
+    ),
+  ];
+  const nicknameByRiggerId = new Map<string, string>();
+  if (riggerIds.length > 0) {
+    const profiles = await db
+      .select({
+        id: schema.memberProfiles.id,
+        nickname: schema.memberProfiles.nickname,
+      })
+      .from(schema.memberProfiles)
+      .where(inArray(schema.memberProfiles.id, riggerIds));
+    for (const r of profiles) {
+      if (r.nickname?.trim()) nicknameByRiggerId.set(r.id, r.nickname.trim());
+    }
+  }
+
   return approvals.map((a) => {
     const photo = firstByPostId.get(a.postId);
+    const riggerId = photo?.riggerId ?? null;
+    const status =
+      a.status === "approved"
+        ? "approved"
+        : a.status === "rejected"
+          ? "rejected"
+          : "pending";
     return {
       approvalId: a.approvalId,
       postId: a.postId,
       createdAt: a.createdAt ?? new Date(),
+      updatedAt: a.updatedAt ?? null,
       imagePath: photo?.imagePath ?? null,
       caption: photo?.caption ?? null,
-      riggerId: photo?.riggerId ?? null,
+      riggerId,
+      riggerNickname: riggerId ? nicknameByRiggerId.get(riggerId) ?? null : null,
+      status,
     };
   });
 }
@@ -166,6 +269,43 @@ export async function getAllPendingApprovals(): Promise<PendingApprovalRow[]> {
   return mapApprovalsToRows(approvals);
 }
 
+/** 버니용: 승인/거절 포함 전체 목록 (확인용). 최신순. */
+export async function getApprovalRequestsForBunny(
+  bunnyUserId: string,
+): Promise<BunnyApprovalListItem[]> {
+  const approvals = await db
+    .select({
+      approvalId: schema.bunnyApprovals.id,
+      postId: schema.bunnyApprovals.postId,
+      createdAt: schema.bunnyApprovals.createdAt,
+      updatedAt: schema.bunnyApprovals.updatedAt,
+      status: schema.bunnyApprovals.status,
+    })
+    .from(schema.bunnyApprovals)
+    .where(eq(schema.bunnyApprovals.bunnyUserId, bunnyUserId))
+    .orderBy(desc(schema.bunnyApprovals.createdAt));
+
+  return mapApprovalsToRowsWithStatus(approvals);
+}
+
+/** 관리자: 승인/거절 포함 전체 목록 (확인용). 최신순. */
+export async function getAllApprovalRequests(): Promise<
+  BunnyApprovalListItem[]
+> {
+  const approvals = await db
+    .select({
+      approvalId: schema.bunnyApprovals.id,
+      postId: schema.bunnyApprovals.postId,
+      createdAt: schema.bunnyApprovals.createdAt,
+      updatedAt: schema.bunnyApprovals.updatedAt,
+      status: schema.bunnyApprovals.status,
+    })
+    .from(schema.bunnyApprovals)
+    .orderBy(desc(schema.bunnyApprovals.createdAt));
+
+  return mapApprovalsToRowsWithStatus(approvals);
+}
+
 export async function approveBunnyPostRequest(
   approvalId: string,
   bunnyUserId: string,
@@ -200,7 +340,9 @@ export async function approveBunnyPostRequest(
   const allApproved = allForPost.every((r) => r.status === "approved");
   let riggerId: string | undefined;
   if (allApproved) {
-    await setRiggerPostVisibilityByPostId(postId, "public");
+    const targetVisibility =
+      (await getVisibilityAfterApprovalByPostId(postId)) ?? "public";
+    await setRiggerPostVisibilityByPostId(postId, targetVisibility);
     const photoRow = await db
       .select({ riggerId: schema.riggerPhotos.riggerId })
       .from(schema.riggerPhotos)
@@ -241,7 +383,9 @@ export async function approveBunnyPostRequestAsAdmin(
   const allApproved = allForPost.every((r) => r.status === "approved");
   let riggerId: string | undefined;
   if (allApproved) {
-    await setRiggerPostVisibilityByPostId(postId, "public");
+    const targetVisibility =
+      (await getVisibilityAfterApprovalByPostId(postId)) ?? "public";
+    await setRiggerPostVisibilityByPostId(postId, targetVisibility);
     const photoRow = await db
       .select({ riggerId: schema.riggerPhotos.riggerId })
       .from(schema.riggerPhotos)

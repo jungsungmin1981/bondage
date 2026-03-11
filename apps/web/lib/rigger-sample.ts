@@ -6,6 +6,8 @@ export type Rigger = {
   tier: RiggerTier;
   avatarFallback: string;
   avatarUrl?: string | null;
+  /** DB 연동 시 프로필 소유자 userId (본인 여부 판별용) */
+  userId?: string | null;
   /** 원형 마크 영역에 표시할 이미지 URL (미설정 시 아바타 표시) */
   markImageUrl?: string | null;
   /** 브론즈·실버·골드: 1~5 (골드 2명씩, 실버 3명씩, 브론즈 4명씩 5→4→3→2→1) */
@@ -166,8 +168,9 @@ function buildBronzeRiggers(): Rigger[] {
   });
 }
 
-/** 마크용 이미지 (원형 영역에 표시) */
+/** 마크용 이미지 (원형 영역에 표시). 첫 번째가 기본 카드 이미지(실버 링) */
 const MARK_IMAGES = [
+  "/marks/mark-ring.png",
   "/marks/mark-collar.png",
   "/marks/mark-gag.png",
   "/marks/mark-cuffs.png",
@@ -193,19 +196,8 @@ export function getMarkPickerUrls(tier: RiggerTier): readonly string[] {
   return MARK_IMAGES;
 }
 
-const _rawRiggers: Rigger[] = [
-  ...buildRiggers(LEGEND_NAMES, "legend", 0).map((r, i) =>
-    i === 0 ? { ...r, markImageUrl: MARK_LEGEND_URL } : i < 3 ? { ...r, markImageUrl: MARK_IMAGES[i - 1] } : r,
-  ),
-  ...withMarks(buildGoldRiggers(), 3),
-  ...withMarks(buildSilverRiggers(), 13),
-  ...withMarks(buildBronzeRiggers(), 28),
-];
-
-export const SAMPLE_RIGGERS: Rigger[] = _rawRiggers.map((r, i) => ({
-  ...r,
-  ...getSampleProfile(i),
-}));
+/** 리거 목록용 샘플 데이터 제거. 승인된 리거는 DB(member_profiles)에서 조회 예정. */
+export const SAMPLE_RIGGERS: Rigger[] = [];
 
 export function getRiggerById(id: string): Rigger | undefined {
   return SAMPLE_RIGGERS.find((r) => r.id === id);
@@ -219,13 +211,17 @@ export function getRiggerIdForUserId(_userId: string): string {
   return SAMPLE_RIGGERS[0]?.id ?? "rigger-0";
 }
 
-/** 로그인 사용자에게 매핑된 리거일 때 이름·아바타만 현재 로그인 정보로 덮어씁니다. 상세정보(성별·구분 등)는 샘플 데이터 유지. */
+/** 로그인 사용자에게 매핑된 리거일 때 이름·아바타만 현재 로그인 정보로 덮어씁니다. (DB 리거는 rigger.userId로 판별, 없으면 getRiggerIdForUserId 사용) */
 export function applyCurrentUserToRigger<T extends Rigger>(
   rigger: T,
   currentUserId: string | null,
   user: { name?: string | null; email?: string | null; image?: string | null },
 ): T {
-  if (!currentUserId || getRiggerIdForUserId(currentUserId) !== rigger.id) return rigger;
+  const isOwn =
+    currentUserId &&
+    (rigger.userId === currentUserId ||
+      getRiggerIdForUserId(currentUserId) === rigger.id);
+  if (!isOwn) return rigger;
   const displayName = (user.name?.trim() || user.email?.trim() || "회원").slice(0, 50);
   const fallback =
     displayName.length >= 2 ? displayName.slice(0, 2) : displayName.slice(0, 1);

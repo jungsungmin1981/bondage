@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { auth } from "@workspace/auth";
+import { getRiggerProfileById } from "@workspace/db";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
-import { getRiggerById, getRiggerIdForUserId } from "@/lib/rigger-sample";
 
 export default async function RiggerEditPage({
   params,
@@ -15,10 +15,10 @@ export default async function RiggerEditPage({
   if (!session) redirect("/login");
 
   const { id } = await params;
-  const rigger = getRiggerById(id);
-  if (!rigger) notFound();
+  const profile = await getRiggerProfileById(id);
+  if (!profile) notFound();
 
-  if (getRiggerIdForUserId(session.user.id) !== rigger.id) {
+  if (profile.userId !== session.user.id) {
     redirect(`/rigger/${id}`);
   }
 

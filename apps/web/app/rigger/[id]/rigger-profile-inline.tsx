@@ -425,6 +425,8 @@ function FragmentBlock({ pairs }: { pairs: PairItem[] }) {
   );
 }
 
+const PENDING_TIER_LABEL = "승인 대기중";
+
 function FragmentRow({
   label,
   value,
@@ -435,6 +437,8 @@ function FragmentRow({
   ellipsis?: boolean;
 }) {
   const display = value || "-";
+  const isPendingTier =
+    label === "등급" && value === PENDING_TIER_LABEL;
   return (
     <>
       <dt className="shrink-0 text-sm font-medium text-muted-foreground">
@@ -444,7 +448,9 @@ function FragmentRow({
         className={
           ellipsis
             ? "min-w-0 overflow-hidden text-lg font-medium"
-            : "min-w-0 text-lg font-medium"
+            : isPendingTier
+              ? "min-w-0 text-lg font-medium text-blue-600"
+              : "min-w-0 text-lg font-medium"
         }
         title={ellipsis && display !== "-" ? display : undefined}
       >

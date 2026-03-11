@@ -1,16 +1,13 @@
 import Link from "next/link";
 import { Fragment } from "react";
 import { auth } from "@workspace/auth";
+import { getRiggerPhotoPosts, getRiggerProfileById } from "@workspace/db";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
-import { getRiggerPhotoPosts } from "@workspace/db";
 import { Button } from "@workspace/ui/components/button";
-import {
-  applyCurrentUserToRigger,
-  getRiggerById,
-  getRiggerIdForUserId,
-  TIER_LABELS,
-} from "@/lib/rigger-sample";
+import { Mail } from "lucide-react";
+import { applyCurrentUserToRigger, TIER_LABELS } from "@/lib/rigger-sample";
+import { mapRiggerProfileToRigger } from "@/lib/rigger-from-db";
 import { INITIAL_SIZE } from "@/lib/rigger-posts-constants";
 import { fetchRiggerPostsSlice } from "@/lib/rigger-posts-slice";
 import { RiggerTierCard } from "@/components/rigger-tier-card";
@@ -22,8 +19,10 @@ import { RiggerProfileInline } from "./rigger-profile-inline";
 
 export default async function RiggerDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ postId?: string }>;
 }) {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -31,8 +30,11 @@ export default async function RiggerDetailPage({
   if (!session) redirect("/login");
 
   const { id } = await params;
-  const riggerRaw = getRiggerById(id);
-  if (!riggerRaw) notFound();
+  const { postId: openPostId } = await searchParams;
+  const dbProfile = await getRiggerProfileById(id);
+  if (!dbProfile) notFound();
+
+  const riggerRaw = mapRiggerProfileToRigger(dbProfile);
   const override = await getRiggerOverride(id);
   const mergedRaw = override
     ? {
@@ -48,8 +50,12 @@ export default async function RiggerDetailPage({
     session.user,
   );
 
-  const tierLabel = TIER_LABELS[rigger.tier];
-  const isOwnProfile = getRiggerIdForUserId(session.user.id) === rigger.id;
+  const PENDING_TIER_LABEL = "승인 대기중";
+  const tierLabel =
+    dbProfile.status === "approved"
+      ? TIER_LABELS[rigger.tier]
+      : PENDING_TIER_LABEL;
+  const isOwnProfile = rigger.userId === session.user.id;
 
   const posts = await getRiggerPhotoPosts(id);
   const hasAnyPost = posts.length > 0;
@@ -133,7 +139,9 @@ export default async function RiggerDetailPage({
                             className={
                               label === "활동지역"
                                 ? "min-w-0 overflow-hidden text-lg font-medium"
-                                : "min-w-0 text-lg font-medium"
+                                : label === "등급" && value === PENDING_TIER_LABEL
+                                  ? "min-w-0 text-lg font-medium text-blue-600"
+                                  : "min-w-0 text-lg font-medium"
                             }
                             title={
                               label === "활동지역" && value !== "-"
@@ -157,11 +165,20 @@ export default async function RiggerDetailPage({
                     자기소개
                   </dt>
                   <dd className="min-w-0 flex flex-wrap items-center gap-2">
-                    <Button asChild size="sm" className="shrink-0">
+                    <Button
+                      asChild
+                      size="sm"
+                      variant="outline"
+                      className="shrink-0 rounded-lg border-border/70 bg-muted/30 shadow-sm shadow-black/5 hover:bg-muted/60"
+                      aria-label="쪽지 보내기"
+                    >
                       <Link
                         href={`/messages/new?to=${encodeURIComponent(rigger.id)}`}
                       >
-                        쪽지 보내기
+                        <span className="inline-flex items-center gap-2">
+                          <Mail className="size-5 text-foreground" strokeWidth={2} />
+                          <span className="text-sm font-medium">쪽지 보내기</span>
+                        </span>
                       </Link>
                     </Button>
                   </dd>
@@ -195,6 +212,7 @@ export default async function RiggerDetailPage({
             initialLikeByPostId={initialSlice.likeByPostId}
             initialCommentsByPhotoId={initialSlice.commentsByPhotoId}
             initialHasMore={initialSlice.hasMore}
+            initialOpenPostId={openPostId ?? undefined}
           />
         )}
       </div>

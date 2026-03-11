@@ -4,5 +4,8 @@ export * from "./queries/rigger-photos";
 export * from "./queries/post-likes";
 export * from "./queries/photo-comments";
 export * from "./queries/bunny-approvals";
+export * from "./queries/direct-messages";
+export * from "./queries/dm";
 export * from "./queries/users";
+export * from "./queries/member-profiles";
 

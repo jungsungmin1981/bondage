@@ -1,11 +1,8 @@
 import Link from "next/link";
-import { db, schema } from "@workspace/db";
+import { getApprovedBunnyProfiles } from "@workspace/db";
 
 export default async function BunniesPage() {
-  const users = await db.select().from(schema.users);
-  const bunnies = users
-    .filter((u) => u.email.startsWith("bunny") && u.email.endsWith("@example.com"))
-    .sort((a, b) => a.email.localeCompare(b.email));
+  const bunnies = await getApprovedBunnyProfiles();
 
   return (
     <main className="mx-auto flex min-h-svh w-full max-w-3xl flex-col gap-4 p-4 sm:p-6">
@@ -15,7 +12,7 @@ export default async function BunniesPage() {
             버니 회원 목록
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {bunnies.length}명 (bunny*@example.com)
+            {bunnies.length}명 (승인된 버니 프로필)
           </p>
         </div>
         <Link
@@ -31,21 +28,23 @@ export default async function BunniesPage() {
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-xs text-muted-foreground">
               <tr>
+                <th className="px-3 py-2 text-left font-medium">닉네임</th>
                 <th className="px-3 py-2 text-left font-medium">이메일</th>
                 <th className="px-3 py-2 text-left font-medium">이름</th>
                 <th className="px-3 py-2 text-left font-medium">생성일</th>
               </tr>
             </thead>
             <tbody className="divide-y">
-              {bunnies.map((u) => (
-                <tr key={u.id} className="hover:bg-muted/30">
+              {bunnies.map((p) => (
+                <tr key={p.id} className="hover:bg-muted/30">
+                  <td className="px-3 py-2">{p.nickname}</td>
                   <td className="px-3 py-2 font-mono text-[12px] sm:text-sm">
-                    {u.email}
+                    {p.email ?? "-"}
                   </td>
-                  <td className="px-3 py-2">{u.name ?? "-"}</td>
+                  <td className="px-3 py-2">{p.userName ?? "-"}</td>
                   <td className="px-3 py-2 text-muted-foreground">
-                    {u.createdAt
-                      ? new Date(u.createdAt).toLocaleString("ko-KR", {
+                    {p.createdAt
+                      ? new Date(p.createdAt).toLocaleString("ko-KR", {
                           year: "numeric",
                           month: "2-digit",
                           day: "2-digit",
@@ -59,10 +58,10 @@ export default async function BunniesPage() {
               {bunnies.length === 0 && (
                 <tr>
                   <td
-                    colSpan={3}
+                    colSpan={4}
                     className="px-3 py-8 text-center text-sm text-muted-foreground"
                   >
-                    버니 더미 계정이 없습니다.
+                    승인된 버니가 없습니다.
                   </td>
                 </tr>
               )}

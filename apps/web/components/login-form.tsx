@@ -13,16 +13,14 @@ import { SocialAuthIcons } from "@/components/social-auth-icons";
 function getLoginErrorMessage(message: string): string {
   const lower = message.toLowerCase();
   if (lower.includes("invalid") && (lower.includes("password") || lower.includes("credential")))
-    return "이메일 또는 비밀번호가 올바르지 않습니다.";
-  if (lower.includes("email_not_found") || lower.includes("email not found"))
-    return "등록되지 않은 이메일입니다.";
+    return "ID 또는 비밀번호가 올바르지 않습니다.";
+  if (lower.includes("user not found") || (lower.includes("username") && lower.includes("not found")))
+    return "등록되지 않은 ID입니다.";
   if (lower.includes("password") && (lower.includes("wrong") || lower.includes("invalid")))
     return "비밀번호가 올바르지 않습니다.";
-  if (lower.includes("user not found"))
-    return "등록된 계정이 없습니다.";
   if (lower.includes("too many") || lower.includes("rate limit"))
     return "시도 횟수가 너무 많습니다. 잠시 후 다시 시도해 주세요.";
-  return "로그인에 실패했습니다. 이메일과 비밀번호를 확인해 주세요.";
+  return "로그인에 실패했습니다. ID와 비밀번호를 확인해 주세요.";
 }
 
 export function LoginForm({
@@ -30,7 +28,7 @@ export function LoginForm({
   ...props
 }: React.ComponentProps<"div">) {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,9 +38,9 @@ export function LoginForm({
     setPending(true);
     setError(null);
 
-    const { error: signInError } = await authClient.signIn.email(
+    const { error: signInError } = await authClient.signIn.username(
       {
-        email,
+        username,
         password,
         callbackURL: "/",
         rememberMe: true,
@@ -83,16 +81,17 @@ export function LoginForm({
 
       <div className="pt-6">
         <form onSubmit={onSubmit} className="flex flex-col gap-6">
-          {/* Email - rounded translucent field */}
+          {/* ID - rounded translucent field */}
           <div className="flex items-center gap-3 rounded-xl border border-blue-400/20 bg-blue-900/40 px-4 py-3 focus-within:border-blue-400/50 focus-within:ring-2 focus-within:ring-blue-400/20">
             <User className="size-5 shrink-0 text-blue-300/90" strokeWidth={1.5} />
             <Input
-              id="email"
-              type="email"
-              placeholder="Username"
+              id="username"
+              type="text"
+              autoComplete="username"
+              placeholder="ID"
               required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={username}
+              onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9]/g, ""))}
               disabled={pending}
               className="min-h-0 flex-1 border-0 bg-transparent p-0 text-blue-100 placeholder:text-blue-300/70 focus-visible:ring-0 focus-visible:ring-offset-0"
             />

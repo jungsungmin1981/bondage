@@ -27,10 +27,10 @@ export function OwnProfileTierColumn({ rigger }: OwnProfileTierColumnProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // 저장 후 refresh 등으로 서버 마크 URL이 바뀌면, 편집 중이 아닐 때만 동기화
+  // 저장 후 refresh 등으로 서버 마크 URL이 바뀌면, 편집 중이 아닐 때만 동기화 (값이 실제로 다를 때만 setState로 루프 방지)
   useEffect(() => {
     if (pendingFile !== null) return;
-    setPendingUrl(initialUrl);
+    setPendingUrl((prev) => (prev !== initialUrl ? initialUrl : prev));
   }, [initialUrl, pendingFile]);
 
   useEffect(() => {
@@ -96,7 +96,7 @@ export function OwnProfileTierColumn({ rigger }: OwnProfileTierColumnProps) {
   useEffect(() => {
     if (!isProfileEditing) {
       setPendingFile(null);
-      setPendingUrl(initialUrl);
+      setPendingUrl((prev) => (prev !== initialUrl ? initialUrl : prev));
     }
   }, [isProfileEditing, initialUrl]);
 

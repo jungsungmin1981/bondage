@@ -3,12 +3,16 @@
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { auth } from "@workspace/auth";
-import { db, schema, getUserIdListByEmails } from "@workspace/db";
+import {
+  db,
+  schema,
+  getUserIdListByEmails,
+  getRiggerProfileByUserId,
+} from "@workspace/db";
 import fs from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
 import sharp from "sharp";
-import { getRiggerIdForUserId } from "@/lib/rigger-sample";
 import {
   getWatermarkConfig,
   resolvePublicFileSync,
@@ -151,11 +155,18 @@ export async function uploadPhoto(
     // 단, 모델이 버니인 경우에는 버니 승인 전까지 항상 승인대기(pending) 상태로 유지한다.
     let visibility: "public" | "private" | "pending" =
       rawVisibility === "private" ? "private" : "public";
+    const visibilityAfterApproval: "public" | "private" | null =
+      model === "bunny"
+        ? rawVisibility === "private"
+          ? "private"
+          : "public"
+        : null;
     if (model === "bunny") {
       visibility = "pending";
     }
 
-    const ownRiggerId = getRiggerIdForUserId(session.user.id);
+    const myRigger = await getRiggerProfileByUserId(session.user.id);
+    const ownRiggerId = myRigger?.id ?? null;
     if (ownRiggerId !== riggerId) {
       return { ok: false, error: "본인 프로필에만 사진을 등록할 수 있습니다." };
     }
@@ -218,6 +229,7 @@ export async function uploadPhoto(
         imagePath: publicPath,
         caption: captionTrim,
         visibility,
+        visibilityAfterApproval,
       });
     }
 

@@ -1,5 +1,6 @@
 import path from "path";
 import { fileURLToPath } from "url";
+import withPWAInit from "@ducanh2912/next-pwa";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -12,7 +13,8 @@ const betterAuthReactPath = path.resolve(
 const nextConfig = {
   experimental: {
     serverActions: {
-      bodySizeLimit: "10mb",
+      // 이미지 자동 압축/리사이즈를 위해 원본 입력은 더 크게 허용
+      bodySizeLimit: "60mb",
     },
   },
   transpilePackages: ["@workspace/ui", "better-auth"],
@@ -25,4 +27,8 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+const withPWA = withPWAInit({
+  dest: "public",
+  disable: process.env.NODE_ENV === "development",
+});
+export default withPWA(nextConfig);

@@ -1,9 +1,10 @@
 import { headers } from "next/headers";
 import { auth } from "@workspace/auth";
 import {
-  getAllPendingApprovals,
-  getPendingApprovalsForBunny,
+  getAllApprovalRequests,
+  getApprovalRequestsForBunny,
 } from "@workspace/db";
+import { isAdmin } from "@/lib/admin";
 import { BunnyApprovalsList } from "./bunny-approvals-list";
 
 export default async function BunnyApprovalsPage() {
@@ -12,30 +13,24 @@ export default async function BunnyApprovalsPage() {
   if (!session) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-10">
-        <h1 className="text-lg font-semibold">버니 승인요청</h1>
+        <h1 className="text-lg font-semibold">승인 요청</h1>
         <p className="mt-4 text-sm text-muted-foreground">
-          버니 승인요청을 보려면 먼저 로그인해 주세요.
+          승인 요청을 보려면 먼저 로그인해 주세요.
         </p>
       </div>
     );
   }
 
-  const adminEmail = process.env.ADMIN_EMAIL;
-  const isAdmin =
-    typeof adminEmail === "string" &&
-    adminEmail.length > 0 &&
-    session.user.email === adminEmail;
-
-  const items = isAdmin
-    ? await getAllPendingApprovals()
-    : await getPendingApprovalsForBunny(session.user.id);
+  const items = isAdmin(session)
+    ? await getAllApprovalRequests()
+    : await getApprovalRequestsForBunny(session.user.id);
 
   if (items.length === 0) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-10">
-        <h1 className="text-lg font-semibold">버니 승인요청</h1>
+        <h1 className="text-lg font-semibold">승인 요청</h1>
         <p className="mt-4 text-sm text-muted-foreground">
-          현재 대기 중인 승인요청이 없습니다.
+          승인요청 내역이 없습니다.
         </p>
       </div>
     );
@@ -43,7 +38,7 @@ export default async function BunnyApprovalsPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
-      <h1 className="text-lg font-semibold">버니 승인요청</h1>
+      <h1 className="text-lg font-semibold">승인 요청</h1>
       <BunnyApprovalsList items={items} />
     </div>
   );

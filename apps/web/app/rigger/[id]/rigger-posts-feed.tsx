@@ -39,6 +39,8 @@ type Props = {
   initialLikeByPostId: Record<string, { count: number; liked: boolean }>;
   initialCommentsByPhotoId: Record<string, unknown[]>;
   initialHasMore: boolean;
+  /** 이 postId에 해당하는 게시물 상세 다이얼로그를 마운트 시 자동으로 연다 (예: ?postId=xxx) */
+  initialOpenPostId?: string;
 };
 
 function PostCard({
@@ -47,15 +49,17 @@ function PostCard({
   sessionUserId,
   like,
   initialComments,
+  openDetailInitially,
 }: {
   post: SerializedPost;
   riggerId: string;
   sessionUserId: string;
   like: { count: number; liked: boolean };
   initialComments: React.ComponentProps<typeof PostCommentBlock>["initialComments"];
+  openDetailInitially?: boolean;
 }) {
   const router = useRouter();
-  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(!!openDetailInitially);
   const [editOpen, setEditOpen] = useState(false);
   const [visibility, setVisibility] = useState<"public" | "private" | "pending">(
     "public",
@@ -600,6 +604,7 @@ export function RiggerPostsFeed({
   initialLikeByPostId,
   initialCommentsByPhotoId,
   initialHasMore,
+  initialOpenPostId,
 }: Props) {
   const [posts, setPosts] = useState<SerializedPost[]>(initialPosts);
   const [likeByPostId, setLikeByPostId] = useState(initialLikeByPostId);
@@ -679,6 +684,7 @@ export function RiggerPostsFeed({
                 typeof PostCommentBlock
               >["initialComments"]
             }
+            openDetailInitially={post.postId === initialOpenPostId}
           />
         ))}
       </ul>

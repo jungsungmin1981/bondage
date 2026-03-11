@@ -60,6 +60,7 @@ function ToggleGroupItem({
   children,
   variant = "default",
   size = "default",
+  type = "button",
   ...props
 }: React.ComponentProps<typeof ToggleGroupPrimitive.Item> &
   VariantProps<typeof toggleVariants>) {
@@ -67,6 +68,7 @@ function ToggleGroupItem({
 
   return (
     <ToggleGroupPrimitive.Item
+      type={type}
       data-slot="toggle-group-item"
       data-variant={context.variant || variant}
       data-size={context.size || size}

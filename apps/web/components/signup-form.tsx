@@ -15,23 +15,57 @@ const inputBoxClass =
 const inputFieldClass =
   "min-h-0 flex-1 border-0 bg-transparent p-0 text-blue-100 placeholder:text-blue-300/70 focus-visible:ring-0 focus-visible:ring-offset-0";
 
-/** 회원가입 실패 시 서버 메시지를 한글로 변환 */
-function getSignupErrorMessage(message: string): string {
-  const lower = message.toLowerCase();
+/** 에러 객체에서 읽을 수 있는 메시지 문자열 추출 */
+function extractErrorMessage(err: unknown): string {
+  if (err == null) return "";
+  if (typeof err === "string") return err.trim();
+  if (typeof err === "object") {
+    const o = err as Record<string, unknown>;
+    if (typeof o.message === "string") return o.message.trim();
+    if (typeof o.error === "string") return o.error.trim();
+    if (typeof o.msg === "string") return o.msg.trim();
+    if (o.body != null) {
+      const bodyMsg = extractErrorMessage(o.body);
+      if (bodyMsg) return bodyMsg;
+    }
+    if (o.data && typeof o.data === "object" && typeof (o.data as Record<string, unknown>).message === "string")
+      return String((o.data as Record<string, unknown>).message).trim();
+    if (o.cause != null) return extractErrorMessage(o.cause);
+  }
+  return "";
+}
+
+/** 회원가입 실패 시 서버 메시지를 한글로 변환. 매칭 안 되면 원인 메시지를 붙여서 반환 */
+function getSignupErrorMessage(message: unknown): string {
+  const text = (
+    typeof message === "string" ? message : extractErrorMessage(message)
+  ).trim();
+  const lower = (text === "[object Object]" ? "" : text).toLowerCase();
   if (lower.includes("already exists") || lower.includes("use another email"))
     return "이미 가입된 이메일입니다. 다른 이메일을 사용해 주세요.";
+  if (lower.includes("username") && (lower.includes("taken") || lower.includes("already")))
+    return "이미 사용 중인 아이디입니다.";
   if (lower.includes("email already") || lower.includes("email is already"))
     return "이미 사용 중인 이메일입니다.";
   if (lower.includes("invalid email"))
     return "올바른 이메일 형식이 아닙니다.";
   if (lower.includes("password") && (lower.includes("short") || lower.includes("length")))
     return "비밀번호는 8자 이상이어야 합니다.";
+  if (lower.includes("username") && lower.includes("invalid"))
+    return "아이디는 영문, 숫자만 사용할 수 있습니다.";
+  const display = text === "[object Object]" ? "" : text;
+  if (display) return `회원가입에 실패했습니다. (${display})`;
   return "회원가입에 실패했습니다. 입력 내용을 확인해 주세요.";
+}
+
+const ID_PATTERN = /^[a-zA-Z0-9]*$/;
+function isValidId(value: string): boolean {
+  return ID_PATTERN.test(value);
 }
 
 export function SignupForm({ className, ...props }: React.ComponentProps<"div">) {
   const router = useRouter();
-  const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -41,6 +75,11 @@ export function SignupForm({ className, ...props }: React.ComponentProps<"div">)
   const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
+    const trimmedId = username.trim();
+    if (!isValidId(trimmedId)) {
+      setError("아이디는 영문, 숫자만 사용할 수 있습니다.");
+      return;
+    }
     if (password !== confirmPassword) {
       setError("비밀번호가 일치하지 않습니다.");
       return;
@@ -51,25 +90,22 @@ export function SignupForm({ className, ...props }: React.ComponentProps<"div">)
       {
         email,
         password,
-        name,
-        callbackURL: "/",
+        name: trimmedId || email,
+        username: trimmedId,
+        callbackURL: "/onboarding",
       },
       {
         onError: (ctx) => {
-          setError(getSignupErrorMessage(ctx.error.message));
+          setError(getSignupErrorMessage(ctx.error));
         },
       },
     );
 
     setPending(false);
     if (signUpError) {
-      const msg =
-        typeof signUpError === "string"
-          ? signUpError
-          : (signUpError as { message?: string }).message ?? "Sign up failed";
-      setError((prev) => prev ?? getSignupErrorMessage(msg));
+      setError((prev) => prev ?? getSignupErrorMessage(signUpError));
     } else {
-      router.push("/");
+      router.push("/onboarding");
     }
   };
 
@@ -92,12 +128,16 @@ export function SignupForm({ className, ...props }: React.ComponentProps<"div">)
           <div className={inputBoxClass}>
             <User className="size-5 shrink-0 text-blue-300/90" strokeWidth={1.5} />
             <Input
-              id="name"
+              id="username"
               type="text"
-              placeholder="ID"
+              autoComplete="username"
+              placeholder="아이디 (영문, 숫자)"
               required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              value={username}
+              onChange={(e) => {
+                const v = e.target.value.replace(/[^a-zA-Z0-9]/g, "");
+                setUsername(v);
+              }}
               disabled={pending}
               className={inputFieldClass}
             />
@@ -107,7 +147,8 @@ export function SignupForm({ className, ...props }: React.ComponentProps<"div">)
             <Input
               id="email"
               type="email"
-              placeholder="Email ID"
+              autoComplete="email"
+              placeholder="이메일"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}

@@ -34,15 +34,22 @@ const navItems = [
   { label: "뽐내기", href: "/showoff" },
   { label: "워터마크", href: "/watermark" },
   { label: "버니", href: "/bunnies" },
-  { label: "버니 승인요청", href: "/bunny-approvals" },
+  { label: "승인 요청", href: "/bunny-approvals" },
+  { label: "리거 승인", href: "/admin/riggers" },
+  { label: "회원 종류 선택", href: "/onboarding" },
 ] as const;
 
 const navLinkClass =
   "block min-h-[44px] w-full rounded-lg px-4 py-3 text-left text-sm font-medium transition-colors hover:bg-muted focus:bg-muted focus-visible:ring-2 focus-visible:ring-ring";
 
-export function MainNav() {
+export function MainNav({
+  pendingBunnyApprovalsCount,
+}: {
+  pendingBunnyApprovalsCount?: number;
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const pendingCount = pendingBunnyApprovalsCount ?? 0;
 
   return (
     <>
@@ -95,7 +102,18 @@ export function MainNav() {
                       pathname === item.href && "bg-muted font-semibold",
                     )}
                   >
-                    {item.label}
+                    <span className="inline-flex items-center gap-2">
+                      <span>{item.label}</span>
+                      {item.href === "/bunny-approvals" && pendingCount > 0 && (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-blue-600/30 bg-blue-50/60 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-blue-700">
+                          <span className="relative inline-flex h-2 w-2">
+                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-600/60 opacity-50" />
+                            <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-600" />
+                          </span>
+                          {pendingCount}
+                        </span>
+                      )}
+                    </span>
                   </Link>
                 ),
               )}
@@ -150,7 +168,20 @@ export function MainNav() {
               )}
               asChild
             >
-              <Link href={item.href}>{item.label}</Link>
+              <Link href={item.href}>
+                <span className="inline-flex items-center gap-2">
+                  <span>{item.label}</span>
+                  {item.href === "/bunny-approvals" && pendingCount > 0 && (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-blue-600/30 bg-blue-50/60 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-blue-700">
+                      <span className="relative inline-flex h-2 w-2">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-600/60 opacity-50" />
+                        <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-600" />
+                      </span>
+                      {pendingCount}
+                    </span>
+                  )}
+                </span>
+              </Link>
             </Button>
           ),
         )}

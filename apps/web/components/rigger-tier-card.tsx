@@ -39,7 +39,7 @@ function TierMarkCircle({
         <img
           src={markImageUrl!}
           alt=""
-          className="h-full w-full object-cover object-center"
+          className="h-full w-full object-contain object-center bg-black/90"
         />
       ) : (
         <div className="flex h-full w-full items-center justify-center">

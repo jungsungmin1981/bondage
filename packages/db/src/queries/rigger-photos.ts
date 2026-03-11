@@ -1,4 +1,4 @@
-import { and, desc, eq, ne, or } from "drizzle-orm";
+import { and, asc, desc, eq, ne, or } from "drizzle-orm";
 import { db } from "../client/node";
 import * as schema from "../schema";
 
@@ -47,6 +47,24 @@ export function groupPhotosByPost(photos: RiggerPhotoRow[]): RiggerPhotoPost[] {
 export async function getRiggerPhotoPosts(riggerId: string): Promise<RiggerPhotoPost[]> {
   const photos = await getRiggerPhotos(riggerId);
   return groupPhotosByPost(photos);
+}
+
+/** postId 기준 해당 게시물의 사진 목록 (모달 상세용). created_at 오름차순. */
+export async function getPhotosByPostId(
+  postId: string,
+): Promise<{ imagePath: string; caption: string | null }[]> {
+  const rows = await db
+    .select({
+      imagePath: schema.riggerPhotos.imagePath,
+      caption: schema.riggerPhotos.caption,
+    })
+    .from(schema.riggerPhotos)
+    .where(eq(schema.riggerPhotos.postId, postId))
+    .orderBy(asc(schema.riggerPhotos.createdAt));
+  return rows.map((r) => ({
+    imagePath: r.imagePath,
+    caption: r.caption,
+  }));
 }
 
 /**
@@ -109,6 +127,22 @@ export async function updateRiggerPostVisibilityOwnedByUser(
     )
     .returning({ id: schema.riggerPhotos.id });
   return updated.length;
+}
+
+/**
+ * postId에 해당하는 rigger_photos 한 건의 visibility_after_approval 조회.
+ * 버니 승인 완료 시 적용할 공개/비공개 결정에 사용. null이면 호출부에서 public으로 처리.
+ */
+export async function getVisibilityAfterApprovalByPostId(
+  postId: string,
+): Promise<"public" | "private" | null> {
+  const rows = await db
+    .select({ visibilityAfterApproval: schema.riggerPhotos.visibilityAfterApproval })
+    .from(schema.riggerPhotos)
+    .where(eq(schema.riggerPhotos.postId, postId))
+    .limit(1);
+  const v = rows[0]?.visibilityAfterApproval;
+  return v === "private" ? "private" : v === "public" ? "public" : null;
 }
 
 /**

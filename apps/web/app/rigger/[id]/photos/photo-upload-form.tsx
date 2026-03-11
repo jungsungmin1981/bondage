@@ -74,18 +74,16 @@ export function PhotoUploadForm({ riggerId }: Props) {
     let cancelled = false;
     setBunnyLoading(true);
     setBunnyLoadError(null);
-    fetch("/api/users")
+    fetch("/api/bunnies")
       .then(async (res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = (await res.json()) as unknown;
         if (!Array.isArray(data)) throw new Error("Invalid response");
-        const parsed = data
-          .map((u: any) => ({
-            id: String(u?.id ?? ""),
-            email: String(u?.email ?? ""),
-            name: u?.name == null ? null : String(u.name),
-          }))
-          .filter((u) => u.email.startsWith("bunny") && u.email.endsWith("@example.com"));
+        const parsed = data.map((u: { id?: string; email?: string; name?: string | null }) => ({
+          id: String(u?.id ?? ""),
+          email: String(u?.email ?? ""),
+          name: u?.name == null ? null : String(u.name),
+        }));
         if (!cancelled) setBunnyUsers(parsed);
       })
       .catch((e) => {
