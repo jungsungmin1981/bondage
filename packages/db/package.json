@@ -21,7 +21,9 @@
     "db:studio": "drizzle-kit studio --host localhost --port 4983",
     "lint": "eslint",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:ensure-class-posts": "tsx scripts/ensure-class-posts.ts",
+    "db:ensure-class-challenges": "tsx scripts/ensure-class-challenges.ts"
   },
   "dependencies": {
     "dotenv": "^17.3.1",

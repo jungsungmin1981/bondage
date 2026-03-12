@@ -8,6 +8,7 @@ import {
   getPublicDirSync,
   type WatermarkConfig,
 } from "@/lib/watermark-config";
+import sharp from "sharp";
 
 function getConfigFilePath(): string {
   return path.join(getPublicDirSync(), "watermark-config.json");
@@ -56,7 +57,11 @@ export async function uploadWatermarkImage(
   try {
     await fs.mkdir(dir, { recursive: true });
     const buffer = Buffer.from(await file.arrayBuffer());
-    await fs.writeFile(filePath, buffer);
+    const resized = await sharp(buffer)
+      .resize({ width: 1600, withoutEnlargement: true })
+      .png()
+      .toBuffer();
+    await fs.writeFile(filePath, resized);
     return { ok: true, url: "/watermark.png" };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "이미지 저장에 실패했습니다." };

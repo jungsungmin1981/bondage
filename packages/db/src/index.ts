@@ -8,4 +8,6 @@ export * from "./queries/direct-messages";
 export * from "./queries/dm";
 export * from "./queries/users";
 export * from "./queries/member-profiles";
+export * from "./queries/class-posts";
+export * from "./queries/class-challenges";
 

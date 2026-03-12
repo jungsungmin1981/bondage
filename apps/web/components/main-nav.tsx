@@ -23,7 +23,7 @@ import {
 const navItems = [
   { label: "리거", href: "/rigger" },
   {
-    label: "클레스",
+    label: "클래스",
     sub: [
       { label: "초급", href: "/class/beginner" },
       { label: "중급", href: "/class/intermediate" },
@@ -37,7 +37,7 @@ const navItems = [
 ] as const;
 
 const navLinkClass =
-  "block min-h-[44px] w-full rounded-lg px-4 py-3 text-left text-sm font-medium transition-colors hover:bg-muted focus:bg-muted focus-visible:ring-2 focus-visible:ring-ring";
+  "block min-h-[44px] w-full rounded-lg px-4 py-3 text-left text-sm font-medium text-foreground transition-colors hover:bg-muted focus:bg-muted focus-visible:ring-2 focus-visible:ring-ring";
 
 export function MainNav({
   pendingBunnyApprovalsCount,
@@ -71,7 +71,7 @@ export function MainNav({
               {navItems.map((item) =>
                 "sub" in item ? (
                   <div key={item.label} className="flex flex-col gap-0.5">
-                    <span className="px-4 py-2 text-xs font-semibold text-muted-foreground">
+                    <span className="px-4 py-2 text-xs font-semibold text-foreground">
                       {item.label}
                     </span>
                     {item.sub.map((sub) => (
@@ -119,7 +119,7 @@ export function MainNav({
         </Sheet>
       </div>
 
-      {/* PC: 가로 메뉴 + 클레스 드롭다운 */}
+      {/* PC: 가로 메뉴 + 클래스 드롭다운 */}
       <nav
         className="hidden items-center gap-1 md:flex"
         aria-label="메인 메뉴"

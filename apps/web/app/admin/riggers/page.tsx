@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { auth } from "@workspace/auth";
 import { getPendingRiggerProfiles } from "@workspace/db";
 import { isAdmin } from "@/lib/admin";
+import { getRiggerOverride } from "@/lib/rigger-overrides";
 import { RiggerApprovalsList } from "./rigger-approvals-list";
 
 export default async function AdminRiggersPage() {
@@ -29,7 +30,14 @@ export default async function AdminRiggersPage() {
     );
   }
 
-  const items = await getPendingRiggerProfiles();
+  const rows = await getPendingRiggerProfiles();
+
+  const items = await Promise.all(
+    rows.map(async (row) => {
+      const override = await getRiggerOverride(row.id);
+      return { ...row, markImageUrl: override?.markImageUrl ?? null };
+    }),
+  );
 
   if (items.length === 0) {
     return (

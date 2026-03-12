@@ -10,7 +10,7 @@ export default async function ClassIntermediatePage() {
 
   return (
     <div className="min-h-[calc(100svh-3.5rem)] p-4 sm:p-6">
-      <h1 className="text-xl font-semibold sm:text-2xl">클레스 · 중급</h1>
+      <h1 className="text-xl font-semibold sm:text-2xl">클래스 · 중급</h1>
       <p className="mt-2 text-sm text-muted-foreground">
         중급 클래스 콘텐츠가 이곳에 표시됩니다.
       </p>

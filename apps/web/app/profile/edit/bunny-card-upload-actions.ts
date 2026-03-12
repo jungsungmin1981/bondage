@@ -7,14 +7,13 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@workspace/auth";
 import { getBunnyProfileById, updateMemberProfile } from "@workspace/db";
 import { getPublicDirSync } from "@/lib/watermark-config";
+import { resizeToJpeg } from "@/lib/image/resize";
 
 const ALLOWED = ["image/jpeg", "image/png", "image/webp"];
 
-function bunnyCardFileName(profileId: string, mime: string): string {
+function bunnyCardFileName(profileId: string): string {
   const safe = profileId.replace(/[^a-zA-Z0-9_-]/g, "_");
-  const ext =
-    mime === "image/png" ? "png" : mime === "image/webp" ? "webp" : "jpg";
-  return `bunny-${safe}.${ext}`;
+  return `bunny-${safe}.jpg`;
 }
 
 /**
@@ -42,14 +41,15 @@ export async function uploadBunnyCardImage(
 
   const publicDir = getPublicDirSync();
   const marksDir = path.join(publicDir, "marks");
-  const name = bunnyCardFileName(profileId, file.type);
+  const name = bunnyCardFileName(profileId);
   const filePath = path.join(marksDir, name);
   const url = `/marks/${name}?t=${Date.now()}`;
 
   try {
     await fs.mkdir(marksDir, { recursive: true });
     const buffer = Buffer.from(await file.arrayBuffer());
-    await fs.writeFile(filePath, buffer);
+    const resized = await resizeToJpeg(buffer);
+    await fs.writeFile(filePath, resized);
   } catch (e) {
     return {
       ok: false,

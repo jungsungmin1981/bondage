@@ -52,11 +52,11 @@ export default async function RiggerPage() {
         </p>
       ) : (
         <div className="flex flex-col gap-10">
-          {TIER_ORDER.map((tier) => (
+          {TIER_ORDER.map((tier, idx) => (
             <RiggerTierSection
               key={tier}
               tier={tier}
-              riggers={riggersByTier[TIER_ORDER.indexOf(tier)]}
+              riggers={riggersByTier[idx] ?? []}
             />
           ))}
         </div>

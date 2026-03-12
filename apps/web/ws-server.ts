@@ -1,7 +1,7 @@
 import http from "http";
 import crypto from "crypto";
 import dotenv from "dotenv";
-import { WebSocketServer, type WebSocket } from "ws";
+import { WebSocketServer, type RawData, type WebSocket } from "ws";
 import { and, eq } from "drizzle-orm";
 
 // @workspace/db는 import 시점에 DB client를 만들며 env가 필요하므로, 최우선으로 .env를 로드한다.
@@ -115,37 +115,50 @@ server.on("upgrade", (req, socket, head) => {
     socket.destroy();
     return;
   }
-  wss.handleUpgrade(req, socket, head, (ws) => {
+  wss.handleUpgrade(req, socket, head, (ws: WebSocket) => {
     ctxBySocket.set(ws, { userId: verified.userId, threads: new Set() });
     wss.emit("connection", ws, req);
   });
 });
 
-wss.on("connection", (ws) => {
-  ws.on("message", async (data) => {
+wss.on("connection", (ws: WebSocket) => {
+  ws.on("message", async (data: RawData) => {
     const ctx = ctxBySocket.get(ws);
     if (!ctx) return;
-    let msg: any;
+    let msg: unknown;
     try {
       msg = JSON.parse(String(data));
     } catch {
       return;
     }
-    if (msg?.type === "subscribe" && typeof msg.threadId === "string") {
+    if (
+      typeof msg === "object" &&
+      msg != null &&
+      "type" in msg &&
+      (msg as any).type === "subscribe" &&
+      typeof (msg as any).threadId === "string"
+    ) {
       try {
-        await assertParticipant(msg.threadId, ctx.userId);
-        ctx.threads.add(msg.threadId);
-        const set = socketsByThread.get(msg.threadId) ?? new Set<WebSocket>();
-        socketsByThread.set(msg.threadId, set);
+        const threadId = (msg as any).threadId as string;
+        await assertParticipant(threadId, ctx.userId);
+        ctx.threads.add(threadId);
+        const set = socketsByThread.get(threadId) ?? new Set<WebSocket>();
+        socketsByThread.set(threadId, set);
         set.add(ws);
-        ws.send(JSON.stringify({ type: "subscribed", threadId: msg.threadId }));
+        ws.send(JSON.stringify({ type: "subscribed", threadId }));
       } catch {
         ws.send(JSON.stringify({ type: "error", error: "권한이 없습니다." }));
       }
       return;
     }
-    if (msg?.type === "unsubscribe" && typeof msg.threadId === "string") {
-      const t = msg.threadId;
+    if (
+      typeof msg === "object" &&
+      msg != null &&
+      "type" in msg &&
+      (msg as any).type === "unsubscribe" &&
+      typeof (msg as any).threadId === "string"
+    ) {
+      const t = (msg as any).threadId as string;
       ctx.threads.delete(t);
       const set = socketsByThread.get(t);
       set?.delete(ws);

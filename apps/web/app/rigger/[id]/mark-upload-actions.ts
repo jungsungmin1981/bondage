@@ -6,15 +6,14 @@ import path from "path";
 import { auth } from "@workspace/auth";
 import { getRiggerProfileById } from "@workspace/db";
 import { getPublicDirSync } from "@/lib/watermark-config";
+import { resizeToJpeg } from "@/lib/image/resize";
 
 const ALLOWED = ["image/jpeg", "image/png", "image/webp"];
 
 /** public/marks 아래 안전한 파일명 (rigger id + 확장자) */
-function markFileName(riggerId: string, mime: string): string {
+function markFileName(riggerId: string): string {
   const safe = riggerId.replace(/[^a-zA-Z0-9_-]/g, "_");
-  const ext =
-    mime === "image/png" ? "png" : mime === "image/webp" ? "webp" : "jpg";
-  return `custom-${safe}.${ext}`;
+  return `custom-${safe}.jpg`;
 }
 
 /**
@@ -42,14 +41,15 @@ export async function uploadRiggerMarkImage(
 
   const publicDir = getPublicDirSync();
   const marksDir = path.join(publicDir, "marks");
-  const name = markFileName(riggerId, file.type);
+  const name = markFileName(riggerId);
   const filePath = path.join(marksDir, name);
   const url = `/marks/${name}`;
 
   try {
     await fs.mkdir(marksDir, { recursive: true });
     const buffer = Buffer.from(await file.arrayBuffer());
-    await fs.writeFile(filePath, buffer);
+    const resized = await resizeToJpeg(buffer);
+    await fs.writeFile(filePath, resized);
     // 동일 경로 덮어쓰기 시 브라우저 캐시로 예전 이미지가 보이는 것 방지
     const urlWithBust = `${url}?t=${Date.now()}`;
     return { ok: true, url: urlWithBust };

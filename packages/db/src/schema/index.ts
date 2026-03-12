@@ -12,4 +12,6 @@ export * from "./dm-thread";
 export * from "./dm-participant";
 export * from "./dm-message";
 export * from "./dm-attachment";
+export * from "./class-post";
+export * from "./class-challenge";
 

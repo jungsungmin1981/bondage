@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { db } from "../client/node";
 import * as schema from "../schema";
 
@@ -226,7 +226,8 @@ export async function getPendingRiggerProfiles(): Promise<
       eq(schema.memberProfiles.memberType, "rigger"),
       eq(schema.memberProfiles.status, "pending"),
     ),
-  );
+  )
+    .orderBy(asc(schema.memberProfiles.createdAt));
   return rows.map((r) => ({
     id: r.id,
     userId: r.userId,

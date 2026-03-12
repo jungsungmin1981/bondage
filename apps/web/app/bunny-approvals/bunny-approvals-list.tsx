@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { approveBunnyPost, rejectBunnyPost } from "./actions";
 import { Button } from "@workspace/ui/components/button";
@@ -30,13 +30,37 @@ function formatTime(d: Date): string {
   return new Date(d).toLocaleString("ko-KR");
 }
 
-function getTimes(item: BunnyApprovalItem): {
-  requestTime: string;
-  resultTime: string | null;
-} {
-  const requestTime = formatTime(item.createdAt);
-  if (item.status === "approved" || item.status === "rejected") {
-    const resultTime = item.updatedAt ? formatTime(item.updatedAt) : requestTime;
+/** 요청 시간을 "n분 전" 형태로 표시 (pending용) */
+function formatRelativeTime(d: Date): string {
+  const now = Date.now();
+  const then = new Date(d).getTime();
+  const diffMs = now - then;
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHour = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHour / 24);
+
+  if (diffSec < 10) return "방금";
+  if (diffSec < 60) return `${diffSec}초 전`;
+  if (diffMin < 60) return `${diffMin}분 전`;
+  if (diffHour < 24) return `${diffHour}시간 전`;
+  if (diffDay < 7) return `${diffDay}일 전`;
+  return formatTime(d);
+}
+
+function getTimes(
+  item: BunnyApprovalItem,
+  options?: { useRelativeForPending?: boolean },
+): { requestTime: string; resultTime: string | null } {
+  const isProcessed = item.status === "approved" || item.status === "rejected";
+  const requestTime =
+    isProcessed
+      ? formatTime(item.createdAt)
+      : options?.useRelativeForPending
+        ? formatRelativeTime(item.createdAt)
+        : formatTime(item.createdAt);
+  if (isProcessed) {
+    const resultTime = item.updatedAt ? formatTime(item.updatedAt) : formatTime(item.createdAt);
     return { requestTime, resultTime };
   }
   return { requestTime, resultTime: null };
@@ -48,11 +72,14 @@ export function BunnyApprovalsList({
   items: BunnyApprovalItem[];
 }) {
   const router = useRouter();
+  const [hasMounted, setHasMounted] = useState(false);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<BunnyApprovalItem | null>(
     null,
   );
+
+  useEffect(() => setHasMounted(true), []);
 
   const handleApprove = async (approvalId: string) => {
     setPendingId(approvalId);
@@ -82,7 +109,7 @@ export function BunnyApprovalsList({
     <ul className="mt-6 space-y-3">
       {items.map((item) => {
         const isProcessed = item.status === "approved" || item.status === "rejected";
-        const { requestTime, resultTime } = getTimes(item);
+        const { requestTime, resultTime } = getTimes(item, { useRelativeForPending: hasMounted });
         return (
           <li
             key={item.approvalId}
@@ -176,8 +203,12 @@ export function BunnyApprovalsList({
                 </span>
               </p>
               {item.status === "pending" && (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  승인 요청 : {requestTime}
+                <p className="mt-1 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-700">
+                  <span className="relative inline-flex h-1.5 w-1.5 shrink-0">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-600 opacity-60" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-blue-600" />
+                  </span>
+                  {requestTime}
                 </p>
               )}
               {item.status === "approved" && (

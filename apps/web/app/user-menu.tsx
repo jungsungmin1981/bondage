@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@workspace/ui/components/button";
@@ -12,13 +12,19 @@ export function UserMenu() {
   const pathname = usePathname();
   const [nickname, setNickname] = useState<string | null>(null);
   const [profileLink, setProfileLink] = useState<string | null>(null);
+  const lastFetchedUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!session?.user?.id) {
       setNickname(null);
       setProfileLink(null);
+      lastFetchedUserIdRef.current = null;
       return;
     }
+    if (lastFetchedUserIdRef.current === session.user.id) {
+      return;
+    }
+    lastFetchedUserIdRef.current = session.user.id;
     fetch("/api/me/profile")
       .then((res) => res.json())
       .then(

@@ -11,6 +11,12 @@ const betterAuthReactPath = path.resolve(
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "**.amazonaws.com", pathname: "/**" },
+      { protocol: "https", hostname: "**.cloudfront.net", pathname: "/**" },
+    ],
+  },
   experimental: {
     serverActions: {
       // 이미지 자동 압축/리사이즈를 위해 원본 입력은 더 크게 허용

@@ -30,7 +30,7 @@ export function RiggerTierSection({
       >
         {label}
       </h2>
-      <ul className="grid list-none grid-cols-3 gap-8 sm:grid-cols-4 sm:gap-8 lg:grid-cols-5 lg:gap-8">
+      <ul className="grid list-none grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-6 lg:grid-cols-5 lg:gap-8">
         {riggers.map((rigger) => (
           <li key={rigger.id} className="min-w-0">
             <Link

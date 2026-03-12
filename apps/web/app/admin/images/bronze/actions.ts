@@ -5,6 +5,7 @@ import { auth } from "@workspace/auth";
 import fs from "fs/promises";
 import path from "path";
 import { resolvePublicFileSync } from "@/lib/watermark-config";
+import { resizeCardToPng } from "@/lib/image/resize";
 
 function getBronzeCardImagePath(): string {
   return resolvePublicFileSync("/rigger-card-bronze.png");
@@ -32,7 +33,8 @@ export async function uploadBronzeCardImage(
   try {
     await fs.mkdir(dir, { recursive: true });
     const buffer = Buffer.from(await file.arrayBuffer());
-    await fs.writeFile(filePath, buffer);
+    const resized = await resizeCardToPng(buffer);
+    await fs.writeFile(filePath, resized);
     return { ok: true, url: "/rigger-card-bronze.png" };
   } catch (e) {
     return {
