@@ -3,7 +3,7 @@
 import type { FormEvent } from "react";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
+import { CheckCircle, ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
@@ -29,7 +29,9 @@ export function ClassImagePreviewClient({ cards }: Props) {
   const [photoIndex, setPhotoIndex] = useState(0);
   const [challengeOpen, setChallengeOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [hasMyChallenge, setHasMyChallenge] = useState<boolean | null>(null);
+  const [myChallengeStatus, setMyChallengeStatus] = useState<
+    "pending" | "approved" | "rejected" | null
+  >(null);
   const touchStartX = useRef<number | null>(null);
 
   useEffect(() => {
@@ -38,20 +40,21 @@ export function ClassImagePreviewClient({ cards }: Props) {
 
   useEffect(() => {
     if (!active?.id) {
-      setHasMyChallenge(null);
+      setMyChallengeStatus(null);
       return;
     }
+    setMyChallengeStatus(active.myChallengeStatus ?? null);
     let cancelled = false;
     getMyChallengeForClassPostAction(active.id).then((res) => {
-      if (!cancelled) setHasMyChallenge(res.hasChallenge);
+      if (!cancelled) setMyChallengeStatus(res.status);
     });
     return () => {
       cancelled = true;
     };
-  }, [active?.id]);
+  }, [active?.id, active?.myChallengeStatus]);
 
   const onChallengeSuccess = useCallback(() => {
-    setHasMyChallenge(true);
+    setMyChallengeStatus("pending");
   }, []);
 
   const previewPhotos =
@@ -222,13 +225,21 @@ export function ClassImagePreviewClient({ cards }: Props) {
 
                     {/* 도전 아이콘 버튼 카드 */}
                     <div className="flex items-center justify-center rounded-xl border border-border bg-card px-3 py-1">
-                      {hasMyChallenge === true ? (
+                      {myChallengeStatus === "pending" ? (
                         <span
                           className="flex items-center justify-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-700 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-300 sm:text-sm"
                           aria-label="심사중"
                         >
                           <Clock className="h-4 w-4 shrink-0 sm:h-4 sm:w-4" strokeWidth={2} />
                           심사중
+                        </span>
+                      ) : myChallengeStatus === "approved" ? (
+                        <span
+                          className="flex items-center justify-center gap-2 rounded-lg border border-green-600/30 bg-green-500/10 px-3 py-1.5 text-xs font-medium text-green-700 dark:border-green-500/30 dark:bg-green-400/10 dark:text-green-300 sm:text-sm"
+                          aria-label="완료"
+                        >
+                          <CheckCircle className="h-4 w-4 shrink-0 sm:h-4 sm:w-4" strokeWidth={2} />
+                          완료
                         </span>
                       ) : (
                         <button
@@ -251,6 +262,39 @@ export function ClassImagePreviewClient({ cards }: Props) {
                     </div>
                   </div>
                 )}
+
+              {/* 도전 통계 */}
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                {(() => {
+                  const approved = active.challengeApprovedCount ?? 0;
+                  const pending = active.challengePendingCount ?? 0;
+                  const rejected = active.challengeRejectedCount ?? 0;
+                  if (approved === 0 && pending === 0) {
+                    return (
+                      <span className="inline-flex items-center rounded-md border border-emerald-600/30 bg-emerald-50/50 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-400">
+                        첫 클리어에 도전하세요!
+                      </span>
+                    );
+                  }
+                  return (
+                    <>
+                      <span className="inline-flex items-center rounded-md border border-green-600/30 bg-green-50/50 px-2 py-0.5 text-xs font-medium text-green-700 dark:border-green-500/30 dark:bg-green-950/40 dark:text-green-400">
+                        성공 {approved}
+                      </span>
+                      {pending > 0 && (
+                        <span className="inline-flex items-center rounded-md border border-blue-600/30 bg-blue-50/50 px-2 py-0.5 text-xs font-medium text-blue-700 dark:border-blue-500/30 dark:bg-blue-950/40 dark:text-blue-400">
+                          심사중 {pending}
+                        </span>
+                      )}
+                      {rejected > 0 && (
+                        <span className="inline-flex items-center rounded-md border border-red-600/30 bg-red-50/50 px-2 py-0.5 text-xs font-medium text-red-700 dark:border-red-500/30 dark:bg-red-950/40 dark:text-red-400">
+                          실패 {rejected}
+                        </span>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
 
               {/* 설명 구역 */}
               {active.description?.trim() && (
@@ -331,6 +375,10 @@ function ClassChallengeDialog({
     e.preventDefault();
     if (!note.trim()) {
       alert("메모를 입력해주세요.");
+      return;
+    }
+    if (files.length === 0) {
+      alert("이미지를 1장 이상 등록해주세요.");
       return;
     }
     if (submitting) return;

@@ -42,7 +42,7 @@ export default async function RiggerPage() {
       <div className="mb-8">
         <h1 className="text-xl font-semibold sm:text-2xl">리거</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          등급별 리거를 확인하세요. 레전드, 골드, 실버, 브론즈 순으로 구성됩니다.
+          등급별 리거를 확인하세요. 마스터, 골드, 실버, 브론즈 순으로 구성됩니다.
         </p>
       </div>
 

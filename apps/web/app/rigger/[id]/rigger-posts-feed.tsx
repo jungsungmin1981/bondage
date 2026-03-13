@@ -41,6 +41,10 @@ type Props = {
   initialHasMore: boolean;
   /** 이 postId에 해당하는 게시물 상세 다이얼로그를 마운트 시 자동으로 연다 (예: ?postId=xxx) */
   initialOpenPostId?: string;
+  /** 관리자가 다른 리거 게시물 전체 노출 시 사용 (비공개/승인대기 포함) */
+  visibilityAsUserId?: string;
+  /** 관리자 등 리거 권한으로 접근 시 게시물 수정/삭제 버튼 노출 */
+  canEditPostsAsRigger?: boolean;
 };
 
 function PostCard({
@@ -50,6 +54,7 @@ function PostCard({
   like,
   initialComments,
   openDetailInitially,
+  canEditPostsAsRigger,
 }: {
   post: SerializedPost;
   riggerId: string;
@@ -57,6 +62,7 @@ function PostCard({
   like: { count: number; liked: boolean };
   initialComments: React.ComponentProps<typeof PostCommentBlock>["initialComments"];
   openDetailInitially?: boolean;
+  canEditPostsAsRigger?: boolean;
 }) {
   const router = useRouter();
   const [detailOpen, setDetailOpen] = useState(!!openDetailInitially);
@@ -74,6 +80,7 @@ function PostCard({
   const createdAt = post.createdAt ? new Date(post.createdAt) : null;
   const totalPhotos = post.photos.length;
   const isOwnPost = post.photos[0]?.userId === sessionUserId;
+  const canEditPost = isOwnPost || !!canEditPostsAsRigger;
   const postVisibility: "public" | "private" | "pending" =
     post.photos[0]?.visibility === "private"
       ? "private"
@@ -90,7 +97,7 @@ function PostCard({
   const isRejected =
     isPending && approvals.some((a) => a.status === "rejected");
   const showPendingBunnyStatus =
-    isPending && isOwnPost && approvalCount > 0 && !isRejected;
+    isPending && canEditPost && approvalCount > 0 && !isRejected;
   const canGoPrev = totalPhotos > 1 && photoIndex > 0;
   const canGoNext = totalPhotos > 1 && photoIndex < totalPhotos - 1;
 
@@ -291,7 +298,7 @@ function PostCard({
                       })
                     : ""}
                 </p>
-                {isOwnPost && (
+                {canEditPost && (
                   <Button
                     type="button"
                     variant="outline"
@@ -407,7 +414,7 @@ function PostCard({
           </DialogContent>
         </Dialog>
 
-        {isOwnPost && (
+        {canEditPost && (
           <Dialog
             open={editOpen}
             onOpenChange={(open) => {
@@ -605,6 +612,8 @@ export function RiggerPostsFeed({
   initialCommentsByPhotoId,
   initialHasMore,
   initialOpenPostId,
+  visibilityAsUserId,
+  canEditPostsAsRigger,
 }: Props) {
   const [posts, setPosts] = useState<SerializedPost[]>(initialPosts);
   const [likeByPostId, setLikeByPostId] = useState(initialLikeByPostId);
@@ -639,6 +648,7 @@ export function RiggerPostsFeed({
         offsetRef.current,
         PAGE_SIZE,
         sessionUserId,
+        visibilityAsUserId,
       );
       if (result.posts.length === 0) {
         setHasMore(false);
@@ -652,7 +662,7 @@ export function RiggerPostsFeed({
     } finally {
       setLoading(false);
     }
-  }, [riggerId, sessionUserId, loading, hasMore]);
+  }, [riggerId, sessionUserId, visibilityAsUserId, loading, hasMore]);
 
   useEffect(() => {
     const el = sentinelRef.current;
@@ -685,6 +695,7 @@ export function RiggerPostsFeed({
               >["initialComments"]
             }
             openDetailInitially={post.postId === initialOpenPostId}
+            canEditPostsAsRigger={canEditPostsAsRigger}
           />
         ))}
       </ul>

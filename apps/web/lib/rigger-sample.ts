@@ -21,6 +21,8 @@ export type Rigger = {
   bondageRating?: string | null;
   style?: string | null;
   bio?: string | null;
+  /** 프로필 공개 여부 (정보수정에서 설정) */
+  profileVisibility?: "public" | "private" | null;
 };
 
 const LEGEND_NAMES = ["치우천왕", "이마스터", "박치우"];
@@ -186,7 +188,7 @@ function withMarks<T extends { id: string }>(riggers: T[], startIndex: number): 
 
 export const DEFAULT_MARK_IMAGE_URL = MARK_IMAGES[0];
 
-export const MARK_LEGEND_URL = "/marks/mark-legend.png";
+export const MARK_LEGEND_URL = "/marks/dragon-mark.png";
 
 /** 등급별 마크 선택 목록 (레전드는 전용 마크 포함) */
 export function getMarkPickerUrls(tier: RiggerTier): readonly string[] {

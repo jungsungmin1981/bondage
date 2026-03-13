@@ -133,6 +133,9 @@ export function ClassIntermediateAdmin() {
   const formRef = useRef<HTMLDivElement>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [items, setItems] = useState<ClassCardType[]>([]);
+  const [visibilityFilter, setVisibilityFilter] = useState<
+    "all" | "public" | "private"
+  >("all");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewPhotoIndex, setPreviewPhotoIndex] = useState(0);
@@ -172,6 +175,13 @@ export function ClassIntermediateAdmin() {
     setEditingId(item.id);
     formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, []);
+
+  const filteredItems = items.filter((item) => {
+    if (visibilityFilter === "all") return true;
+    if (visibilityFilter === "public") return item.visibility === "public";
+    if (visibilityFilter === "private") return item.visibility === "private";
+    return true;
+  });
 
   useEffect(() => {
     (async () => {
@@ -621,13 +631,27 @@ export function ClassIntermediateAdmin() {
 
       <section className="space-y-4">
         <h3 className="font-medium">등록 목록</h3>
-        {items.length === 0 ? (
+        <ToggleGroup
+          type="single"
+          value={visibilityFilter}
+          onValueChange={(v) => {
+            if (!v) return;
+            setVisibilityFilter(v as "all" | "public" | "private");
+          }}
+          className="mb-2"
+          aria-label="공개 여부로 필터"
+        >
+          <ToggleGroupItem value="all">전체</ToggleGroupItem>
+          <ToggleGroupItem value="public">공개</ToggleGroupItem>
+          <ToggleGroupItem value="private">비공개</ToggleGroupItem>
+        </ToggleGroup>
+        {filteredItems.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             등록된 항목이 없습니다. 위 폼에서 등록 후 목록에 표시됩니다.
           </p>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
-            {items.map((item) => (
+            {filteredItems.map((item) => (
               <div key={item.id} className="relative">
                 <button
                   type="button"

@@ -130,6 +130,50 @@ export async function updateRiggerPostVisibilityOwnedByUser(
 }
 
 /**
+ * 게시물 삭제 (riggerId + postId 기준, 관리자용. bunny_approvals 선 삭제)
+ */
+export async function deleteRiggerPost(
+  riggerId: string,
+  postId: string,
+): Promise<number> {
+  await db
+    .delete(schema.bunnyApprovals)
+    .where(eq(schema.bunnyApprovals.postId, postId));
+  const deleted = await db
+    .delete(schema.riggerPhotos)
+    .where(
+      and(
+        eq(schema.riggerPhotos.riggerId, riggerId),
+        or(eq(schema.riggerPhotos.postId, postId), eq(schema.riggerPhotos.id, postId)),
+      ),
+    )
+    .returning({ id: schema.riggerPhotos.id });
+  return deleted.length;
+}
+
+/**
+ * 게시물 공개유무 변경 (riggerId + postId 기준, 관리자용. pending 제외)
+ */
+export async function updateRiggerPostVisibilityByPost(
+  riggerId: string,
+  postId: string,
+  visibility: "public" | "private",
+): Promise<number> {
+  const updated = await db
+    .update(schema.riggerPhotos)
+    .set({ visibility })
+    .where(
+      and(
+        eq(schema.riggerPhotos.riggerId, riggerId),
+        ne(schema.riggerPhotos.visibility, "pending"),
+        or(eq(schema.riggerPhotos.postId, postId), eq(schema.riggerPhotos.id, postId)),
+      ),
+    )
+    .returning({ id: schema.riggerPhotos.id });
+  return updated.length;
+}
+
+/**
  * postId에 해당하는 rigger_photos 한 건의 visibility_after_approval 조회.
  * 버니 승인 완료 시 적용할 공개/비공개 결정에 사용. null이면 호출부에서 public으로 처리.
  */

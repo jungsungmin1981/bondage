@@ -7,12 +7,9 @@ import {
   ensureOneToOneThread,
   insertMessage,
 } from "@workspace/db";
-import fs from "fs/promises";
-import path from "path";
 import { randomUUID } from "crypto";
 import sharp from "sharp";
-
-const UPLOAD_BASE_DIR = "public/uploads/messages";
+import { uploadBufferToS3 } from "@/lib/s3-upload";
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const ALLOWED_EXTS = [".jpg", ".jpeg", ".png", ".webp"];
 // 원본 입력은 더 크게 받되, sharp로 최종 산출물을 줄인다.
@@ -106,9 +103,6 @@ export async function sendThreadMessage(
     }
   }
 
-  const uploadDir = path.join(process.cwd(), UPLOAD_BASE_DIR, threadId);
-  await fs.mkdir(uploadDir, { recursive: true });
-
   const attachments: { type: "image"; url: string }[] = [];
   for (const file of files) {
     const originalExt = getExt(file);
@@ -116,10 +110,9 @@ export async function sendThreadMessage(
     const inputBuffer = Buffer.from(arrayBuffer);
     const { buffer: outputBuffer, ext } = await processImage(inputBuffer, originalExt);
     const fileName = `${Date.now()}-${randomUUID()}${ext}`;
-    const filePath = path.join(uploadDir, fileName);
-    const publicPath = `/uploads/messages/${encodeURIComponent(threadId)}/${fileName}`;
-    await fs.writeFile(filePath, outputBuffer);
-    attachments.push({ type: "image", url: publicPath });
+    const s3Key = `uploads/messages/${threadId}/${fileName}`;
+    const imageUrl = await uploadBufferToS3(s3Key, outputBuffer, "image/jpeg");
+    attachments.push({ type: "image", url: imageUrl });
   }
 
   try {

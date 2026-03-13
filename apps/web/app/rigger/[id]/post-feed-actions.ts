@@ -7,6 +7,7 @@ export async function loadMoreRiggerPosts(
   offset: number,
   limit: number,
   userId: string,
+  visibilityAsUserId?: string,
 ): Promise<SliceResult> {
-  return fetchRiggerPostsSlice(riggerId, offset, limit, userId);
+  return fetchRiggerPostsSlice(riggerId, offset, limit, userId, visibilityAsUserId ? { visibilityAsUserId } : undefined);
 }

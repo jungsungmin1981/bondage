@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { Fragment } from "react";
 import { auth } from "@workspace/auth";
-import { getRiggerPhotoPosts, getRiggerProfileById } from "@workspace/db";
+import {
+  getApprovedClassChallengeCountsByUserId,
+  getPublicClassPostCountsByLevel,
+  getRiggerPhotoPosts,
+  getRiggerProfileById,
+} from "@workspace/db";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { Button } from "@workspace/ui/components/button";
@@ -12,9 +17,11 @@ import { INITIAL_SIZE } from "@/lib/rigger-posts-constants";
 import { fetchRiggerPostsSlice } from "@/lib/rigger-posts-slice";
 import { RiggerTierCard } from "@/components/rigger-tier-card";
 import { OwnProfileTierColumn } from "./own-profile-tier-column";
+import { isAdmin } from "@/lib/admin";
 import { getRiggerOverride } from "@/lib/rigger-overrides";
 import { RiggerPostsFeed } from "./rigger-posts-feed";
 import { BioPreview } from "./bio-preview";
+import { ClassSummaryBadges } from "./class-summary-badges";
 import { RiggerProfileInline } from "./rigger-profile-inline";
 
 export default async function RiggerDetailPage({
@@ -55,18 +62,29 @@ export default async function RiggerDetailPage({
     dbProfile.status === "approved"
       ? TIER_LABELS[rigger.tier]
       : PENDING_TIER_LABEL;
-  const isOwnProfile = rigger.userId === session.user.id;
+  const isOwnProfile =
+    rigger.userId === session.user.id || isAdmin(session);
+  /** 비공개 프로필일 때는 작성자·관리자만 작성글(사진) 노출 */
+  const canSeePosts =
+    isOwnProfile || (rigger.profileVisibility ?? "public") !== "private";
 
   const posts = await getRiggerPhotoPosts(id);
   const hasAnyPost = posts.length > 0;
-  const initialSlice = hasAnyPost
-    ? await fetchRiggerPostsSlice(
-        id,
-        0,
-        INITIAL_SIZE,
-        session.user.id,
-      )
-    : null;
+  const initialSlice =
+    hasAnyPost && canSeePosts
+      ? await fetchRiggerPostsSlice(
+          id,
+          0,
+          INITIAL_SIZE,
+          session.user.id,
+          isAdmin(session) ? { visibilityAsUserId: rigger.userId } : undefined,
+        )
+      : null;
+
+  const [classCounts, totalByLevel] = await Promise.all([
+    getApprovedClassChallengeCountsByUserId(rigger.userId),
+    getPublicClassPostCountsByLevel(),
+  ]);
 
   const pair = (label: string, value: string | null | undefined) => ({
     label,
@@ -124,6 +142,9 @@ export default async function RiggerDetailPage({
                 activityRegion={rigger.activityRegion}
                 style={rigger.style}
                 bio={rigger.bio}
+                profileVisibility={rigger.profileVisibility ?? "public"}
+                classCounts={classCounts}
+                totalByLevel={totalByLevel}
               />
             ) : (
               <>
@@ -159,6 +180,17 @@ export default async function RiggerDetailPage({
                       ))}
                     </Fragment>
                   ))}
+                  <Fragment>
+                    <dt className="shrink-0 text-sm font-medium text-muted-foreground">
+                      클래스
+                    </dt>
+                    <dd className="col-span-3 min-w-0">
+                      <ClassSummaryBadges
+                        classCounts={classCounts}
+                        totalByLevel={totalByLevel}
+                      />
+                    </dd>
+                  </Fragment>
                 </dl>
                 <dl className="mt-4 grid grid-cols-[5rem_1fr] gap-x-3 gap-y-1.5 items-baseline border-t pt-4">
                   <dt className="shrink-0 text-sm font-medium text-muted-foreground">
@@ -200,11 +232,15 @@ export default async function RiggerDetailPage({
 
       <div className="mx-auto mt-8 max-w-4xl">
         <h2 className="text-sm font-medium text-muted-foreground">사진</h2>
-        {!hasAnyPost || !initialSlice ? (
+        {!hasAnyPost ? (
           <p className="mt-2 text-sm text-muted-foreground">
             등록된 사진이 없습니다.
           </p>
-        ) : (
+        ) : !canSeePosts ? (
+          <p className="mt-2 text-sm text-muted-foreground">
+            비공개 프로필입니다.
+          </p>
+        ) : initialSlice ? (
           <RiggerPostsFeed
             riggerId={rigger.id}
             sessionUserId={session.user.id}
@@ -213,7 +249,13 @@ export default async function RiggerDetailPage({
             initialCommentsByPhotoId={initialSlice.commentsByPhotoId}
             initialHasMore={initialSlice.hasMore}
             initialOpenPostId={openPostId ?? undefined}
+            visibilityAsUserId={isAdmin(session) ? rigger.userId : undefined}
+            canEditPostsAsRigger={isAdmin(session)}
           />
+        ) : (
+          <p className="mt-2 text-sm text-muted-foreground">
+            등록된 사진이 없습니다.
+          </p>
         )}
       </div>
     </div>

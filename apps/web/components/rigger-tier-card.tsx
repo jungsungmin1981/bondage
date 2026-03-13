@@ -31,13 +31,14 @@ function TierMarkCircle({
   onChooseImage?: (file: File) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const showImg = Boolean(markImageUrl?.trim());
+  const displayMarkUrl = markImageUrl?.trim() || "/default-rigger-mark.png";
+  const showImg = Boolean(displayMarkUrl);
 
   const inner = (
     <div className="absolute inset-0 overflow-hidden rounded-full">
       {showImg ? (
         <img
-          src={markImageUrl!}
+          src={displayMarkUrl}
           alt=""
           className="h-full w-full object-contain object-center bg-black/90"
         />

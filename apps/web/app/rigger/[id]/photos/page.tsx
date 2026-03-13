@@ -3,6 +3,7 @@ import { auth } from "@workspace/auth";
 import { getRiggerProfileById } from "@workspace/db";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
+import { isAdmin } from "@/lib/admin";
 import { PhotoUploadForm } from "./photo-upload-form";
 
 export default async function RiggerPhotosPage({
@@ -19,7 +20,7 @@ export default async function RiggerPhotosPage({
   const profile = await getRiggerProfileById(id);
   if (!profile) notFound();
 
-  if (profile.userId !== session.user.id) {
+  if (profile.userId !== session.user.id && !isAdmin(session)) {
     redirect(`/rigger/${id}`);
   }
 

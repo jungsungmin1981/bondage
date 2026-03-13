@@ -19,6 +19,9 @@ export async function createClassChallengeAction(input: {
   imageUrls: string[];
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
+    if (!input.imageUrls?.length) {
+      return { ok: false, error: "이미지를 1장 이상 등록해주세요." };
+    }
     const session = await requireSession();
     const id = crypto.randomUUID();
     await createClassChallenge({
@@ -39,12 +42,16 @@ export async function createClassChallengeAction(input: {
 
 export async function getMyChallengeForClassPostAction(
   classPostId: string,
-): Promise<{ hasChallenge: boolean }> {
+): Promise<{ status: "pending" | "approved" | "rejected" | null }> {
   try {
     const session = await requireSession();
     const row = await getChallengeByUserAndClassPost(session.user.id, classPostId);
-    return { hasChallenge: !!row };
+    if (!row) return { status: null };
+    if (row.status === "pending" || row.status === "approved" || row.status === "rejected") {
+      return { status: row.status };
+    }
+    return { status: null };
   } catch {
-    return { hasChallenge: false };
+    return { status: null };
   }
 }

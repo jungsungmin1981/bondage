@@ -6,7 +6,8 @@ import { cn } from "@workspace/ui/lib/utils";
 
 const tabs = [
   { label: "리거 승인", href: "/admin/riggers" },
-  { label: "클래스", href: "/admin/class" },
+  { label: "클래스 등록", href: "/admin/class" },
+  { label: "클래스 심사", href: "/admin/class-review" },
   { label: "워터마크", href: "/admin/watermark" },
   { label: "이미지", href: "/admin/images" },
 ] as const;

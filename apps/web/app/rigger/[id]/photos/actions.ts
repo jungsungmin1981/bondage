@@ -10,15 +10,13 @@ import {
   getRiggerProfileByUserId,
 } from "@workspace/db";
 import fs from "fs/promises";
-import path from "path";
 import { randomUUID } from "crypto";
 import sharp from "sharp";
 import {
   getWatermarkConfig,
   resolvePublicFileSync,
 } from "@/lib/watermark-config";
-
-const UPLOAD_BASE_DIR = "public/uploads/rigger";
+import { uploadBufferToS3 } from "@/lib/s3-upload";
 const MAX_PHOTOS = 4;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB (압축 후 여유 있게)
@@ -203,11 +201,8 @@ export async function uploadPhoto(
       }
     }
 
-    const uploadDir = path.join(process.cwd(), UPLOAD_BASE_DIR, riggerId);
     const captionTrim = caption.slice(0, 30).trim() || null;
     const postId = randomUUID();
-
-    await fs.mkdir(uploadDir, { recursive: true });
 
     for (const file of files) {
       const originalExt = getExt(file);
@@ -216,17 +211,15 @@ export async function uploadPhoto(
       const { buffer: outputBuffer, ext } = await processImage(inputBuffer, originalExt);
 
       const fileName = `${Date.now()}-${randomUUID()}${ext}`;
-      const filePath = path.join(uploadDir, fileName);
-      const publicPath = `/uploads/rigger/${encodeURIComponent(riggerId)}/${fileName}`;
-
-      await fs.writeFile(filePath, outputBuffer);
+      const s3Key = `uploads/rigger/${riggerId}/${fileName}`;
+      const imageUrl = await uploadBufferToS3(s3Key, outputBuffer, "image/jpeg");
 
       await db.insert(schema.riggerPhotos).values({
         id: randomUUID(),
         postId,
         riggerId,
         userId: session.user.id,
-        imagePath: publicPath,
+        imagePath: imageUrl,
         caption: captionTrim,
         visibility,
         visibilityAfterApproval,

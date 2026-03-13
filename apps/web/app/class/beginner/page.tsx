@@ -1,6 +1,7 @@
 import { auth } from "@workspace/auth";
 import {
-  getChallengesByUserForPostIds,
+  getChallengeCountsByPostIds,
+  getMyChallengeStatusByPostIds,
   getPublicClassPostsByLevel,
 } from "@workspace/db";
 import { headers } from "next/headers";
@@ -16,25 +17,36 @@ export default async function ClassBeginnerPage() {
 
   const rows = await getPublicClassPostsByLevel("beginner");
   const postIds = rows.map((r) => r.id);
-  const myChallenges =
+  const [statusMap, countsMap] =
     postIds.length > 0
-      ? await getChallengesByUserForPostIds(session.user.id, postIds)
-      : [];
-  const challengedIds = new Set(myChallenges.map((c) => c.classPostId));
+      ? await Promise.all([
+          getMyChallengeStatusByPostIds(session.user.id, postIds),
+          getChallengeCountsByPostIds(postIds),
+        ])
+      : [
+          new Map<string, "pending" | "approved" | "rejected">(),
+          new Map<string, { approved: number; pending: number; rejected: number }>(),
+        ];
 
-  const cards: ClassCardType[] = rows.map((r) => ({
-    id: r.id,
-    visibility: r.visibility as "public" | "private",
-    title: r.title,
-    description: r.description,
-    ropeThicknessMm: r.ropeThicknessMm,
-    ropeLengthM: r.ropeLengthM,
-    quantity: r.quantity,
-    imageUrl: r.coverImageUrl,
-    extraImageUrls: (r.extraImageUrls as string[]) ?? [],
-    videoUrl: (r.videoUrl as string | null | undefined) ?? undefined,
-    hasMyChallenge: challengedIds.has(r.id),
-  }));
+  const cards: ClassCardType[] = rows.map((r) => {
+    const counts = countsMap.get(r.id) ?? { approved: 0, pending: 0, rejected: 0 };
+    return {
+      id: r.id,
+      visibility: r.visibility as "public" | "private",
+      title: r.title,
+      description: r.description,
+      ropeThicknessMm: r.ropeThicknessMm,
+      ropeLengthM: r.ropeLengthM,
+      quantity: r.quantity,
+      imageUrl: r.coverImageUrl,
+      extraImageUrls: (r.extraImageUrls as string[]) ?? [],
+      videoUrl: (r.videoUrl as string | null | undefined) ?? undefined,
+      myChallengeStatus: statusMap.get(r.id),
+      challengeApprovedCount: counts.approved,
+      challengePendingCount: counts.pending,
+      challengeRejectedCount: counts.rejected,
+    };
+  });
 
   return (
     <div className="min-h-[calc(100svh-3.5rem)] bg-white p-4 sm:p-6">

@@ -33,11 +33,15 @@ export async function saveRiggerProfile(
       patch.activityRegion = data.activityRegion;
     if (data.style !== undefined) patch.style = data.style;
     if (data.bio !== undefined) patch.bio = data.bio;
+    if (data.profileVisibility !== undefined)
+      patch.profileVisibility = data.profileVisibility;
     if (data.markImageUrl !== undefined) {
       let u = data.markImageUrl;
-      // custom 마크는 동일 경로 덮어쓰기 → 캐시 무력화용 쿼리 없으면 붙임
+      // S3 등 절대 URL이면 쿼리 추가 스킵. 상대 경로(custom 마크)일 때만 캐시 무력화
       if (
         typeof u === "string" &&
+        !u.startsWith("http://") &&
+        !u.startsWith("https://") &&
         u.includes("/marks/custom-") &&
         !u.includes("?")
       ) {

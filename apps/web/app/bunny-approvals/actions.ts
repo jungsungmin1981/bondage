@@ -22,12 +22,14 @@ export async function getPostDetailForApproval(
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return { ok: false, error: "로그인이 필요합니다." };
 
-  const allowed = await getPostIdsWhereUserIsRequestedBunny(
-    [postId],
-    session.user.id,
-  );
-  if (!allowed.has(postId)) {
-    return { ok: false, error: "해당 게시물을 볼 수 있는 권한이 없습니다." };
+  if (!isAdmin(session)) {
+    const allowed = await getPostIdsWhereUserIsRequestedBunny(
+      [postId],
+      session.user.id,
+    );
+    if (!allowed.has(postId)) {
+      return { ok: false, error: "해당 게시물을 볼 수 있는 권한이 없습니다." };
+    }
   }
 
   const rows = await getPhotosByPostId(postId);

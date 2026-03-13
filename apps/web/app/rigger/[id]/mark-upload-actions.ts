@@ -1,23 +1,20 @@
 "use server";
 
 import { headers } from "next/headers";
-import fs from "fs/promises";
-import path from "path";
 import { auth } from "@workspace/auth";
 import { getRiggerProfileById } from "@workspace/db";
-import { getPublicDirSync } from "@/lib/watermark-config";
 import { resizeToJpeg } from "@/lib/image/resize";
+import { uploadBufferToS3 } from "@/lib/s3-upload";
 
 const ALLOWED = ["image/jpeg", "image/png", "image/webp"];
 
-/** public/marks 아래 안전한 파일명 (rigger id + 확장자) */
-function markFileName(riggerId: string): string {
-  const safe = riggerId.replace(/[^a-zA-Z0-9_-]/g, "_");
-  return `custom-${safe}.jpg`;
+/** S3 키용 안전한 리거 id (파일명 규칙과 동일) */
+function safeRiggerId(riggerId: string): string {
+  return riggerId.replace(/[^a-zA-Z0-9_-]/g, "_");
 }
 
 /**
- * 본인 리거 마크용 이미지 업로드 → public/marks/custom-{id}.png 로 저장
+ * 본인 리거 마크용 이미지 업로드 → S3 marks/rigger/{riggerId}.jpg 저장
  * 반환 URL로 override.markImageUrl 저장하면 됨.
  */
 export async function uploadRiggerMarkImage(
@@ -39,20 +36,13 @@ export async function uploadRiggerMarkImage(
     return { ok: false, error: "JPEG, PNG, WebP만 업로드할 수 있습니다." };
   }
 
-  const publicDir = getPublicDirSync();
-  const marksDir = path.join(publicDir, "marks");
-  const name = markFileName(riggerId);
-  const filePath = path.join(marksDir, name);
-  const url = `/marks/${name}`;
+  const key = `marks/rigger/${safeRiggerId(riggerId)}.jpg`;
 
   try {
-    await fs.mkdir(marksDir, { recursive: true });
     const buffer = Buffer.from(await file.arrayBuffer());
     const resized = await resizeToJpeg(buffer);
-    await fs.writeFile(filePath, resized);
-    // 동일 경로 덮어쓰기 시 브라우저 캐시로 예전 이미지가 보이는 것 방지
-    const urlWithBust = `${url}?t=${Date.now()}`;
-    return { ok: true, url: urlWithBust };
+    const url = await uploadBufferToS3(key, resized, "image/jpeg");
+    return { ok: true, url };
   } catch (e) {
     return {
       ok: false,

@@ -21,7 +21,7 @@ export default async function MessagesLayout({
       if (t.otherProfileId && t.otherMemberType === "rigger") {
         try {
           const override = await getRiggerOverride(t.otherProfileId);
-          const mark = override?.markImageUrl?.trim() || null;
+          const mark = override?.markImageUrl?.trim() || "/default-rigger-mark.png";
           return { ...t, otherMarkImageUrl: mark };
         } catch {
           return { ...t, otherMarkImageUrl: null as string | null };

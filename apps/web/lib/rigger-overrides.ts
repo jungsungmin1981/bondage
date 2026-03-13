@@ -21,6 +21,8 @@ export type RiggerOverride = {
   /** 쉼표 구분 복수 스타일 */
   style?: string | null;
   bio?: string | null;
+  /** 프로필 공개 여부 */
+  profileVisibility?: "public" | "private" | null;
 };
 
 const DATA_PATH = path.join(getDataDirSync(), "rigger-overrides.json");

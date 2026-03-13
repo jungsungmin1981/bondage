@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "../client/node";
 import * as schema from "../schema";
 
@@ -108,5 +108,35 @@ export async function getPublicClassPostsByLevel(level: ClassLevel) {
     .from(schema.classPosts)
     .where(and(eq(schema.classPosts.level, level), eq(schema.classPosts.visibility, "public")))
     .orderBy(desc(schema.classPosts.createdAt));
+}
+
+export type PublicClassPostCountsByLevel = {
+  beginner: number;
+  intermediate: number;
+  advanced: number;
+};
+
+/** 레벨별 공개(public) 클래스 포스트 개수. */
+export async function getPublicClassPostCountsByLevel(): Promise<PublicClassPostCountsByLevel> {
+  const rows = await db
+    .select({
+      level: schema.classPosts.level,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(schema.classPosts)
+    .where(eq(schema.classPosts.visibility, "public"))
+    .groupBy(schema.classPosts.level);
+
+  const result: PublicClassPostCountsByLevel = {
+    beginner: 0,
+    intermediate: 0,
+    advanced: 0,
+  };
+  for (const row of rows) {
+    if (row.level === "beginner" || row.level === "intermediate" || row.level === "advanced") {
+      result[row.level] = row.count;
+    }
+  }
+  return result;
 }
 

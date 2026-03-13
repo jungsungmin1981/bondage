@@ -78,10 +78,10 @@ export function RiggerApprovalsList({
                   className="inline-flex focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-full"
                   aria-label={`${row.nickname} 회원 상세 보기`}
                 >
-                  {row.markImageUrl?.trim() ? (
+                  {(row.markImageUrl?.trim() || "/default-rigger-mark.png") ? (
                     <span className="relative flex size-10 shrink-0 overflow-hidden rounded-full bg-muted">
                       <img
-                        src={row.markImageUrl}
+                        src={row.markImageUrl?.trim() || "/default-rigger-mark.png"}
                         alt=""
                         className="size-full object-cover"
                       />

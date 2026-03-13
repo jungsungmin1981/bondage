@@ -23,7 +23,9 @@
     "format": "prettier --write \"**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit",
     "db:ensure-class-posts": "tsx scripts/ensure-class-posts.ts",
-    "db:ensure-class-challenges": "tsx scripts/ensure-class-challenges.ts"
+    "db:ensure-class-challenges": "tsx scripts/ensure-class-challenges.ts",
+    "db:ensure-class-challenge-approvals": "tsx scripts/ensure-class-challenge-approvals.ts",
+    "db:ensure-approval-comment-columns": "tsx scripts/ensure-approval-comment-columns.ts"
   },
   "dependencies": {
     "dotenv": "^17.3.1",

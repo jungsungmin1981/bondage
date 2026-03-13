@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { auth } from "@workspace/auth";
 import fs from "fs/promises";
 import path from "path";
+import { resizeCardToPng } from "@/lib/image/resize";
 import { resolvePublicFileSync } from "@/lib/watermark-config";
 
 function getMainBackgroundImagePath(): string {
@@ -32,7 +33,8 @@ export async function uploadMainBackgroundImage(
   try {
     await fs.mkdir(dir, { recursive: true });
     const buffer = Buffer.from(await file.arrayBuffer());
-    await fs.writeFile(filePath, buffer);
+    const resized = await resizeCardToPng(buffer);
+    await fs.writeFile(filePath, resized);
     return { ok: true, url: "/main-background.png" };
   } catch (e) {
     return {

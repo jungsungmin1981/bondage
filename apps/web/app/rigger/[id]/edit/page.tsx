@@ -3,6 +3,7 @@ import { auth } from "@workspace/auth";
 import { getRiggerProfileById } from "@workspace/db";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
+import { isAdmin } from "@/lib/admin";
 
 export default async function RiggerEditPage({
   params,
@@ -18,7 +19,7 @@ export default async function RiggerEditPage({
   const profile = await getRiggerProfileById(id);
   if (!profile) notFound();
 
-  if (profile.userId !== session.user.id) {
+  if (profile.userId !== session.user.id && !isAdmin(session)) {
     redirect(`/rigger/${id}`);
   }
 

@@ -1,23 +1,20 @@
 "use server";
 
 import { headers } from "next/headers";
-import fs from "fs/promises";
-import path from "path";
 import { revalidatePath } from "next/cache";
 import { auth } from "@workspace/auth";
 import { getBunnyProfileById, updateMemberProfile } from "@workspace/db";
-import { getPublicDirSync } from "@/lib/watermark-config";
 import { resizeToJpeg } from "@/lib/image/resize";
+import { uploadBufferToS3 } from "@/lib/s3-upload";
 
 const ALLOWED = ["image/jpeg", "image/png", "image/webp"];
 
-function bunnyCardFileName(profileId: string): string {
-  const safe = profileId.replace(/[^a-zA-Z0-9_-]/g, "_");
-  return `bunny-${safe}.jpg`;
+function safeProfileId(profileId: string): string {
+  return profileId.replace(/[^a-zA-Z0-9_-]/g, "_");
 }
 
 /**
- * 본인 버니 카드 이미지 업로드 → public/marks/bunny-{profileId}.{ext} 저장 후
+ * 본인 버니 카드 이미지 업로드 → S3 marks/bunny/{profileId}.jpg 저장 후
  * member_profiles.card_image_url 업데이트.
  */
 export async function uploadBunnyCardImage(
@@ -39,30 +36,24 @@ export async function uploadBunnyCardImage(
     return { ok: false, error: "JPEG, PNG, WebP만 업로드할 수 있습니다." };
   }
 
-  const publicDir = getPublicDirSync();
-  const marksDir = path.join(publicDir, "marks");
-  const name = bunnyCardFileName(profileId);
-  const filePath = path.join(marksDir, name);
-  const url = `/marks/${name}?t=${Date.now()}`;
+  const key = `marks/bunny/${safeProfileId(profileId)}.jpg`;
 
   try {
-    await fs.mkdir(marksDir, { recursive: true });
     const buffer = Buffer.from(await file.arrayBuffer());
     const resized = await resizeToJpeg(buffer);
-    await fs.writeFile(filePath, resized);
+    const url = await uploadBufferToS3(key, resized, "image/jpeg");
+    const result = await updateMemberProfile(session.user.id, {
+      cardImageUrl: url,
+    });
+    if (!result.ok) return result;
+    revalidatePath("/profile/edit");
+    revalidatePath(`/bunnies/${encodeURIComponent(profileId)}`);
+    revalidatePath("/", "layout");
+    return { ok: true };
   } catch (e) {
     return {
       ok: false,
       error: e instanceof Error ? e.message : "이미지 저장에 실패했습니다.",
     };
   }
-
-  const result = await updateMemberProfile(session.user.id, {
-    cardImageUrl: url,
-  });
-  if (!result.ok) return result;
-  revalidatePath("/profile/edit");
-  revalidatePath(`/bunnies/${encodeURIComponent(profileId)}`);
-  revalidatePath("/", "layout");
-  return { ok: true };
 }

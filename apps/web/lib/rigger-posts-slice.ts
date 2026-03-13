@@ -47,12 +47,13 @@ export type SliceResult = {
   totalCount: number;
 };
 
-/** 서버 전용: 오프셋 구간만 배치 조회 후 직렬화 */
+/** 서버 전용: 오프셋 구간만 배치 조회 후 직렬화. visibilityAsUserId 있으면 해당 유저 시점으로 비공개/승인대기 노출(관리자용). */
 export async function fetchRiggerPostsSlice(
   riggerId: string,
   offset: number,
   limit: number,
   userId: string,
+  options?: { visibilityAsUserId?: string },
 ): Promise<SliceResult> {
   const all = await getRiggerPhotoPosts(riggerId);
   const allPostIds = all.map((p) => p.postId);
@@ -60,12 +61,13 @@ export async function fetchRiggerPostsSlice(
     allPostIds.length > 0
       ? await getPostIdsWhereUserIsRequestedBunny(allPostIds, userId)
       : new Set<string>();
-  // 비공개(private)는 작성자에게만, 승인대기(pending)는 작성자 또는 승인 요청된 버니에게 노출
+  const ownerIdForVisibility = options?.visibilityAsUserId ?? userId;
+  // 비공개(private)는 작성자에게만, 승인대기(pending)는 작성자 또는 승인 요청된 버니에게 노출. 관리자는 visibilityAsUserId로 리거 시점 접근.
   const visibleAll = all.filter((p) => {
     const first: any = p.photos[0];
     const visibility = String(first?.visibility ?? "public");
     if (visibility !== "private" && visibility !== "pending") return true;
-    if (first?.userId === userId) return true;
+    if (first?.userId === ownerIdForVisibility) return true;
     if (visibility === "pending" && requestedBunnyPostIds.has(p.postId))
       return true;
     return false;

@@ -34,3 +34,8 @@ npm-debug.log*
 # Misc
 .DS_Store
 *.pem
+
+# User uploads (keep source light; fixed assets like dragon-mark.png stay in repo)
+apps/web/public/marks/custom-*
+apps/web/public/marks/bunny-*
+apps/web/public/uploads/

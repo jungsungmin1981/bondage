@@ -9,7 +9,7 @@ import {
 } from "@workspace/ui/components/dialog";
 import { cn } from "@workspace/ui/lib/utils";
 
-const PREVIEW_MAX_HEIGHT_REM = 9;
+const PREVIEW_MAX_HEIGHT_REM = 7.5;
 
 type BioPreviewProps = {
   fullText: string;
@@ -56,7 +56,7 @@ export function BioPreview({ fullText, className }: BioPreviewProps) {
       <div
         ref={boxRef}
         className={cn(
-          "min-w-0 max-w-full max-h-[9rem] overflow-hidden whitespace-pre-wrap break-words text-lg font-medium text-foreground",
+          "min-w-0 max-w-full max-h-[7.5rem] overflow-hidden whitespace-pre-wrap break-words text-lg font-medium text-foreground",
           className,
         )}
       >

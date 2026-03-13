@@ -4,9 +4,12 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { auth } from "@workspace/auth";
 import {
+  deleteRiggerPost,
   deleteRiggerPostOwnedByUser,
+  updateRiggerPostVisibilityByPost,
   updateRiggerPostVisibilityOwnedByUser,
 } from "@workspace/db";
+import { isAdmin } from "@/lib/admin";
 
 export async function deleteOwnRiggerPost(
   riggerId: string,
@@ -16,11 +19,13 @@ export async function deleteOwnRiggerPost(
   if (!session) return { ok: false, error: "로그인이 필요합니다." };
 
   try {
-    const deletedCount = await deleteRiggerPostOwnedByUser(
-      riggerId,
-      postId,
-      session.user.id,
-    );
+    const deletedCount = isAdmin(session)
+      ? await deleteRiggerPost(riggerId, postId)
+      : await deleteRiggerPostOwnedByUser(
+          riggerId,
+          postId,
+          session.user.id,
+        );
     if (deletedCount === 0) {
       return { ok: false, error: "삭제할 게시물이 없거나 권한이 없습니다." };
     }
@@ -42,12 +47,14 @@ export async function updateOwnRiggerPostVisibility(
   if (!session) return { ok: false, error: "로그인이 필요합니다." };
 
   try {
-    const updatedCount = await updateRiggerPostVisibilityOwnedByUser(
-      riggerId,
-      postId,
-      session.user.id,
-      visibility,
-    );
+    const updatedCount = isAdmin(session)
+      ? await updateRiggerPostVisibilityByPost(riggerId, postId, visibility)
+      : await updateRiggerPostVisibilityOwnedByUser(
+          riggerId,
+          postId,
+          session.user.id,
+          visibility,
+        );
     if (updatedCount === 0) {
       return {
         ok: false,
