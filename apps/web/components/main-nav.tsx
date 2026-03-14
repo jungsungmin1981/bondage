@@ -33,6 +33,7 @@ const navItems = [
   { label: "기타", href: "/etc" },
   { label: "뽐내기", href: "/showoff" },
   { label: "버니", href: "/bunnies" },
+  { label: "버니 게시판", href: "/bunnies/board" },
   { label: "승인 요청", href: "/bunny-approvals" },
 ] as const;
 

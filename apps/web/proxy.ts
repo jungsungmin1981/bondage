@@ -23,24 +23,31 @@ export async function proxy(request: NextRequest) {
   const cookie = request.headers.get("cookie") ?? "";
   if (!cookie.includes(SESSION_COOKIE_NAME)) return NextResponse.next();
 
-  const url = new URL("/api/auth/get-session", request.url);
-  const res = await fetch(url, { headers: { cookie } });
-  if (!res.ok) return NextResponse.next();
-  const session = (await res.json()) as {
-    user?: { id?: string; memberType?: string; member_type?: string };
-  } | null;
-  if (!session?.user) return NextResponse.next();
-  const memberType = session.user.memberType ?? session.user.member_type;
-  if (!memberType) {
-    // 세션에 memberType이 아직 없어도(캐시 등) DB에 프로필이 있으면 통과 → 리다이렉트 루프 방지
-    const profileRes = await fetch(new URL("/api/me/profile", request.url), {
-      headers: { cookie },
-    });
-    if (profileRes.ok) {
-      const data = (await profileRes.json()) as { hasProfile?: boolean };
-      if (data.hasProfile) return NextResponse.next();
+  try {
+    const url = new URL("/api/auth/get-session", request.url);
+    const res = await fetch(url, { headers: { cookie } });
+    if (!res.ok) return NextResponse.next();
+    const session = (await res.json()) as {
+      user?: { id?: string; memberType?: string; member_type?: string };
+    } | null;
+    if (!session?.user) return NextResponse.next();
+    const memberType = session.user.memberType ?? session.user.member_type;
+    if (!memberType) {
+      try {
+        const profileRes = await fetch(new URL("/api/me/profile", request.url), {
+          headers: { cookie },
+        });
+        if (profileRes.ok) {
+          const data = (await profileRes.json()) as { hasProfile?: boolean };
+          if (data.hasProfile) return NextResponse.next();
+        }
+      } catch {
+        return NextResponse.next();
+      }
+      return NextResponse.redirect(new URL("/onboarding", request.url));
     }
-    return NextResponse.redirect(new URL("/onboarding", request.url));
+  } catch {
+    return NextResponse.next();
   }
 
   return NextResponse.next();

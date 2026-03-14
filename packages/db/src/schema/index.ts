@@ -15,4 +15,6 @@ export * from "./dm-attachment";
 export * from "./class-post";
 export * from "./class-challenge";
 export * from "./class-challenge-approval";
+export * from "./bunny-board";
+export * from "./bunny-board-post-comment";
 

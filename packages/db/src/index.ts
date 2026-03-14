@@ -10,4 +10,6 @@ export * from "./queries/users";
 export * from "./queries/member-profiles";
 export * from "./queries/class-posts";
 export * from "./queries/class-challenges";
+export * from "./queries/bunny-board";
+export * from "./queries/bunny-board-post-comment";
 

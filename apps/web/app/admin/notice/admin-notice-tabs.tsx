@@ -4,23 +4,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@workspace/ui/lib/utils";
 
-const imageTabs = [
-  { label: "메인 백그라운드", href: "/admin/images/main-background" },
-  { label: "이미지 리사이징", href: "/admin/images/resize" },
-  { label: "브론즈", href: "/admin/images/bronze" },
-  { label: "실버", href: "/admin/images/silver" },
-  { label: "골드", href: "/admin/images/gold" },
-  { label: "마스터", href: "/admin/images/master" },
-  { label: "감옥", href: "/admin/images/jail" },
+const noticeTabs = [
+  { label: "버니-공지사항", href: "/admin/notice/bunny" },
+  { label: "리거-공지사항", href: "/admin/notice/rigger" },
 ] as const;
 
-export function AdminImageTabs() {
+export function AdminNoticeTabs() {
   const pathname = usePathname();
 
   return (
     <div className="mb-4 border-b border-border">
       <div className="flex flex-wrap gap-2 text-sm">
-        {imageTabs.map((tab) => {
+        {noticeTabs.map((tab) => {
           const active =
             pathname === tab.href || pathname.startsWith(tab.href + "/");
           return (
@@ -28,10 +23,9 @@ export function AdminImageTabs() {
               key={tab.href}
               href={tab.href}
               className={cn(
-                "inline-flex items-center border-b-2 border-transparent px-3 py-2 font-medium text-muted-foreground transition",
+                "inline-flex min-h-[44px] items-center border-b-2 border-transparent px-3 py-2 font-medium text-muted-foreground transition",
                 "hover:text-foreground hover:border-muted-foreground",
-                active &&
-                  "border-primary text-foreground",
+                active && "border-primary text-foreground",
               )}
             >
               {tab.label}

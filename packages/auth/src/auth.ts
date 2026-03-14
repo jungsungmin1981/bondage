@@ -11,8 +11,14 @@ const naverClientSecret = process.env.NAVER_CLIENT_SECRET ?? "";
 const googleClientId = process.env.GOOGLE_CLIENT_ID ?? "";
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET ?? "";
 
+const baseURL = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
+const extraOrigins = process.env.BETTER_AUTH_TRUSTED_ORIGINS
+  ? process.env.BETTER_AUTH_TRUSTED_ORIGINS.split(",").map((o) => o.trim()).filter(Boolean)
+  : [];
+
 export const auth = betterAuth({
-  baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
+  baseURL,
+  trustedOrigins: [baseURL, ...extraOrigins],
   user: {
     additionalFields: {
       memberType: {

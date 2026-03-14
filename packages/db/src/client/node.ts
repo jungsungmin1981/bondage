@@ -28,13 +28,20 @@ function parsePoolMax(): number {
 
 const max = parsePoolMax();
 
+/** 연결 URL에 statement_timeout 추가 (서버 기본값이 짧을 때 쿼리 취소 방지) */
+function withStatementTimeout(url: string, seconds = 60): string {
+  const option = encodeURIComponent(`-c statement_timeout=${seconds}s`);
+  return url.includes("?") ? `${url}&options=${option}` : `${url}?options=${option}`;
+}
+
 function createClient() {
   if (!connectionString || connectionString.includes("undefined")) {
     throw new Error(
       "DATABASE_URL 또는 DATABASE_HOST/USER/PASSWORD/NAME 이 설정되지 않았습니다.",
     );
   }
-  return postgres(connectionString, {
+  const urlWithTimeout = withStatementTimeout(connectionString);
+  return postgres(urlWithTimeout, {
     max,
     idle_timeout: 20,
     connect_timeout: 10,

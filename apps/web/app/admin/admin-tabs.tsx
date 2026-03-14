@@ -8,6 +8,7 @@ const tabs = [
   { label: "리거 승인", href: "/admin/riggers" },
   { label: "클래스 등록", href: "/admin/class" },
   { label: "클래스 심사", href: "/admin/class-review" },
+  { label: "공지사항", href: "/admin/notice/bunny" },
   { label: "워터마크", href: "/admin/watermark" },
   { label: "이미지", href: "/admin/images" },
 ] as const;
@@ -20,7 +21,9 @@ export function AdminTabs() {
       <div className="inline-flex rounded-full bg-muted/60 p-1 text-sm shadow-sm">
         {tabs.map((tab) => {
           const active =
-            pathname === tab.href || pathname.startsWith(`${tab.href}/`);
+            tab.href === "/admin/notice/bunny"
+              ? pathname.startsWith("/admin/notice")
+              : pathname === tab.href || pathname.startsWith(`${tab.href}/`);
           return (
             <Link
               key={tab.href}
