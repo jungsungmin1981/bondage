@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu } from "lucide-react";
+import { Mail, Menu } from "lucide-react";
 import { cn } from "@workspace/ui/lib/utils";
 import { Button } from "@workspace/ui/components/button";
 import {
@@ -22,6 +22,10 @@ import {
 
 const navItems = [
   { label: "리거", href: "/rigger" },
+  { label: "버니", href: "/bunnies" },
+  { label: "버니 게시판", href: "/bunnies/board" },
+  { label: "승인 요청", href: "/bunny-approvals" },
+  { label: "쪽지", href: "/notes" },
   {
     label: "클래스",
     sub: [
@@ -32,9 +36,6 @@ const navItems = [
   },
   { label: "기타", href: "/etc" },
   { label: "뽐내기", href: "/showoff" },
-  { label: "버니", href: "/bunnies" },
-  { label: "버니 게시판", href: "/bunnies/board" },
-  { label: "승인 요청", href: "/bunny-approvals" },
 ] as const;
 
 const navLinkClass =
@@ -42,12 +43,30 @@ const navLinkClass =
 
 export function MainNav({
   pendingBunnyApprovalsCount,
+  unreadMessagesCount = 0,
+  unreadNotesCount = 0,
+  showApprovalRequestLink = false,
+  showBunnyBoardLink = false,
 }: {
   pendingBunnyApprovalsCount?: number;
+  unreadMessagesCount?: number;
+  unreadNotesCount?: number;
+  /** 버니·관리자만 true. 리거일 때는 승인 요청 메뉴 숨김 */
+  showApprovalRequestLink?: boolean;
+  /** 버니·관리자만 true. 리거일 때는 버니 게시판 숨김 */
+  showBunnyBoardLink?: boolean;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const pendingCount = pendingBunnyApprovalsCount ?? 0;
+  const unreadCount = unreadMessagesCount ?? 0;
+  const hasUnreadNotes = (unreadNotesCount ?? 0) > 0;
+  const itemsToShow = navItems.filter((item) => {
+    if ("href" in item && item.href === "/bunny-approvals")
+      return showApprovalRequestLink;
+    if ("href" in item && item.href === "/bunnies/board") return showBunnyBoardLink;
+    return true;
+  });
 
   return (
     <>
@@ -69,7 +88,7 @@ export function MainNav({
               <SheetTitle className="sr-only">메뉴</SheetTitle>
             </SheetHeader>
             <nav className="mt-6 flex flex-col gap-1" aria-label="메인 메뉴">
-              {navItems.map((item) =>
+              {itemsToShow.map((item) =>
                 "sub" in item ? (
                   <div key={item.label} className="flex flex-col gap-0.5">
                     <span className="px-4 py-2 text-xs font-semibold text-foreground">
@@ -95,21 +114,31 @@ export function MainNav({
                     key={item.href}
                     href={item.href}
                     onClick={() => setOpen(false)}
+                    aria-label={item.href === "/notes" ? "쪽지" : undefined}
                     className={cn(
                       navLinkClass,
-                      pathname === item.href && "bg-muted font-semibold",
+                      (pathname === item.href ||
+                        (item.href === "/notes" &&
+                          pathname.startsWith("/notes"))) &&
+                        "bg-muted font-semibold",
                     )}
                   >
                     <span className="inline-flex items-center gap-2">
-                      <span>{item.label}</span>
-                      {item.href === "/bunny-approvals" && pendingCount > 0 && (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-blue-600/30 bg-blue-50/60 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-blue-700">
-                          <span className="relative inline-flex h-2 w-2">
-                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-600/60 opacity-50" />
-                            <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-600" />
-                          </span>
-                          {pendingCount}
+                      {item.href === "/notes" ? (
+                        <Mail
+                          className={cn(
+                            "size-5 shrink-0",
+                            hasUnreadNotes &&
+                              "text-blue-600 animate-pulse dark:text-blue-400",
+                          )}
+                          aria-hidden
+                        />
+                      ) : item.href === "/bunny-approvals" && pendingCount > 0 ? (
+                        <span className="rounded-md border border-blue-300/60 bg-blue-50/70 px-2 py-0.5 font-semibold text-blue-600 dark:border-blue-500/40 dark:bg-blue-950/40 dark:text-blue-400">
+                          {item.label}
                         </span>
+                      ) : (
+                        <span>{item.label}</span>
                       )}
                     </span>
                   </Link>
@@ -125,7 +154,7 @@ export function MainNav({
         className="hidden items-center gap-1 md:flex"
         aria-label="메인 메뉴"
       >
-        {navItems.map((item) =>
+        {itemsToShow.map((item) =>
           "sub" in item ? (
             <DropdownMenu key={item.label}>
               <DropdownMenuTrigger asChild>
@@ -162,21 +191,33 @@ export function MainNav({
               size="sm"
               className={cn(
                 "min-h-9 font-medium",
-                pathname === item.href && "bg-muted",
+                (pathname === item.href ||
+                  (item.href === "/notes" &&
+                    pathname.startsWith("/notes"))) &&
+                  "bg-muted",
               )}
               asChild
             >
-              <Link href={item.href}>
+              <Link
+                href={item.href}
+                aria-label={item.href === "/notes" ? "쪽지" : undefined}
+              >
                 <span className="inline-flex items-center gap-2">
-                  <span>{item.label}</span>
-                  {item.href === "/bunny-approvals" && pendingCount > 0 && (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-blue-600/30 bg-blue-50/60 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-blue-700">
-                      <span className="relative inline-flex h-2 w-2">
-                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-600/60 opacity-50" />
-                        <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-600" />
-                      </span>
-                      {pendingCount}
+                  {item.href === "/notes" ? (
+                    <Mail
+                      className={cn(
+                        "size-5 shrink-0",
+                        hasUnreadNotes &&
+                          "text-blue-600 animate-pulse dark:text-blue-400",
+                      )}
+                      aria-hidden
+                    />
+                  ) : item.href === "/bunny-approvals" && pendingCount > 0 ? (
+                    <span className="rounded-md border border-blue-300/60 bg-blue-50/70 px-2 py-0.5 font-semibold text-blue-600 dark:border-blue-500/40 dark:bg-blue-950/40 dark:text-blue-400">
+                      {item.label}
                     </span>
+                  ) : (
+                    <span>{item.label}</span>
                   )}
                 </span>
               </Link>

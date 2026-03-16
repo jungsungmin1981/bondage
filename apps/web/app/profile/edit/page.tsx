@@ -46,22 +46,22 @@ export default async function ProfileEditPage() {
   }
 
   return (
-    <div className="min-h-[calc(100svh-3.5rem)] p-4 sm:p-6">
+    <div className="flex min-h-0 flex-1 flex-col p-4 sm:h-[calc(100dvh-4rem)] sm:overflow-hidden sm:p-6">
       <Link
         href={isRigger ? "/rigger" : "/"}
-        className="mb-6 inline-block text-sm text-muted-foreground underline-offset-2 hover:underline"
+        className="mb-6 shrink-0 text-sm text-muted-foreground underline-offset-2 hover:underline"
       >
         {isRigger ? "← 리거 목록" : "← 홈"}
       </Link>
 
-      <div className="mx-auto grid max-w-4xl gap-6 sm:grid-cols-[minmax(0,280px)_1fr] sm:grid-rows-[auto_auto] sm:gap-x-6 lg:gap-x-10">
+      <div className="mx-auto grid min-h-0 w-full max-w-4xl flex-1 gap-6 sm:grid-cols-[minmax(0,280px)_1fr] sm:grid-rows-[1fr] sm:items-start sm:gap-x-6 lg:gap-x-10">
         {isRigger && rigger ? (
           <OwnProfileTierColumn rigger={rigger} />
         ) : (
           <BunnyCardEditColumn profile={profile} />
         )}
 
-        <div className="min-w-0 rounded-xl border bg-card shadow-sm sm:col-start-2 sm:row-span-2 sm:row-start-1">
+        <div className="min-h-0 min-w-0 overflow-y-auto rounded-xl border bg-card shadow-sm sm:col-start-2 sm:row-start-1">
           <div className="p-6">
             <ProfileForm profile={profile} />
           </div>

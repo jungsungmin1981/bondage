@@ -1,6 +1,8 @@
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "../client/node";
 import * as schema from "../schema";
+import { DIRECT_MESSAGE_SOURCE } from "../direct-message-source";
+import { insertDirectMessage } from "./direct-messages";
 
 /** 통과에 필요한 운영진 승인 수. 나중에 2 또는 3으로 변경하면 됨. */
 export const REQUIRED_APPROVAL_COUNT = 1;
@@ -20,6 +22,18 @@ export async function createClassChallenge(input: {
     imageUrls: input.imageUrls,
     status: "pending",
   });
+}
+
+/** 반려된 도전만 삭제 (재도전 허용용). FK class_challenge_approvals는 cascade 삭제됨. */
+export async function deleteRejectedClassChallenge(challengeId: string): Promise<void> {
+  await db
+    .delete(schema.classChallenges)
+    .where(
+      and(
+        eq(schema.classChallenges.id, challengeId),
+        eq(schema.classChallenges.status, "rejected"),
+      ),
+    );
 }
 
 export async function getChallengeByUserAndClassPost(
@@ -168,7 +182,10 @@ export type ChallengeForReviewRow = {
   note: string;
   /** 해당 도전에 승인/반려 투표한 운영진 닉네임·결정 목록 (페이지에서 주입) */
   processorDecisions?: { nickname: string; decision: "approved" | "rejected" }[];
-};
+  /** 반려 목록용: 반려 사유·참고 이미지 (페이지에서 주입) */
+  rejectionNote?: string | null;
+  rejectionImageUrls?: string[];
+}
 
 /** 도전별로 심사에 참여한 운영진(처리자) 닉네임·결정 목록. challengeId -> { nickname, decision }[] */
 export async function getProcessorDecisionsByChallengeIds(
@@ -198,6 +215,76 @@ export async function getProcessorDecisionsByChallengeIds(
     list.push({ nickname: nick, decision });
   }
   return map;
+}
+
+/** 반려된 도전별 반려 사유·참고 이미지 (한 건당 하나의 반려 기록 사용, 최신 기준). */
+export async function getRejectionDetailsByChallengeIds(
+  challengeIds: string[],
+): Promise<
+  Map<string, { rejectionNote: string | null; rejectionImageUrls: string[] }>
+> {
+  const map = new Map<
+    string,
+    { rejectionNote: string | null; rejectionImageUrls: string[] }
+  >();
+  if (challengeIds.length === 0) return map;
+
+  const rows = await db
+    .select({
+      challengeId: schema.classChallengeApprovals.challengeId,
+      rejectionNote: schema.classChallengeApprovals.rejectionNote,
+      rejectionImageUrls: schema.classChallengeApprovals.rejectionImageUrls,
+    })
+    .from(schema.classChallengeApprovals)
+    .where(
+      and(
+        inArray(schema.classChallengeApprovals.challengeId, challengeIds),
+        eq(schema.classChallengeApprovals.decision, "rejected"),
+      ),
+    )
+    .orderBy(desc(schema.classChallengeApprovals.createdAt));
+
+  for (const row of rows) {
+    if (map.has(row.challengeId)) continue;
+    map.set(row.challengeId, {
+      rejectionNote: row.rejectionNote ?? null,
+      rejectionImageUrls: Array.isArray(row.rejectionImageUrls)
+        ? (row.rejectionImageUrls as string[])
+        : [],
+    });
+  }
+  return map;
+}
+
+/** 레벨별 심사중(pending) 도전 건수. 관리자 목록에 안 나올 때 확인용. */
+export async function getPendingChallengeCountsByLevel(): Promise<{
+  beginner: number;
+  intermediate: number;
+  advanced: number;
+  /** level이 beginner/intermediate/advanced가 아닌 pending 건수 */
+  other: number;
+}> {
+  const rows = await db
+    .select({
+      level: schema.classPosts.level,
+      count: sql<number>`count(*)::int`.as("count"),
+    })
+    .from(schema.classChallenges)
+    .innerJoin(
+      schema.classPosts,
+      eq(schema.classChallenges.classPostId, schema.classPosts.id),
+    )
+    .where(eq(schema.classChallenges.status, "pending"))
+    .groupBy(schema.classPosts.level);
+
+  const result = { beginner: 0, intermediate: 0, advanced: 0, other: 0 };
+  for (const row of rows) {
+    if (row.level === "beginner") result.beginner = row.count;
+    else if (row.level === "intermediate") result.intermediate = row.count;
+    else if (row.level === "advanced") result.advanced = row.count;
+    else result.other += row.count;
+  }
+  return result;
 }
 
 /** 레벨별 심사용 도전 목록 (클래스 정보 + 도전자 닉네임). status 필터 선택. */
@@ -293,7 +380,11 @@ export async function submitChallengeReview(
   payload?: ChallengeReviewPayload,
 ): Promise<void> {
   const [challenge] = await db
-    .select({ status: schema.classChallenges.status })
+    .select({
+      status: schema.classChallenges.status,
+      userId: schema.classChallenges.userId,
+      classPostId: schema.classChallenges.classPostId,
+    })
     .from(schema.classChallenges)
     .where(eq(schema.classChallenges.id, challengeId))
     .limit(1);
@@ -337,6 +428,15 @@ export async function submitChallengeReview(
     });
 
   if (decision === "rejected") {
+    await insertDirectMessage({
+      fromUserId: staffUserId,
+      toUserId: challenge.userId,
+      title: "클래스 도전 반려",
+      body: rejectionNote ?? "클래스 도전이 반려되었습니다.",
+      source: DIRECT_MESSAGE_SOURCE.CLASS_CHALLENGE_REJECTION,
+      imageUrls: rejectionImageUrls ?? null,
+      classPostId: challenge.classPostId ?? null,
+    });
     await updateClassChallengeStatus(challengeId, "rejected");
     return;
   }

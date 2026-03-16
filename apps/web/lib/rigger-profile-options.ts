@@ -1,6 +1,12 @@
 /** 활동지역 입력 최대 글자수 (칸 벗어남 방지) */
 export const ACTIVITY_REGION_MAX_LENGTH = 50;
 
+/** 버니 프로필 — 활동지역 최대 글자수 */
+export const BUNNY_ACTIVITY_REGION_MAX_LENGTH = 15;
+
+/** 버니 프로필 — 자기소개 최대 글자수 */
+export const BUNNY_BIO_MAX_LENGTH = 500;
+
 /** 상세 프로필 — 성별 옵션 (리거/버니 공통) */
 export const GENDER_OPTIONS = ["남", "여"] as const;
 

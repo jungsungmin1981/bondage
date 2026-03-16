@@ -1,6 +1,7 @@
 export * from "./account";
 export * from "./session";
 export * from "./user";
+export * from "./verification";
 export * from "./rigger-photo";
 export * from "./bunny-approval";
 export * from "./photo-like";
@@ -17,4 +18,7 @@ export * from "./class-challenge";
 export * from "./class-challenge-approval";
 export * from "./bunny-board";
 export * from "./bunny-board-post-comment";
+export * from "./bunny-photo";
+export * from "./invite-key";
+export * from "./user-suspension";
 

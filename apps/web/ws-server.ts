@@ -7,6 +7,17 @@ import { and, eq } from "drizzle-orm";
 // @workspace/db는 import 시점에 DB client를 만들며 env가 필요하므로, 최우선으로 .env를 로드한다.
 dotenv.config();
 
+if (process.env.NODE_ENV === "production") {
+  const tokenSecret = process.env.WS_TOKEN_SECRET || process.env.BETTER_AUTH_SECRET;
+  const publishSecret = process.env.WS_PUBLISH_SECRET || process.env.BETTER_AUTH_SECRET;
+  if (!tokenSecret || !publishSecret) {
+    console.error(
+      "In production, WS_TOKEN_SECRET or BETTER_AUTH_SECRET, and WS_PUBLISH_SECRET or BETTER_AUTH_SECRET, must be set.",
+    );
+    process.exit(1);
+  }
+}
+
 const { db, schema } = await import("@workspace/db");
 
 type ClientCtx = {

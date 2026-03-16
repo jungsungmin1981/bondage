@@ -11,6 +11,7 @@ import { ToggleGroup, ToggleGroupItem } from "@workspace/ui/components/toggle-gr
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -408,6 +409,9 @@ export function PhotoUploadForm({ riggerId }: Props) {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>버니 선택</DialogTitle>
+            <DialogDescription className="sr-only">
+              사진에 함께한 버니를 검색해 선택할 수 있습니다.
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3">

@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { auth } from "@workspace/auth";
 import {
   createClassChallenge,
+  deleteRejectedClassChallenge,
   getChallengeByUserAndClassPost,
 } from "@workspace/db";
 
@@ -23,6 +24,13 @@ export async function createClassChallengeAction(input: {
       return { ok: false, error: "이미지를 1장 이상 등록해주세요." };
     }
     const session = await requireSession();
+    const existing = await getChallengeByUserAndClassPost(
+      session.user.id,
+      input.classPostId,
+    );
+    if (existing?.status === "rejected") {
+      await deleteRejectedClassChallenge(existing.id);
+    }
     const id = crypto.randomUUID();
     await createClassChallenge({
       id,
@@ -33,9 +41,21 @@ export async function createClassChallengeAction(input: {
     });
     return { ok: true };
   } catch (e) {
+    const msg = typeof (e as Error).message === "string" ? (e as Error).message : String(e);
+    const raw = e as { code?: string; constraint?: string };
+    const isUniqueViolation =
+      raw.code === "23505" ||
+      raw.constraint === "class_challenges_user_post_unique" ||
+      /duplicate key|unique constraint|class_challenges_user_post_unique/i.test(msg);
+    if (isUniqueViolation) {
+      return {
+        ok: false,
+        error: "이미 이 클래스에 도전을 신청하셨습니다. 같은 클래스에는 한 번만 도전할 수 있습니다.",
+      };
+    }
     return {
       ok: false,
-      error: e instanceof Error ? e.message : "도전 신청 저장에 실패했습니다.",
+      error: msg || "도전 신청 저장에 실패했습니다.",
     };
   }
 }

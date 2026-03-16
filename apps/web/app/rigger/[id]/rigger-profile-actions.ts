@@ -3,7 +3,10 @@
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { auth } from "@workspace/auth";
-import { getRiggerProfileById } from "@workspace/db";
+import {
+  getRiggerProfileById,
+  requestRiggerApprovalAgain,
+} from "@workspace/db";
 import {
   saveRiggerOverride,
   type RiggerOverride,
@@ -55,4 +58,23 @@ export async function saveRiggerProfile(
   } catch {
     return { ok: false, error: "저장에 실패했습니다." };
   }
+}
+
+export async function requestRiggerApprovalAgainAction(
+  riggerId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) return { ok: false, error: "로그인이 필요합니다." };
+  const profile = await getRiggerProfileById(riggerId);
+  if (!profile || profile.userId !== session.user.id) {
+    return { ok: false, error: "본인 프로필만 승인 재요청할 수 있습니다." };
+  }
+  if (profile.status !== "rejected") {
+    return { ok: false, error: "반려된 상태에서만 다시 승인을 요청할 수 있습니다." };
+  }
+  const result = await requestRiggerApprovalAgain(riggerId);
+  if (result.ok) {
+    revalidatePath(`/rigger/${encodeURIComponent(riggerId)}`);
+  }
+  return result;
 }

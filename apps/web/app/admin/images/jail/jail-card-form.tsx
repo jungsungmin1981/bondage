@@ -41,7 +41,7 @@ export function JailCardForm({ onPreviewChange }: Props) {
       if (result.ok) {
         setFile(null);
         setLocked(true);
-        onPreviewChange?.(null);
+        onPreviewChange?.(`${result.url}?t=${Date.now()}`);
       } else {
         alert(result.error);
       }

@@ -1,5 +1,7 @@
+export { eq, and, gt, isNull } from "drizzle-orm";
 export * from "./client/node";
 export * as schema from "./schema";
+export * from "./direct-message-source";
 export * from "./queries/rigger-photos";
 export * from "./queries/post-likes";
 export * from "./queries/photo-comments";
@@ -12,4 +14,6 @@ export * from "./queries/class-posts";
 export * from "./queries/class-challenges";
 export * from "./queries/bunny-board";
 export * from "./queries/bunny-board-post-comment";
+export * from "./queries/bunny-photos";
+export * from "./queries/user-suspensions";
 

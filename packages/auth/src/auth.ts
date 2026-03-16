@@ -1,8 +1,10 @@
-import { db, schema } from "@workspace/db";
+import { db, schema, eq, and, gt, isNull } from "@workspace/db";
 import { betterAuth } from "better-auth";
+import { createAuthMiddleware, APIError } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { genericOAuth, username } from "better-auth/plugins";
 import { nextCookies } from "better-auth/next-js";
+import { Resend } from "resend";
 
 const kakaoClientId = process.env.KAKAO_CLIENT_ID ?? "";
 const kakaoClientSecret = process.env.KAKAO_CLIENT_SECRET ?? "";
@@ -16,6 +18,143 @@ const extraOrigins = process.env.BETTER_AUTH_TRUSTED_ORIGINS
   ? process.env.BETTER_AUTH_TRUSTED_ORIGINS.split(",").map((o) => o.trim()).filter(Boolean)
   : [];
 
+const resendApiKey = process.env.RESEND_API_KEY ?? "";
+const resendFrom =
+  process.env.RESEND_FROM ?? "Bondage <onboarding@resend.dev>";
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/** 비밀번호 재설정 메일 HTML */
+function buildResetPasswordEmailHtml(resetUrl: string): string {
+  const safeUrl = escapeHtml(resetUrl);
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0; padding:0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f1f5f9;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f1f5f9;">
+    <tr>
+      <td align="center" style="padding: 32px 16px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 420px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.07);">
+          <tr>
+            <td style="padding: 28px 24px 20px; border-bottom: 1px solid #e2e8f0;">
+              <h1 style="margin:0; font-size: 18px; font-weight: 600; color: #0f172a;">Bondage 비밀번호 재설정</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 24px;">
+              <p style="margin:0 0 20px; font-size: 15px; line-height: 1.5; color: #475569;">비밀번호 재설정을 요청하셨습니다. 아래 버튼을 클릭하면 새 비밀번호를 설정할 수 있습니다.</p>
+              <table role="presentation" cellspacing="0" cellpadding="0" style="margin: 24px 0;">
+                <tr>
+                  <td style="border-radius: 8px; background-color: #2563eb;">
+                    <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; padding: 14px 28px; font-size: 15px; font-weight: 600; color: #ffffff; text-decoration: none;">비밀번호 재설정하기</a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin: 0 0 8px; font-size: 13px; color: #64748b;">버튼이 동작하지 않으면 아래 링크를 복사해 브라우저에 붙여넣으세요.</p>
+              <p style="margin: 0; font-size: 12px; word-break: break-all; color: #94a3b8;">${safeUrl}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 16px 24px 28px; border-top: 1px solid #e2e8f0;">
+              <p style="margin:0; font-size: 12px; color: #94a3b8;">본인이 요청한 것이 아니라면 이 메일을 무시하세요. 링크는 일정 시간이 지나면 만료됩니다.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+}
+
+/** 이메일 인증 메일 HTML */
+function buildVerificationEmailHtml(verificationUrl: string): string {
+  const safeUrl = escapeHtml(verificationUrl);
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0; padding:0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f1f5f9;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f1f5f9;">
+    <tr>
+      <td align="center" style="padding: 32px 16px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 420px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.07);">
+          <tr>
+            <td style="padding: 28px 24px 20px; border-bottom: 1px solid #e2e8f0;">
+              <h1 style="margin:0; font-size: 18px; font-weight: 600; color: #0f172a;">Bondage 이메일 인증</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 24px;">
+              <p style="margin:0 0 20px; font-size: 15px; line-height: 1.5; color: #475569;">회원가입을 완료하려면 아래 버튼을 클릭해 이메일 인증을 완료해 주세요.</p>
+              <table role="presentation" cellspacing="0" cellpadding="0" style="margin: 24px 0;">
+                <tr>
+                  <td style="border-radius: 8px; background-color: #2563eb;">
+                    <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; padding: 14px 28px; font-size: 15px; font-weight: 600; color: #ffffff; text-decoration: none;">이메일 인증하기</a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin: 0 0 8px; font-size: 13px; color: #64748b;">버튼이 동작하지 않으면 아래 링크를 복사해 브라우저에 붙여넣으세요.</p>
+              <p style="margin: 0; font-size: 12px; word-break: break-all; color: #94a3b8;">${safeUrl}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 16px 24px 28px; border-top: 1px solid #e2e8f0;">
+              <p style="margin:0; font-size: 12px; color: #94a3b8;">본인이 가입한 것이 아니라면 이 메일을 무시하세요. 링크는 일정 시간이 지나면 만료됩니다.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+}
+
+/** 요청 단계에서 인증키 검증 후 유효하면 row 반환, 아니면 APIError throw */
+async function validateInviteKey(key: string): Promise<{ id: string }> {
+  const now = new Date();
+  const [row] = await db
+    .select()
+    .from(schema.inviteKeys)
+    .where(
+      and(
+        eq(schema.inviteKeys.key, key),
+        gt(schema.inviteKeys.expiresAt, now),
+        isNull(schema.inviteKeys.usedAt),
+      ),
+    )
+    .limit(1);
+  if (row) return { id: row.id };
+  const [expiredOrUsed] = await db
+    .select({ id: schema.inviteKeys.id, usedAt: schema.inviteKeys.usedAt })
+    .from(schema.inviteKeys)
+    .where(eq(schema.inviteKeys.key, key))
+    .limit(1);
+  if (expiredOrUsed) {
+    if (expiredOrUsed.usedAt) {
+      throw new APIError("BAD_REQUEST", { message: "INVITE_KEY_ALREADY_USED" });
+    }
+    throw new APIError("BAD_REQUEST", { message: "INVITE_KEY_EXPIRED" });
+  }
+  throw new APIError("BAD_REQUEST", { message: "INVITE_KEY_INVALID" });
+}
+
 export const auth = betterAuth({
   baseURL,
   trustedOrigins: [baseURL, ...extraOrigins],
@@ -27,7 +166,49 @@ export const auth = betterAuth({
         input: false,
         fieldName: "member_type",
       },
+      /** after 훅에서 설정. user 스키마에는 invite_key_id만 있음 */
+      inviteKeyId: {
+        type: "string",
+        required: false,
+        input: false,
+        fieldName: "invite_key_id",
+      },
     },
+  },
+  hooks: {
+    before: createAuthMiddleware(async (ctx) => {
+      if (!ctx.path.includes("sign-up/email")) return;
+      const body = ctx.body as Record<string, unknown> | undefined;
+      const normalizedUsername =
+        typeof body?.username === "string" ? body.username.trim().toLowerCase() : body?.username;
+      const bodyWithUsername = { ...body, username: normalizedUsername };
+
+      const key = typeof body?.inviteKey === "string" ? body.inviteKey.trim() : "";
+      if (!key) {
+        throw new APIError("BAD_REQUEST", { message: "INVITE_KEY_REQUIRED" });
+      }
+      const row = await validateInviteKey(key);
+      const { inviteKey: _drop, ...bodyWithoutKey } = bodyWithUsername as Record<string, unknown>;
+      return {
+        context: {
+          ...ctx,
+          body: bodyWithoutKey,
+          __inviteKeyId: row.id,
+        },
+      };
+    }),
+    after: createAuthMiddleware(async (ctx) => {
+      if (!ctx.path.includes("sign-up/email") || !ctx.context.newSession?.user?.id) return;
+      const inviteKeyId = (ctx.context as Record<string, unknown>).__inviteKeyId as string | undefined;
+      const userId = ctx.context.newSession!.user!.id;
+      if (inviteKeyId) {
+        await db.update(schema.users).set({ inviteKeyId }).where(eq(schema.users.id, userId));
+        await db
+          .update(schema.inviteKeys)
+          .set({ usedAt: new Date() })
+          .where(eq(schema.inviteKeys.id, inviteKeyId));
+      }
+    }),
   },
   database: drizzleAdapter(db, {
     provider: "pg",
@@ -36,10 +217,49 @@ export const auth = betterAuth({
       user: schema.users,
       session: schema.sessions,
       account: schema.accounts,
+      verification: schema.verification,
     },
   }),
+  emailVerification: {
+    sendOnSignUp: true,
+    autoSignInAfterVerification: true,
+    expiresIn: 3600, // 1시간
+    sendVerificationEmail: async ({ user, url }) => {
+      if (!resendApiKey) {
+        console.warn("[Better Auth] 이메일 인증 메일 미발송: RESEND_API_KEY가 설정되지 않았습니다.");
+        return;
+      }
+      const resend = new Resend(resendApiKey);
+      const html = buildVerificationEmailHtml(url);
+      try {
+        const result = await resend.emails.send({
+          from: resendFrom,
+          to: user.email,
+          subject: "Bondage 이메일 인증",
+          html,
+        });
+        if (result.error) {
+          console.error("[Better Auth] 이메일 인증 메일 발송 실패:", result.error);
+        }
+      } catch (e) {
+        console.error("[Better Auth] 이메일 인증 메일 발송 예외:", e);
+      }
+    },
+  },
   emailAndPassword: {
     enabled: true,
+    requireEmailVerification: true,
+    sendResetPassword: async ({ user, url }) => {
+      if (!resendApiKey) return;
+      const resend = new Resend(resendApiKey);
+      const html = buildResetPasswordEmailHtml(url);
+      void resend.emails.send({
+        from: resendFrom,
+        to: user.email,
+        subject: "Bondage 비밀번호 재설정",
+        html,
+      });
+    },
   },
   socialProviders: {
     ...(googleClientId && googleClientSecret

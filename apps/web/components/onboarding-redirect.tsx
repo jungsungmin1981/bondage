@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
-const SKIP_PREFIXES = ["/onboarding", "/login", "/register", "/api"];
+const SKIP_PREFIXES = ["/onboarding", "/login", "/register", "/reset-password", "/api"];
 
 export function OnboardingRedirect() {
   const pathname = usePathname();

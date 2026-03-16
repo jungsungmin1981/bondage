@@ -1,14 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Mail, Lock, User, UserPlus } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Mail, Lock, User, UserPlus, KeyRound } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@workspace/ui/lib/utils";
 import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
-import { SocialAuthIcons } from "@/components/social-auth-icons";
 
 const inputBoxClass =
   "flex items-center gap-3 rounded-xl border border-blue-400/20 bg-blue-900/40 px-4 py-3 focus-within:border-blue-400/50 focus-within:ring-2 focus-within:ring-blue-400/20";
@@ -53,6 +52,14 @@ function getSignupErrorMessage(message: unknown): string {
     return "비밀번호는 8자 이상이어야 합니다.";
   if (lower.includes("username") && lower.includes("invalid"))
     return "아이디는 영문, 숫자만 사용할 수 있습니다.";
+  if (lower.includes("invite_key_expired"))
+    return "인증키가 만료되었습니다.";
+  if (lower.includes("invite_key_already_used"))
+    return "이미 사용된 인증키입니다.";
+  if (lower.includes("invite_key_invalid"))
+    return "유효하지 않은 인증키입니다. 인증키를 확인해 주세요.";
+  if (lower.includes("invite_key_required"))
+    return "회원가입 인증키를 입력해 주세요.";
   const display = text === "[object Object]" ? "" : text;
   if (display) return `회원가입에 실패했습니다. (${display})`;
   return "회원가입에 실패했습니다. 입력 내용을 확인해 주세요.";
@@ -65,12 +72,20 @@ function isValidId(value: string): boolean {
 
 export function SignupForm({ className, ...props }: React.ComponentProps<"div">) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [inviteKey, setInviteKey] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // /register?invite=xxx 진입 시 회원가입 인증키 필드에 자동 입력
+  useEffect(() => {
+    const invite = searchParams.get("invite") ?? searchParams.get("key") ?? "";
+    if (invite.trim()) setInviteKey(invite.trim());
+  }, [searchParams]);
 
   const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -84,6 +99,11 @@ export function SignupForm({ className, ...props }: React.ComponentProps<"div">)
       setError("비밀번호가 일치하지 않습니다.");
       return;
     }
+    const key = inviteKey.trim();
+    if (!key) {
+      setError("회원가입 인증키를 입력해 주세요.");
+      return;
+    }
     setPending(true);
 
     const { error: signUpError } = await authClient.signUp.email(
@@ -92,7 +112,8 @@ export function SignupForm({ className, ...props }: React.ComponentProps<"div">)
         password,
         name: trimmedId || email,
         username: trimmedId,
-        callbackURL: "/onboarding",
+        callbackURL: "/login",
+        inviteKey: key,
       },
       {
         onError: (ctx) => {
@@ -105,7 +126,7 @@ export function SignupForm({ className, ...props }: React.ComponentProps<"div">)
     if (signUpError) {
       setError((prev) => prev ?? getSignupErrorMessage(signUpError));
     } else {
-      router.push("/onboarding");
+      router.push("/login?emailVerificationSent=1");
     }
   };
 
@@ -125,6 +146,19 @@ export function SignupForm({ className, ...props }: React.ComponentProps<"div">)
 
       <div className="pt-6">
         <form onSubmit={onSubmit} className="flex flex-col gap-6">
+          <div className={inputBoxClass}>
+            <KeyRound className="size-5 shrink-0 text-blue-300/90" strokeWidth={1.5} />
+            <Input
+              id="inviteKey"
+              type="text"
+              autoComplete="off"
+              placeholder="회원가입 인증키"
+              value={inviteKey}
+              onChange={(e) => setInviteKey(e.target.value)}
+              disabled={pending}
+              className={inputFieldClass}
+            />
+          </div>
           <div className={inputBoxClass}>
             <User className="size-5 shrink-0 text-blue-300/90" strokeWidth={1.5} />
             <Input
@@ -188,21 +222,15 @@ export function SignupForm({ className, ...props }: React.ComponentProps<"div">)
             disabled={pending}
             className="h-12 w-full rounded-xl bg-gradient-to-b from-blue-500 to-blue-600 text-base font-medium uppercase tracking-wide text-white shadow-lg hover:from-blue-600 hover:to-blue-700 disabled:opacity-50"
           >
-            {pending ? "Creating account..." : "Sign up"}
+            {pending ? "가입 중..." : "회원가입"}
           </Button>
-        </form>
-
-        <p className="mt-6 text-center text-sm text-blue-200/80">
-          Already have an account?{" "}
           <Link
             href="/login"
-            className="font-medium text-blue-100 underline-offset-2 hover:underline"
+            className="flex h-12 w-full items-center justify-center rounded-xl border border-blue-400/30 bg-blue-500/10 text-base font-medium uppercase tracking-wide text-blue-100 shadow-sm transition hover:bg-blue-500/20 hover:text-blue-50 min-h-[44px]"
           >
-            Sign in
+            로그인
           </Link>
-        </p>
-
-        <SocialAuthIcons className="mt-6" />
+        </form>
       </div>
     </div>
   );

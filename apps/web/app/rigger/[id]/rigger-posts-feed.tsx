@@ -5,8 +5,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  useCarousel,
+} from "@workspace/ui/components/carousel";
+import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@workspace/ui/components/dialog";
@@ -23,14 +30,90 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@workspace/ui/components/alert-dialog";
-import type { SerializedPost } from "@/lib/rigger-posts-types";
+import type { SerializedPost, SerializedPhotoRow } from "@/lib/rigger-posts-types";
 import { PAGE_SIZE } from "@/lib/rigger-posts-constants";
 import { loadMoreRiggerPosts } from "./post-feed-actions";
 import { PostLikeButton } from "./post-like-button";
 import { PostCommentBlock } from "./post-comment-block";
 import { deleteOwnRiggerPost, updateOwnRiggerPostVisibility } from "./post-edit-actions";
 
-const SWIPE_THRESHOLD_PX = 50;
+/** 게시물 상세 다이얼로그 내 이미지 캐러셀 (2장 이상일 때만 사용) */
+function PostDetailCarouselSlides({
+  photos,
+  caption,
+}: {
+  photos: SerializedPhotoRow[];
+  caption: string | null;
+}) {
+  const { scrollPrev, scrollNext, canScrollPrev, canScrollNext, api } =
+    useCarousel();
+  const [selectedIndex, setSelectedIndex] = useState(0);
+
+  useEffect(() => {
+    if (!api) return;
+    setSelectedIndex(api.selectedScrollSnap());
+    const onSelect = () => setSelectedIndex(api.selectedScrollSnap());
+    api.on("select", onSelect);
+    return () => {
+      api.off("select", onSelect);
+    };
+  }, [api]);
+
+  return (
+    <>
+      <div className="flex w-full max-w-full items-center justify-center gap-1 sm:gap-2">
+        <div className="flex w-7 shrink-0 flex-col items-center justify-center sm:w-8">
+          {canScrollPrev ? (
+            <button
+              type="button"
+              onClick={scrollPrev}
+              aria-label="이전 사진"
+              className="flex h-9 w-7 items-center justify-center rounded-md text-muted-foreground/60 transition-colors hover:bg-muted/80 hover:text-foreground sm:h-10 sm:w-8"
+            >
+              <ChevronLeft className="size-5 sm:size-6" strokeWidth={1.5} />
+            </button>
+          ) : (
+            <span className="h-9 w-7 sm:h-10 sm:w-8" aria-hidden />
+          )}
+        </div>
+        <div className="min-h-[40dvh] min-w-0 flex-1" aria-hidden>
+          <CarouselContent className="h-full w-full ml-0">
+            {photos.map((photo) => (
+              <CarouselItem key={photo.id} className="pl-0">
+                <div className="flex h-full w-full justify-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={photo.imagePath}
+                    alt={caption ?? "등록된 사진"}
+                    className="h-full w-auto max-h-[min(88dvh,calc(95dvh-7rem))] max-w-full object-contain object-center"
+                    draggable={false}
+                  />
+                </div>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+        </div>
+        <div className="flex w-7 shrink-0 flex-col items-center justify-center sm:w-8">
+          {canScrollNext ? (
+            <button
+              type="button"
+              onClick={scrollNext}
+              aria-label="다음 사진"
+              className="flex h-9 w-7 items-center justify-center rounded-md text-muted-foreground/60 transition-colors hover:bg-muted/80 hover:text-foreground sm:h-10 sm:w-8"
+            >
+              <ChevronRight className="size-5 sm:size-6" strokeWidth={1.5} />
+            </button>
+          ) : (
+            <span className="h-9 w-7 sm:h-10 sm:w-8" aria-hidden />
+          )}
+        </div>
+      </div>
+      <p className="mt-2 rounded-full bg-muted/90 px-2 py-0.5 text-xs text-muted-foreground">
+        {selectedIndex + 1} / {photos.length}
+      </p>
+    </>
+  );
+}
 
 type Props = {
   riggerId: string;
@@ -75,8 +158,6 @@ function PostCard({
   >("public");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [photoIndex, setPhotoIndex] = useState(0);
-  const touchStartX = useRef<number | null>(null);
   const createdAt = post.createdAt ? new Date(post.createdAt) : null;
   const totalPhotos = post.photos.length;
   const isOwnPost = post.photos[0]?.userId === sessionUserId;
@@ -98,18 +179,8 @@ function PostCard({
     isPending && approvals.some((a) => a.status === "rejected");
   const showPendingBunnyStatus =
     isPending && canEditPost && approvalCount > 0 && !isRejected;
-  const canGoPrev = totalPhotos > 1 && photoIndex > 0;
-  const canGoNext = totalPhotos > 1 && photoIndex < totalPhotos - 1;
-
-  const goPrev = useCallback(() => {
-    if (canGoPrev) setPhotoIndex((i) => i - 1);
-  }, [canGoPrev]);
-  const goNext = useCallback(() => {
-    if (canGoNext) setPhotoIndex((i) => i + 1);
-  }, [canGoNext]);
 
   const openDetail = useCallback(() => {
-    setPhotoIndex(0);
     setDetailOpen(true);
   }, []);
 
@@ -119,21 +190,6 @@ function PostCard({
     setInitialVisibility(postVisibility);
     setSaving(false);
   }, [editOpen, postVisibility]);
-
-  useEffect(() => {
-    if (!detailOpen || totalPhotos <= 1) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "ArrowLeft") {
-        e.preventDefault();
-        setPhotoIndex((i) => Math.max(0, i - 1));
-      } else if (e.key === "ArrowRight") {
-        e.preventDefault();
-        setPhotoIndex((i) => Math.min(totalPhotos - 1, i + 1));
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [detailOpen, totalPhotos]);
 
   return (
     <li className="min-w-0">
@@ -284,6 +340,9 @@ function PostCard({
           >
             <DialogHeader>
               <DialogTitle className="sr-only">게시물 상세</DialogTitle>
+              <DialogDescription className="sr-only">
+                게시물 이미지와 제목, 수정·삭제 옵션이 표시됩니다.
+              </DialogDescription>
             </DialogHeader>
             <div className="flex min-h-0 flex-1 flex-col space-y-2 sm:space-y-3">
               <div className="grid grid-cols-3 items-center gap-3">
@@ -316,98 +375,75 @@ function PostCard({
               <p className="shrink-0 text-sm font-medium text-foreground">
                 {post.caption?.trim() || "제목 없음"}
               </p>
-              {/* 이미지 영역: 남는 높이를 모두 사용, 화면 크기에 맞춰 자동 조절 */}
+              {/* 이미지 영역: 2장 이상이면 Carousel로 스와이프 */}
               <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center">
-                {/* 이미지 옆에 배치해 겹침 최소화; 모바일은 좁은 세로 칼럼 */}
-                <div className="flex w-full max-w-full items-center justify-center gap-1 sm:gap-2">
-                  {totalPhotos > 1 && (
-                    <div className="flex w-7 shrink-0 flex-col items-center justify-center sm:w-8">
-                      {canGoPrev ? (
-                        <button
-                          type="button"
-                          onClick={goPrev}
-                          aria-label="이전 사진"
-                          className="flex h-9 w-7 items-center justify-center rounded-md text-muted-foreground/60 transition-colors hover:bg-muted/80 hover:text-foreground sm:h-10 sm:w-8"
-                        >
-                          <ChevronLeft className="size-5 sm:size-6" strokeWidth={1.5} />
-                        </button>
-                      ) : (
-                        <span className="h-9 w-7 sm:h-10 sm:w-8" aria-hidden />
-                      )}
+                {totalPhotos === 0 ? (
+                  <div className="flex min-h-[40dvh] w-full items-center justify-center text-muted-foreground text-sm">
+                    이미지 없음
+                  </div>
+                ) : totalPhotos === 1 ? (
+                  <div className="relative flex h-full w-full min-h-[40dvh] justify-center sm:min-h-[50dvh]">
+                    <div className="flex h-full w-full justify-center">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={post.photos[0]!.imagePath}
+                        alt={post.caption ?? "등록된 사진"}
+                        className="h-full w-auto max-h-[min(88dvh,calc(95dvh-7rem))] max-w-full object-contain object-center"
+                        draggable={false}
+                      />
                     </div>
-                  )}
-                <div
-                  className="flex min-h-0 min-w-0 flex-1 touch-pan-y select-none justify-center overflow-hidden"
-                  onTouchStart={(e) => {
-                    touchStartX.current =
-                      e.changedTouches[0]?.clientX ?? e.touches[0]?.clientX ?? null;
-                  }}
-                  onTouchEnd={(e) => {
-                    const start = touchStartX.current;
-                    if (start == null || totalPhotos <= 1) return;
-                    const end =
-                      e.changedTouches[0]?.clientX ?? e.touches[0]?.clientX ?? start;
-                    const delta = start - end;
-                    if (delta > SWIPE_THRESHOLD_PX) goNext();
-                    else if (delta < -SWIPE_THRESHOLD_PX) goPrev();
-                    touchStartX.current = null;
-                  }}
-                >
-                  {post.photos[photoIndex] && (
-                    <div className="relative flex h-full w-full min-h-[40dvh] justify-center sm:min-h-[50dvh]">
-                      <div className="flex h-full w-full justify-center">
+                    {isRejected && (
+                      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
-                          src={post.photos[photoIndex]!.imagePath}
-                          alt={post.caption ?? "등록된 사진"}
-                          className="h-full w-auto max-h-[min(88dvh,calc(95dvh-7rem))] max-w-full object-contain object-center"
-                          draggable={false}
+                          src="/approve-reject-icon.png"
+                          alt="승인 거절된 게시물"
+                          className="h-40 w-auto max-w-[75%] opacity-95 drop-shadow-[0_3px_24px_rgba(0,0,0,0.85)] sm:h-52"
                         />
                       </div>
-                      {isRejected && (
-                        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src="/approve-reject-icon.png"
-                            alt="승인 거절된 게시물"
-                            className="h-40 w-auto max-w-[75%] opacity-95 drop-shadow-[0_3px_24px_rgba(0,0,0,0.85)] sm:h-52"
-                          />
-                        </div>
-                      )}
-                      {isPending && !isRejected && (
-                        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src="/approve-request-icon.png"
-                            alt="승인 대기중 게시물"
-                            className="h-40 w-40 opacity-100 drop-shadow-[0_3px_20px_rgba(0,0,0,1)] brightness-0 invert sm:h-52 sm:w-52"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-                  {totalPhotos > 1 && (
-                    <div className="flex w-7 shrink-0 flex-col items-center justify-center sm:w-8">
-                      {canGoNext ? (
-                        <button
-                          type="button"
-                          onClick={goNext}
-                          aria-label="다음 사진"
-                          className="flex h-9 w-7 items-center justify-center rounded-md text-muted-foreground/60 transition-colors hover:bg-muted/80 hover:text-foreground sm:h-10 sm:w-8"
-                        >
-                          <ChevronRight className="size-5 sm:size-6" strokeWidth={1.5} />
-                        </button>
-                      ) : (
-                        <span className="h-9 w-7 sm:h-10 sm:w-8" aria-hidden />
-                      )}
-                    </div>
-                  )}
-                </div>
-                {totalPhotos > 1 && (
-                  <p className="mt-2 rounded-full bg-muted/90 px-2 py-0.5 text-xs text-muted-foreground">
-                    {photoIndex + 1} / {totalPhotos}
-                  </p>
+                    )}
+                    {isPending && !isRejected && (
+                      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src="/approve-request-icon.png"
+                          alt="승인 대기중 게시물"
+                          className="h-40 w-40 opacity-100 drop-shadow-[0_3px_20px_rgba(0,0,0,1)] brightness-0 invert sm:h-52 sm:w-52"
+                        />
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <Carousel
+                    className="w-full"
+                    opts={{ loop: false, align: "center" }}
+                  >
+                    <PostDetailCarouselSlides
+                      photos={post.photos}
+                      caption={post.caption}
+                    />
+                  </Carousel>
+                )}
+                {/* 승인 거절/대기 오버레이는 캐러셀 위에 동일 표시 */}
+                {totalPhotos > 1 && isRejected && (
+                  <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="/approve-reject-icon.png"
+                      alt="승인 거절된 게시물"
+                      className="h-40 w-auto max-w-[75%] opacity-95 drop-shadow-[0_3px_24px_rgba(0,0,0,0.85)] sm:h-52"
+                    />
+                  </div>
+                )}
+                {totalPhotos > 1 && isPending && !isRejected && (
+                  <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="/approve-request-icon.png"
+                      alt="승인 대기중 게시물"
+                      className="h-40 w-40 opacity-100 drop-shadow-[0_3px_20px_rgba(0,0,0,1)] brightness-0 invert sm:h-52 sm:w-52"
+                    />
+                  </div>
                 )}
               </div>
             </div>
@@ -428,6 +464,9 @@ function PostCard({
             <DialogContent className="max-w-sm">
               <DialogHeader>
                 <DialogTitle>게시물 설정</DialogTitle>
+                <DialogDescription className="sr-only">
+                  공개 유무 변경 및 게시물 삭제를 할 수 있습니다.
+                </DialogDescription>
               </DialogHeader>
 
               <div className="space-y-4">

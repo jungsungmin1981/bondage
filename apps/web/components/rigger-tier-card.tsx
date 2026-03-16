@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Star } from "lucide-react";
 import { cn } from "@workspace/ui/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@workspace/ui/components/avatar";
@@ -12,6 +12,7 @@ import {
 } from "@workspace/ui/components/popover";
 import type { Rigger, RiggerTier } from "@/lib/rigger-sample";
 import { TIER_STARS } from "@/lib/rigger-sample";
+import { SuspensionRemainingTime } from "@/components/suspension-remaining-time";
 
 /** 카드 내 원형 마크 공통 래퍼 + 편집 시 Popover(신규 사진 파일 선택) */
 function TierMarkCircle({
@@ -180,6 +181,10 @@ export type RiggerTierCardProps = {
   markPick?: { onChooseImage: (file: File) => void };
   /** 등급 카드 배경 이미지를 임시로 덮어쓸 때 사용 (관리자 미리보기용) */
   backgroundOverrideUrl?: string;
+  /** 계정 사용 제한 시 카드 위 감옥 이미지 URL (예: /jail-card.png) */
+  jailOverlayUrl?: string | null;
+  /** 정지 해제 예정 시각 ISO 문자열. null이면 영구. 상세보기에서만 전달 시 남은 시간 표시 */
+  suspendedUntil?: string | null;
 };
 
 /** 레전드 카드 이미지 배경: 원형 마크·닉네임만 표시 (별 없음), 레전드(퍼플) 테마 */
@@ -442,82 +447,106 @@ export function RiggerTierCard({
   rigger,
   markPick,
   backgroundOverrideUrl,
+  jailOverlayUrl,
+  suspendedUntil,
 }: RiggerTierCardProps) {
   const tier = rigger.tier;
   const styles = TIER_STYLES[tier];
   const starCount = TIER_STARS[tier];
 
+  let card: ReactNode;
   if (tier === "legend") {
-    return (
+    card = (
       <LegendCardWithImage
         rigger={rigger}
         markPick={markPick}
         backgroundOverrideUrl={backgroundOverrideUrl}
       />
     );
-  }
-  if (tier === "bronze") {
-    return (
+  } else if (tier === "bronze") {
+    card = (
       <BronzeCardWithImage
         rigger={rigger}
         markPick={markPick}
         backgroundOverrideUrl={backgroundOverrideUrl}
       />
     );
-  }
-  if (tier === "silver") {
-    return (
+  } else if (tier === "silver") {
+    card = (
       <SilverCardWithImage
         rigger={rigger}
         markPick={markPick}
         backgroundOverrideUrl={backgroundOverrideUrl}
       />
     );
-  }
-  if (tier === "gold") {
-    return (
+  } else if (tier === "gold") {
+    card = (
       <GoldCardWithImage
         rigger={rigger}
         markPick={markPick}
         backgroundOverrideUrl={backgroundOverrideUrl}
       />
     );
+  } else {
+    card = (
+      <article
+        className={cn(
+          "flex w-full min-h-[180px] min-w-0 flex-col rounded-xl border-2 bg-card/95 p-3 ring-2 backdrop-blur sm:p-4",
+          styles.border,
+          styles.glow,
+        )}
+        aria-label={`${rigger.name}, ${tier} 등급`}
+      >
+        <div className="flex flex-1 flex-col items-center justify-center gap-3">
+          <Avatar className="size-14 shrink-0 sm:size-16" size="lg">
+            <AvatarImage src={rigger.avatarUrl ?? undefined} alt="" />
+            <AvatarFallback className="text-base font-medium">
+              {rigger.avatarFallback}
+            </AvatarFallback>
+          </Avatar>
+        </div>
+        <div
+          className={cn(
+            "mt-2 rounded-lg border px-3 py-2 text-center text-sm font-medium",
+            styles.banner,
+          )}
+        >
+          {rigger.name}
+        </div>
+        <div className="mt-2 flex justify-center gap-0.5" aria-hidden>
+          {Array.from({ length: starCount }, (_, i) => (
+            <Star
+              key={i}
+              className={cn("size-4 shrink-0", styles.star)}
+              strokeWidth={1.5}
+            />
+          ))}
+        </div>
+      </article>
+    );
   }
 
   return (
-    <article
-      className={cn(
-        "flex w-full min-h-[180px] min-w-0 flex-col rounded-xl border-2 bg-card/95 p-3 ring-2 backdrop-blur sm:p-4",
-        styles.border,
-        styles.glow,
-      )}
-      aria-label={`${rigger.name}, ${tier} 등급`}
-    >
-      <div className="flex flex-1 flex-col items-center justify-center gap-3">
-        <Avatar className="size-14 shrink-0 sm:size-16" size="lg">
-          <AvatarImage src={rigger.avatarUrl ?? undefined} alt="" />
-          <AvatarFallback className="text-base font-medium">
-            {rigger.avatarFallback}
-          </AvatarFallback>
-        </Avatar>
-      </div>
-      <div
-        className={cn(
-          "mt-2 rounded-lg border px-3 py-2 text-center text-sm font-medium",
-          styles.banner,
-        )}
-      >
-        {rigger.name}
-      </div>
-      <div className="mt-2 flex justify-center gap-0.5" aria-hidden>
-        {Array.from({ length: starCount }, (_, i) => (
-          <Star
-            key={i}
-            className={cn("size-4 shrink-0", styles.star)}
-            strokeWidth={1.5}
+    <div className="relative w-full min-w-0">
+      {card}
+      {jailOverlayUrl && (
+        <>
+          <img
+            src={jailOverlayUrl}
+            alt=""
+            className="pointer-events-none absolute inset-0 h-full w-full rounded-xl object-cover object-center"
+            aria-hidden
           />
-        ))}
-      </div>
-    </article>
+          {suspendedUntil !== undefined && (
+            <div
+              className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-xl bg-black/40 pt-8"
+              aria-hidden
+            >
+              <SuspensionRemainingTime suspendedUntil={suspendedUntil ?? null} />
+            </div>
+          )}
+        </>
+      )}
+    </div>
   );
 }

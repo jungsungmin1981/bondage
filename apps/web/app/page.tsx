@@ -1,4 +1,8 @@
 import { auth } from "@workspace/auth";
+import {
+  getMemberProfileByUserId,
+  getInviteKeyMemberTypeByUserId,
+} from "@workspace/db";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -12,6 +16,14 @@ export default async function MainPage() {
 
   if (!session) {
     redirect("/login");
+  }
+
+  const profile = await getMemberProfileByUserId(session.user.id);
+  if (!profile) {
+    const inviteKeyType = await getInviteKeyMemberTypeByUserId(session.user.id);
+    if (inviteKeyType === "rigger") redirect("/onboarding/rigger");
+    if (inviteKeyType === "bunny") redirect("/onboarding/bunny");
+    redirect("/onboarding");
   }
 
   const displayName = session.user.name ?? session.user.email ?? "회원";

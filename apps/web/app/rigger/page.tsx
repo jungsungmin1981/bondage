@@ -1,5 +1,5 @@
 import { auth } from "@workspace/auth";
-import { getApprovedRiggerProfiles } from "@workspace/db";
+import { getApprovedRiggerProfiles, getSuspendedUserIds } from "@workspace/db";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import {
@@ -16,7 +16,10 @@ export default async function RiggerPage() {
   });
   if (!session) redirect("/login");
 
-  const approved = await getApprovedRiggerProfiles();
+  const [approved, suspendedUserIds] = await Promise.all([
+    getApprovedRiggerProfiles(),
+    getSuspendedUserIds(),
+  ]);
   const list = approved.map(mapRiggerProfileToRigger);
   const listWithOverrides = await Promise.all(
     list.map(async (r) => {
@@ -57,6 +60,7 @@ export default async function RiggerPage() {
               key={tier}
               tier={tier}
               riggers={riggersByTier[idx] ?? []}
+              suspendedUserIds={suspendedUserIds}
             />
           ))}
         </div>

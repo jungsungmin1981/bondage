@@ -12,6 +12,7 @@ const imageTabs = [
   { label: "골드", href: "/admin/images/gold" },
   { label: "마스터", href: "/admin/images/master" },
   { label: "감옥", href: "/admin/images/jail" },
+  { label: "기부", href: "/admin/images/donation" },
 ] as const;
 
 export function AdminImageTabs() {

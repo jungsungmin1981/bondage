@@ -20,6 +20,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@workspace/ui/components/dialog";
@@ -679,6 +680,9 @@ export function ClassAdvancedAdmin() {
         >
           <DialogHeader>
             <DialogTitle className="sr-only">미리보기</DialogTitle>
+            <DialogDescription className="sr-only">
+              클래스 게시물 미리보기입니다.
+            </DialogDescription>
           </DialogHeader>
           <div className="flex min-h-0 flex-1 flex-col space-y-2 sm:space-y-3">
             <p className="shrink-0 text-sm font-medium text-foreground">

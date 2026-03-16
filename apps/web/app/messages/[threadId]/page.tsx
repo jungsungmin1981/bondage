@@ -20,8 +20,8 @@ export default async function ThreadPage({
     messages = await getThreadMessages(decoded, session.user.id, 50);
     await markThreadRead(decoded, session.user.id);
   } catch {
-    // 참여자가 아닌 thread에 접근한 경우 등
-    redirect("/messages");
+    // 참여자가 아닌 thread에 접근한 경우 등 — list=1 로 보내서 첫 스레드로 다시 리다이렉트되지 않게 함
+    redirect("/messages?list=1");
   }
 
   // 상단 헤더용 상대 정보 (닉네임, 마크 이미지)

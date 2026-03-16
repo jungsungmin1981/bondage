@@ -1,6 +1,8 @@
 import { and, asc, desc, eq, inArray, ne, sql } from "drizzle-orm";
+import { DIRECT_MESSAGE_SOURCE } from "../direct-message-source";
 import { db } from "../client/node";
 import * as schema from "../schema";
+import { insertDirectMessage } from "./direct-messages";
 import {
   getVisibilityAfterApprovalByPostId,
   setRiggerPostVisibilityByPostId,
@@ -437,12 +439,29 @@ export async function rejectBunnyPostRequest(
       );
   });
 
+  const riggerRow = await db
+    .select({ userId: schema.riggerPhotos.userId })
+    .from(schema.riggerPhotos)
+    .where(eq(schema.riggerPhotos.postId, postId))
+    .limit(1);
+  const riggerUserId = riggerRow[0]?.userId;
+  if (riggerUserId) {
+    await insertDirectMessage({
+      fromUserId: bunnyUserId,
+      toUserId: riggerUserId,
+      title: "게시물 승인 거절",
+      body: "요청하신 게시물에 대한 버니 승인이 거절되었습니다.",
+      source: DIRECT_MESSAGE_SOURCE.BUNNY_REJECTION,
+    });
+  }
+
   return { ok: true };
 }
 
 /** 관리자: bunnyUserId 체크 없이 거절 */
 export async function rejectBunnyPostRequestAsAdmin(
   approvalId: string,
+  rejectedByUserId: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const row = await db
     .select({
@@ -474,6 +493,22 @@ export async function rejectBunnyPostRequestAsAdmin(
         ),
       );
   });
+
+  const riggerRow = await db
+    .select({ userId: schema.riggerPhotos.userId })
+    .from(schema.riggerPhotos)
+    .where(eq(schema.riggerPhotos.postId, postId))
+    .limit(1);
+  const riggerUserId = riggerRow[0]?.userId;
+  if (riggerUserId) {
+    await insertDirectMessage({
+      fromUserId: rejectedByUserId,
+      toUserId: riggerUserId,
+      title: "게시물 승인 거절",
+      body: "요청하신 게시물에 대한 버니 승인이 거절되었습니다.",
+      source: DIRECT_MESSAGE_SOURCE.BUNNY_REJECTION,
+    });
+  }
 
   return { ok: true };
 }

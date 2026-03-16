@@ -9,6 +9,12 @@ import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
 import { Textarea } from "@workspace/ui/components/textarea";
 import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  useCarousel,
+} from "@workspace/ui/components/carousel";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -19,20 +25,115 @@ import { getMyChallengeForClassPostAction } from "@/app/class/actions";
 import type { ClassCard as ClassCardType } from "./data";
 import { ClassCard } from "./class-card";
 
+const isOptimizableImageUrl = (url: string) =>
+  url.startsWith("https://") || url.startsWith("http://");
+
 type Props = {
   cards: ClassCardType[];
 };
 
+/** Carousel 내부에서만 사용. 이전/다음 버튼 + 슬라이드 인덱스 표시 */
+function ClassDetailCarouselSlides({
+  previewPhotos,
+}: {
+  previewPhotos: string[];
+}) {
+  const { scrollPrev, scrollNext, canScrollPrev, canScrollNext, api } =
+    useCarousel();
+  const [selectedIndex, setSelectedIndex] = useState(0);
+
+  useEffect(() => {
+    if (!api) return;
+    setSelectedIndex(api.selectedScrollSnap());
+    const onSelect = () => setSelectedIndex(api.selectedScrollSnap());
+    api.on("select", onSelect);
+    return () => {
+      api.off("select", onSelect);
+    };
+  }, [api]);
+
+  return (
+    <>
+      <div className="flex w-full max-w-full items-center justify-center gap-1 sm:gap-2">
+        <div className="flex w-7 shrink-0 flex-col items-center justify-center sm:w-8">
+          {canScrollPrev ? (
+            <button
+              type="button"
+              onClick={scrollPrev}
+              aria-label="이전 사진"
+              className="flex h-9 w-7 items-center justify-center rounded-md text-muted-foreground/60 transition-colors hover:bg-muted/80 hover:text-foreground sm:h-10 sm:w-8"
+            >
+              <ChevronLeft className="size-5 sm:size-6" strokeWidth={1.5} />
+            </button>
+          ) : (
+            <span className="h-9 w-7 sm:h-10 sm:w-8" aria-hidden />
+          )}
+        </div>
+        <div className="min-h-[40dvh] min-w-0 flex-1" aria-hidden>
+          <CarouselContent className="h-full w-full ml-0">
+            {previewPhotos.map((url) => (
+              <CarouselItem key={url} className="pl-0">
+                <div className="flex h-full w-full justify-center">
+                {url.startsWith("blob:") ? (
+                  <img
+                    src={url}
+                    alt=""
+                    className="h-auto w-full max-h-[50dvh] object-contain object-center"
+                    draggable={false}
+                  />
+                ) : isOptimizableImageUrl(url) ? (
+                  <Image
+                    src={url}
+                    alt=""
+                    width={800}
+                    height={600}
+                    className="h-auto w-full max-h-[50dvh] object-contain object-center"
+                    sizes="(max-width: 768px) 100vw, 800px"
+                    draggable={false}
+                  />
+                ) : (
+                  <img
+                    src={url}
+                    alt=""
+                    className="h-auto w-full max-h-[50dvh] object-contain object-center"
+                    draggable={false}
+                  />
+                )}
+              </div>
+            </CarouselItem>
+          ))}
+          </CarouselContent>
+        </div>
+        <div className="flex w-7 shrink-0 flex-col items-center justify-center sm:w-8">
+          {canScrollNext ? (
+            <button
+              type="button"
+              onClick={scrollNext}
+              aria-label="다음 사진"
+              className="flex h-9 w-7 items-center justify-center rounded-md text-muted-foreground/60 transition-colors hover:bg-muted/80 hover:text-foreground sm:h-10 sm:w-8"
+            >
+              <ChevronRight className="size-5 sm:size-6" strokeWidth={1.5} />
+            </button>
+          ) : (
+            <span className="h-9 w-7 sm:h-10 sm:w-8" aria-hidden />
+          )}
+        </div>
+      </div>
+      <p className="mt-2 text-xs text-muted-foreground">
+        {selectedIndex + 1} / {previewPhotos.length}
+      </p>
+    </>
+  );
+}
+
 export function ClassImagePreviewClient({ cards }: Props) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState<ClassCardType | null>(null);
-  const [photoIndex, setPhotoIndex] = useState(0);
   const [challengeOpen, setChallengeOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [myChallengeStatus, setMyChallengeStatus] = useState<
     "pending" | "approved" | "rejected" | null
   >(null);
-  const touchStartX = useRef<number | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -65,21 +166,9 @@ export function ClassImagePreviewClient({ cards }: Props) {
         ].filter((v): v is string => !!v)
       : [];
 
-  const canPrev = previewPhotos.length > 1 && photoIndex > 0;
-  const canNext = previewPhotos.length > 1 && photoIndex < previewPhotos.length - 1;
-
   const openDetail = (card: ClassCardType) => {
     setActive(card);
-    setPhotoIndex(0);
     setOpen(true);
-  };
-
-  const goPrev = () => {
-    if (canPrev) setPhotoIndex((i) => i - 1);
-  };
-
-  const goNext = () => {
-    if (canNext) setPhotoIndex((i) => i + 1);
   };
 
   return (
@@ -112,95 +201,49 @@ export function ClassImagePreviewClient({ cards }: Props) {
 
           {active && (
             <div className="flex min-h-0 flex-1 flex-col space-y-2 sm:space-y-3">
-              {/* 대표/추가 이미지 슬라이드 */}
+              {/* 대표/추가 이미지 슬라이드 (2장 이상이면 Carousel로 드래그·스와이프) */}
               <div className="relative flex flex-col items-center justify-center">
-                <div className="flex w-full max-w-full items-center justify-center gap-1 sm:gap-2">
-                  {previewPhotos.length > 1 && (
-                    <div className="flex w-7 shrink-0 flex-col items-center justify-center sm:w-8">
-                      {canPrev ? (
-                        <button
-                          type="button"
-                          onClick={goPrev}
-                          aria-label="이전 사진"
-                          className="flex h-9 w-7 items-center justify-center rounded-md text-muted-foreground/60 transition-colors hover:bg-muted/80 hover:text-foreground sm:h-10 sm:w-8"
-                        >
-                          <ChevronLeft className="size-5 sm:size-6" strokeWidth={1.5} />
-                        </button>
-                      ) : (
-                        <span className="h-9 w-7 sm:h-10 sm:w-8" aria-hidden />
-                      )}
-                    </div>
-                  )}
-
-                  <div
-                    className="flex min-h-0 min-w-0 flex-1 touch-pan-y select-none justify-center overflow-hidden"
-                    onTouchStart={(e) => {
-                      touchStartX.current =
-                        e.changedTouches[0]?.clientX ?? e.touches[0]?.clientX ?? null;
-                    }}
-                    onTouchEnd={(e) => {
-                      const start = touchStartX.current;
-                      if (start == null || previewPhotos.length <= 1) return;
-                      const end =
-                        e.changedTouches[0]?.clientX ?? e.touches[0]?.clientX ?? start;
-                      const delta = start - end;
-                      if (delta > 50) goNext();
-                      else if (delta < -50) goPrev();
-                      touchStartX.current = null;
-                    }}
-                  >
-                    {previewPhotos[photoIndex] ? (
-                      <div className="relative flex w-full justify-center">
-                        <div className="flex w-full justify-center">
-                          {previewPhotos[photoIndex]!.startsWith("blob:") ? (
-                            <img
-                              src={previewPhotos[photoIndex]!}
-                              alt=""
-                              className="h-auto w-full max-h-[50dvh] object-contain object-center"
-                              draggable={false}
-                            />
-                          ) : (
-                            <Image
-                              src={previewPhotos[photoIndex]!}
-                              alt=""
-                              width={800}
-                              height={600}
-                              className="h-auto w-full max-h-[50dvh] object-contain object-center"
-                              sizes="(max-width: 768px) 100vw, 800px"
-                              draggable={false}
-                            />
-                          )}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex h-56 w-full items-center justify-center text-muted-foreground">
-                        <span className="text-sm">이미지 없음</span>
-                      </div>
-                    )}
+                {previewPhotos.length === 0 ? (
+                  <div className="flex h-56 w-full items-center justify-center text-muted-foreground">
+                    <span className="text-sm">이미지 없음</span>
                   </div>
-
-                  {previewPhotos.length > 1 && (
-                    <div className="flex w-7 shrink-0 flex-col items-center justify-center sm:w-8">
-                      {canNext ? (
-                        <button
-                          type="button"
-                          onClick={goNext}
-                          aria-label="다음 사진"
-                          className="flex h-9 w-7 items-center justify-center rounded-md text-muted-foreground/60 transition-colors hover:bg-muted/80 hover:text-foreground sm:h-10 sm:w-8"
-                        >
-                          <ChevronRight className="size-5 sm:size-6" strokeWidth={1.5} />
-                        </button>
+                ) : previewPhotos.length === 1 ? (
+                  <>
+                    <div className="flex w-full justify-center">
+                      {previewPhotos[0]!.startsWith("blob:") ? (
+                        <img
+                          src={previewPhotos[0]!}
+                          alt=""
+                          className="h-auto w-full max-h-[50dvh] object-contain object-center"
+                          draggable={false}
+                        />
+                      ) : isOptimizableImageUrl(previewPhotos[0]!) ? (
+                        <Image
+                          src={previewPhotos[0]!}
+                          alt=""
+                          width={800}
+                          height={600}
+                          className="h-auto w-full max-h-[50dvh] object-contain object-center"
+                          sizes="(max-width: 768px) 100vw, 800px"
+                          draggable={false}
+                        />
                       ) : (
-                        <span className="h-9 w-7 sm:h-10 sm:w-8" aria-hidden />
+                        <img
+                          src={previewPhotos[0]!}
+                          alt=""
+                          className="h-auto w-full max-h-[50dvh] object-contain object-center"
+                          draggable={false}
+                        />
                       )}
                     </div>
-                  )}
-                </div>
-
-                {previewPhotos.length > 1 && (
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    {photoIndex + 1} / {previewPhotos.length}
-                  </p>
+                  </>
+                ) : (
+                  <Carousel
+                    className="w-full"
+                    opts={{ loop: false, align: "center" }}
+                  >
+                    <ClassDetailCarouselSlides previewPhotos={previewPhotos} />
+                  </Carousel>
                 )}
               </div>
 
@@ -331,6 +374,13 @@ type ClassChallengeDialogProps = {
   onSuccess: () => void;
 };
 
+/** 서버(sharp)에서 안정적으로 처리 가능한 이미지 형식만 허용 */
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+function isAllowedImageType(type: string): boolean {
+  return ALLOWED_IMAGE_TYPES.includes(type);
+}
+
 async function uploadChallengeImage(file: File, classPostId: string): Promise<string> {
   const fd = new FormData();
   fd.set("file", file);
@@ -354,6 +404,7 @@ function ClassChallengeDialog({
   const [files, setFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (files.length === 0) {
@@ -367,7 +418,18 @@ function ClassChallengeDialog({
     };
   }, [files]);
 
+  const resetForm = useCallback(() => {
+    setNote("");
+    setFiles([]);
+    fileInputRef.current && (fileInputRef.current.value = "");
+  }, []);
+
+  useEffect(() => {
+    if (open) resetForm();
+  }, [open, classPostId, resetForm]);
+
   const handleClose = () => {
+    resetForm();
     onOpenChange(false);
   };
 
@@ -451,17 +513,26 @@ function ClassChallengeDialog({
           <div className="space-y-2">
             <Label htmlFor="challenge-files">파일 첨부</Label>
             <input
+              ref={fileInputRef}
               id="challenge-files"
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp"
               multiple
               className="block w-full text-xs sm:text-sm file:mr-3 file:rounded-md file:border file:border-border file:bg-background file:px-3 file:py-1.5 file:text-xs file:font-medium hover:file:bg-muted"
               onChange={(e) => {
                 const selected = Array.from(e.target.files ?? []);
                 if (selected.length === 0) return;
 
+                const valid = selected.filter((f) => isAllowedImageType(f.type));
+                const excludedCount = selected.length - valid.length;
+                if (excludedCount > 0) {
+                  alert(
+                    `${excludedCount}개 파일은 지원하지 않는 형식이라 제외되었습니다. (JPEG, PNG, WebP만 등록 가능합니다.)`,
+                  );
+                }
+
                 const MAX_FILES = 3;
-                const combined = [...files, ...selected];
+                const combined = [...files, ...valid];
                 const limited = combined.slice(0, MAX_FILES);
 
                 setFiles(limited);

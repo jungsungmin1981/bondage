@@ -9,11 +9,17 @@ import { uploadBunnyCardImage } from "@/app/profile/edit/bunny-card-upload-actio
 type OwnBunnyCardColumnProps = {
   profileId: string;
   cardImageUrl: string | null;
+  /** 계정 사용 제한 시 감옥 이미지 오버레이 */
+  jailOverlay?: boolean;
+  /** 정지 해제 예정 시각 ISO. 상세보기에서 남은 시간 표시용 */
+  suspendedUntil?: string | null;
 };
 
 export function OwnBunnyCardColumn({
   profileId,
   cardImageUrl: initialCardImageUrl,
+  jailOverlay,
+  suspendedUntil,
 }: OwnBunnyCardColumnProps) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -66,9 +72,13 @@ export function OwnBunnyCardColumn({
   }
 
   return (
-    <div className="flex w-full max-w-[280px] flex-col gap-1 sm:col-start-1 sm:row-span-2 sm:row-start-1 sm:justify-end">
+    <div className="flex w-full max-w-[280px] flex-col gap-1 sm:col-start-1 sm:row-span-2 sm:row-start-1 sm:justify-start">
       <div className="w-full">
-        <BunnyCard cardImageUrl={displayCardUrl} />
+        <BunnyCard
+        cardImageUrl={displayCardUrl}
+        jailOverlay={jailOverlay}
+        suspendedUntil={suspendedUntil}
+      />
       </div>
       <input
         ref={inputRef}

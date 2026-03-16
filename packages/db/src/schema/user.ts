@@ -12,6 +12,8 @@ export const users = pgTable("users", {
   image: text("image"),
   /** 회원 구분: 리거/버니 선택 시 세션에 노출되어 미들웨어에서 사용 */
   memberType: text("member_type"), // "rigger" | "bunny"
+  /** 가입 시 사용한 인증키 id (invite_keys.id) */
+  inviteKeyId: text("invite_key_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

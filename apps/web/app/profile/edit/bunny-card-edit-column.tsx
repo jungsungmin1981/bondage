@@ -30,7 +30,7 @@ export function BunnyCardEditColumn({ profile }: BunnyCardEditColumnProps) {
   }
 
   return (
-    <div className="flex w-full max-w-[280px] flex-col gap-1 sm:col-start-1 sm:row-span-2 sm:row-start-1 sm:justify-end">
+    <div className="flex w-full max-w-[280px] flex-col gap-1 sm:col-start-1 sm:row-start-1 sm:justify-end">
       <div className="w-full">
         <BunnyCard cardImageUrl={profile.cardImageUrl} />
       </div>

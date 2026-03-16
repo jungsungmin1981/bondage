@@ -25,9 +25,9 @@ export async function uploadJailCardImage(
   if (!file || !(file instanceof File))
     return { ok: false, error: "이미지 파일을 선택해 주세요." };
 
-  const allowed = ["image/jpeg", "image/png", "image/webp"];
+  const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif"];
   if (!allowed.includes(file.type))
-    return { ok: false, error: "JPEG, PNG, WebP만 업로드할 수 있습니다." };
+    return { ok: false, error: "JPEG, PNG, WebP, GIF만 업로드할 수 있습니다." };
 
   const filePath = getJailCardImagePath();
   const dir = path.dirname(filePath);

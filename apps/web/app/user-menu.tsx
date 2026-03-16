@@ -58,23 +58,14 @@ export function UserMenu() {
 
   if (!session) {
     return (
-      <div className="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => router.push("/login")}
-          className="min-h-[44px] min-w-[44px] px-3 sm:min-h-9 sm:min-w-0"
-        >
-          로그인
-        </Button>
-        <Button
-          size="sm"
-          onClick={() => router.push("/register")}
-          className="min-h-[44px] px-4 sm:min-h-9"
-        >
-          회원가입
-        </Button>
-      </div>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => router.push("/login")}
+        className="min-h-[44px] min-w-[44px] px-3 sm:min-h-9 sm:min-w-0"
+      >
+        로그인
+      </Button>
     );
   }
 

@@ -1,11 +1,18 @@
 import Link from "next/link";
 import { Fragment } from "react";
 import { auth } from "@workspace/auth";
-import { getBunnyProfileById } from "@workspace/db";
+import {
+  getActiveSuspensionForUser,
+  getBunnyProfileById,
+  getBunnyPhotos,
+  getUserCreatedAt,
+} from "@workspace/db";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { Button } from "@workspace/ui/components/button";
 import { BunnyCard } from "@/components/bunny-card";
+import { isAdmin } from "@/lib/admin";
+import { getInviteKeyMinAgeHours } from "@/lib/invite-key-config";
 import { BioPreview } from "@/app/rigger/[id]/bio-preview";
 import { BunnyProfileInline } from "./bunny-profile-inline";
 import { OwnBunnyCardColumn } from "./own-bunny-card-column";
@@ -30,6 +37,7 @@ export default async function BunnyDetailPage({
     "버니"
   ).slice(0, 50);
   const isOwnProfile = profile.userId === session.user.id;
+  const canEditAsAdmin = !isOwnProfile && isAdmin(session);
 
   const PENDING_TIER_LABEL = "승인 대기중";
   const statusLabel =
@@ -47,6 +55,35 @@ export default async function BunnyDetailPage({
   const row3 = [pair("활동지역", profile.activityRegion)];
 
   const rawBio = profile.bio?.trim() ? profile.bio : "-";
+  const [photos, suspension] = await Promise.all([
+    getBunnyPhotos(profile.id),
+    profile.userId ? getActiveSuspensionForUser(profile.userId) : Promise.resolve(null),
+  ]);
+  const hasPhotos = photos.length > 0;
+  const isSuspended = !!suspension;
+  const jailOverlay = isSuspended;
+  const suspendedUntil =
+    suspension != null
+      ? suspension.suspendedUntil?.toISOString() ?? null
+      : undefined;
+
+  let canCreateInviteKey = false;
+  let inviteKeyAllowedAt: string | null = null;
+  if (isOwnProfile && !isSuspended) {
+    const createdAt = await getUserCreatedAt(session.user.id);
+    const hours = getInviteKeyMinAgeHours();
+    if (createdAt) {
+      const allowedAt = new Date(
+        createdAt.getTime() + hours * 60 * 60 * 1000,
+      );
+      inviteKeyAllowedAt = allowedAt.toISOString();
+      canCreateInviteKey = new Date() >= allowedAt;
+    } else {
+      canCreateInviteKey = true;
+    }
+  }
+  const showInviteKeyButton =
+    isOwnProfile && profile.status === "approved" && !isSuspended;
 
   return (
     <div className="min-h-[calc(100svh-3.5rem)] p-4 sm:p-6">
@@ -64,11 +101,17 @@ export default async function BunnyDetailPage({
           <OwnBunnyCardColumn
             profileId={profile.id}
             cardImageUrl={profile.cardImageUrl}
+            jailOverlay={jailOverlay}
+            suspendedUntil={suspendedUntil}
           />
         ) : (
           <div className="flex justify-center sm:col-start-1 sm:row-start-1 sm:justify-start">
             <div className="w-full max-w-[280px]">
-              <BunnyCard cardImageUrl={profile.cardImageUrl} />
+              <BunnyCard
+                cardImageUrl={profile.cardImageUrl}
+                jailOverlay={jailOverlay}
+                suspendedUntil={suspendedUntil}
+              />
             </div>
           </div>
         )}
@@ -88,6 +131,9 @@ export default async function BunnyDetailPage({
                 division={profile.division}
                 activityRegion={profile.activityRegion}
                 bio={profile.bio}
+                canCreateInviteKey={canCreateInviteKey}
+                inviteKeyAllowedAt={inviteKeyAllowedAt}
+                showInviteKeyButton={showInviteKeyButton}
               />
             ) : (
               <>
@@ -102,10 +148,10 @@ export default async function BunnyDetailPage({
                           <dd
                             className={
                               label === "활동지역"
-                                ? "min-w-0 overflow-hidden text-lg font-medium"
+                                ? "min-w-0 overflow-hidden text-base font-medium"
                                 : label === "상태" && value === PENDING_TIER_LABEL
-                                  ? "min-w-0 text-lg font-medium text-blue-600"
-                                  : "min-w-0 text-lg font-medium"
+                                  ? "min-w-0 text-base font-medium text-blue-600"
+                                  : "min-w-0 text-base font-medium"
                             }
                             title={
                               label === "활동지역" && value !== "-"
@@ -129,13 +175,21 @@ export default async function BunnyDetailPage({
                     자기소개
                   </dt>
                   <dd className="min-w-0 flex flex-wrap items-center gap-2">
-                    <Button asChild size="sm" className="shrink-0">
-                      <Link
-                        href={`/messages/new?to=${encodeURIComponent(profile.id)}`}
-                      >
-                        쪽지 보내기
-                      </Link>
-                    </Button>
+                    {canEditAsAdmin ? (
+                      <Button asChild size="sm" variant="outline" className="shrink-0">
+                        <Link href={`/bunnies/${encodeURIComponent(profile.id)}/edit`}>
+                          정보수정
+                        </Link>
+                      </Button>
+                    ) : (
+                      <Button asChild size="sm" className="shrink-0">
+                        <Link
+                          href={`/messages/new?to=${encodeURIComponent(profile.id)}`}
+                        >
+                          쪽지 보내기
+                        </Link>
+                      </Button>
+                    )}
                   </dd>
                   <dd className="col-start-2 min-w-0">
                     <BioPreview
@@ -144,6 +198,7 @@ export default async function BunnyDetailPage({
                           ? "-"
                           : (profile.bio?.trim() ?? "")
                       }
+                      previewMaxHeightRem={11}
                     />
                   </dd>
                 </dl>
@@ -154,10 +209,41 @@ export default async function BunnyDetailPage({
       </div>
 
       <div className="mx-auto mt-8 max-w-4xl">
-        <h2 className="text-sm font-medium text-muted-foreground">사진</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          등록된 사진이 없습니다.
-        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="text-sm font-medium text-muted-foreground">사진</h2>
+          {isOwnProfile && !isSuspended && (
+            <Button asChild size="sm" variant="outline">
+              <Link href={`/bunnies/${encodeURIComponent(profile.id)}/photos`}>
+                사진 등록
+              </Link>
+            </Button>
+          )}
+        </div>
+        {!hasPhotos ? (
+          <p className="mt-2 text-sm text-muted-foreground">
+            등록된 사진이 없습니다.
+          </p>
+        ) : (
+          <ul className="mt-3 grid list-none grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+            {photos.map((photo) => (
+              <li key={photo.id} className="min-w-0">
+                <div className="relative aspect-[3/4] w-full min-w-0 overflow-hidden rounded-lg border border-border bg-muted">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={photo.imagePath}
+                    alt={photo.caption ?? "등록된 사진"}
+                    className="h-full w-full object-cover object-center"
+                  />
+                </div>
+                {photo.caption && (
+                  <p className="mt-1 truncate text-xs text-muted-foreground">
+                    {photo.caption}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );

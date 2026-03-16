@@ -6,6 +6,7 @@ import { auth } from "@workspace/auth";
 import {
   db,
   schema,
+  getActiveSuspensionForUser,
   getUserIdListByEmails,
   getRiggerProfileByUserId,
 } from "@workspace/db";
@@ -125,6 +126,11 @@ export async function uploadPhoto(
       headers: await headers(),
     });
     if (!session) return { ok: false, error: "로그인이 필요합니다." };
+
+    const suspension = await getActiveSuspensionForUser(session.user.id);
+    if (suspension) {
+      return { ok: false, error: "계정 사용 제한 중에는 이용할 수 없습니다." };
+    }
 
     const riggerId = formData.get("riggerId");
     const rawCaption = (formData.get("caption") ?? "") as string;

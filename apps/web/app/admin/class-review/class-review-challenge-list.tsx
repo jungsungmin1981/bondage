@@ -15,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@workspace/ui/components/dialog";
+import { cn } from "@workspace/ui/lib/utils";
 import { updateChallengeStatusAction } from "./actions";
 import type { ChallengeForReviewRow } from "@workspace/db";
 
@@ -146,16 +147,22 @@ type ModalKind = "approve" | "reject" | null;
 export function ClassReviewChallengeList({
   items,
   levelLabel = "초급",
+  statusFilter,
 }: {
   items: ChallengeForReviewRow[];
   levelLabel?: "초급" | "중급" | "고급";
+  /** 승인 탭이면 '승인 / 반려' 머리글·열 숨김 */
+  statusFilter?: "pending" | "approved" | "rejected";
 }) {
+  const showActionColumn = statusFilter !== "approved";
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [modal, setModal] = useState<{
     kind: ModalKind;
     row: ChallengeForReviewRow;
   } | null>(null);
+  const [viewRejectionRow, setViewRejectionRow] =
+    useState<ChallengeForReviewRow | null>(null);
   const [approveComment, setApproveComment] = useState("");
   const [rejectNote, setRejectNote] = useState("");
   const [rejectFiles, setRejectFiles] = useState<File[]>([]);
@@ -265,12 +272,34 @@ export function ClassReviewChallengeList({
             <th className="pb-3 pr-4 font-medium">신청일</th>
             <th className="pb-3 pr-4 font-medium">상태</th>
             <th className="pb-3 pr-4 font-medium">처리자</th>
-            <th className="pb-3 font-medium">승인 / 반려</th>
+            {showActionColumn && (
+              <th className="pb-3 font-medium">
+                {statusFilter === "rejected" ? "반려 사유" : "승인 / 반려"}
+              </th>
+            )}
           </tr>
         </thead>
         <tbody>
-          {items.map((row) => (
-            <tr key={row.challengeId} className="border-b">
+          {items.map((row) => {
+            const isRejectedClickable =
+              row.status === "rejected" &&
+              (row.rejectionNote != null ||
+                (row.rejectionImageUrls?.length ?? 0) > 0);
+            return (
+            <tr
+              key={row.challengeId}
+              className={cn(
+                "border-b",
+                isRejectedClickable &&
+                  "cursor-pointer transition-colors hover:bg-muted/50",
+              )}
+              role={isRejectedClickable ? "button" : undefined}
+              onClick={
+                isRejectedClickable
+                  ? () => setViewRejectionRow(row)
+                  : undefined
+              }
+            >
               <td className="py-5 pr-4 align-middle">
                 <ClassImageWithInfo
                   coverImageUrl={row.coverImageUrl}
@@ -296,21 +325,17 @@ export function ClassReviewChallengeList({
               </td>
               <td className="py-5 pr-4 align-middle">
                 {row.processorDecisions?.length ? (
-                  <span className="flex flex-wrap items-center gap-x-1 gap-y-0.5">
+                  <span className="flex flex-col flex-wrap gap-y-0.5">
                     {row.processorDecisions.map((p, i) => (
-                      <span key={i}>
-                        {i > 0 && (
-                          <span className="text-muted-foreground">, </span>
-                        )}
-                        <span
-                          className={
-                            p.decision === "approved"
-                              ? "font-medium text-green-700 dark:text-green-400"
-                              : "font-medium text-red-700 dark:text-red-400"
-                          }
-                        >
-                          {p.nickname}
-                        </span>
+                      <span
+                        key={i}
+                        className={
+                          p.decision === "approved"
+                            ? "font-medium text-green-700 dark:text-green-400"
+                            : "font-medium text-red-700 dark:text-red-400"
+                        }
+                      >
+                        {p.nickname}
                       </span>
                     ))}
                   </span>
@@ -318,31 +343,42 @@ export function ClassReviewChallengeList({
                   <span className="text-muted-foreground">—</span>
                 )}
               </td>
-              <td className="py-5 align-middle">
-                {row.status === "pending" ? (
-                  <div className="flex flex-wrap gap-1.5">
+              {showActionColumn && (
+                <td className="py-5 align-middle" onClick={(e) => e.stopPropagation()}>
+                  {row.status === "pending" ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      <Button
+                        size="sm"
+                        disabled={isPending(row.challengeId)}
+                        onClick={() => openApprove(row)}
+                      >
+                        {isPending(row.challengeId) ? "처리 중…" : "승인"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        disabled={isPending(row.challengeId)}
+                        onClick={() => openReject(row)}
+                      >
+                        반려
+                      </Button>
+                    </div>
+                  ) : row.status === "rejected" && isRejectedClickable ? (
                     <Button
                       size="sm"
-                      disabled={isPending(row.challengeId)}
-                      onClick={() => openApprove(row)}
+                      variant="outline"
+                      onClick={() => setViewRejectionRow(row)}
                     >
-                      {isPending(row.challengeId) ? "처리 중…" : "승인"}
+                      반려 내용 보기
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      disabled={isPending(row.challengeId)}
-                      onClick={() => openReject(row)}
-                    >
-                      반려
-                    </Button>
-                  </div>
-                ) : (
-                  <span className="text-muted-foreground">—</span>
-                )}
-              </td>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </td>
+              )}
             </tr>
-          ))}
+          );
+          })}
         </tbody>
       </table>
 
@@ -374,6 +410,58 @@ export function ClassReviewChallengeList({
               승인하기
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 반려 내용 보기 모달 (목록에서 클릭 시) */}
+      <Dialog
+        open={!!viewRejectionRow}
+        onOpenChange={(open) => !open && setViewRejectionRow(null)}
+      >
+        <DialogContent className="max-w-md sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>반려 내용</DialogTitle>
+            {viewRejectionRow && (
+              <DialogDescription asChild>
+                <span>{viewRejectionRow.classTitle}</span>
+              </DialogDescription>
+            )}
+          </DialogHeader>
+          {viewRejectionRow && (
+            <div className="space-y-4 py-2">
+              {viewRejectionRow.rejectionNote != null &&
+              viewRejectionRow.rejectionNote.trim() !== "" ? (
+                <div className="rounded-md border bg-muted/30 p-3">
+                  <p className="whitespace-pre-wrap break-words text-sm text-foreground">
+                    {viewRejectionRow.rejectionNote}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">반려 사유 없음</p>
+              )}
+              {(viewRejectionRow.rejectionImageUrls?.length ?? 0) > 0 && (
+                <div>
+                  <p className="mb-2 text-xs font-medium text-muted-foreground">
+                    참고 이미지
+                  </p>
+                  <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {viewRejectionRow.rejectionImageUrls!.map((url, i) => (
+                      <li
+                        key={i}
+                        className="relative aspect-square overflow-hidden rounded-lg border bg-muted"
+                      >
+                        <img
+                          src={url}
+                          alt={`참고 이미지 ${i + 1}`}
+                          className="size-full object-cover"
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

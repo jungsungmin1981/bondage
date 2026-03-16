@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 /** Better Auth 기본 세션 쿠키 이름 (customize하지 않았다면 이 이름 사용) */
 const SESSION_COOKIE_NAME = "better-auth.session_token";
 
-const SKIP_PREFIXES = ["/onboarding", "/login", "/register", "/api"];
+const SKIP_PREFIXES = ["/onboarding", "/login", "/register", "/reset-password", "/api"];
 
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;

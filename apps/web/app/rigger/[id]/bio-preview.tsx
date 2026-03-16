@@ -4,24 +4,31 @@ import { useLayoutEffect, useRef, useState } from "react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@workspace/ui/components/dialog";
 import { cn } from "@workspace/ui/lib/utils";
 
-const PREVIEW_MAX_HEIGHT_REM = 7.5;
+const DEFAULT_PREVIEW_MAX_HEIGHT_REM = 7.5;
 
 type BioPreviewProps = {
   fullText: string;
   className?: string;
+  /** 미리보기 최대 높이(rem). 기본 7.5. 버니 상세는 11(약 2줄 더) */
+  previewMaxHeightRem?: number;
 };
 
 /**
  * 자기소개: 글 쓴 대로(pre-wrap).
- * 9rem 안에 다 들어가면 그대로만 표시(클릭/창 없음).
+ * 지정 높이 안에 다 들어가면 그대로만 표시(클릭/창 없음).
  * 넘치면 … 잘리고, 그때만 클릭 시 다이얼로그.
  */
-export function BioPreview({ fullText, className }: BioPreviewProps) {
+export function BioPreview({
+  fullText,
+  className,
+  previewMaxHeightRem = DEFAULT_PREVIEW_MAX_HEIGHT_REM,
+}: BioPreviewProps) {
   const [open, setOpen] = useState(false);
   const [clamped, setClamped] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
@@ -41,7 +48,7 @@ export function BioPreview({ fullText, className }: BioPreviewProps) {
     return (
       <p
         className={cn(
-          "min-w-0 max-w-full text-lg font-medium text-muted-foreground",
+          "min-w-0 max-w-full text-base font-medium text-muted-foreground",
           className,
         )}
       >
@@ -56,44 +63,46 @@ export function BioPreview({ fullText, className }: BioPreviewProps) {
       <div
         ref={boxRef}
         className={cn(
-          "min-w-0 max-w-full max-h-[7.5rem] overflow-hidden whitespace-pre-wrap break-words text-lg font-medium text-foreground",
+          "min-w-0 max-w-full overflow-hidden whitespace-pre-wrap break-words text-base font-medium text-foreground",
           className,
         )}
+        style={{ maxHeight: `${previewMaxHeightRem}rem` }}
       >
         {trimmed}
       </div>
     );
   }
 
-  // 넘침: 상한 고정 + … + 클릭 시 다이얼로그만
+  // 넘침: 상한 고정 + … + 클릭 시 다이얼로그. 래퍼로 높이 고정해 폼이 늘어나지 않음
   return (
     <>
-      <button
-        type="button"
-        className={cn(
-          "relative min-w-0 max-w-full w-full overflow-hidden rounded-md text-left text-lg font-medium text-foreground",
-          "cursor-pointer hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          className,
-        )}
-        style={{ maxHeight: `${PREVIEW_MAX_HEIGHT_REM}rem` }}
-        onClick={() => setOpen(true)}
+      <div
+        className={cn("min-w-0 max-w-full overflow-hidden", className)}
+        style={{ maxHeight: `${previewMaxHeightRem}rem` }}
       >
-        <div
-          ref={boxRef}
-          className="max-h-full overflow-hidden whitespace-pre-wrap break-words pr-1"
-          style={{ maxHeight: `${PREVIEW_MAX_HEIGHT_REM}rem` }}
+        <button
+          type="button"
+          className="relative flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden rounded-md text-left text-base font-medium text-foreground cursor-pointer hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          style={{ maxHeight: `${previewMaxHeightRem}rem` }}
+          onClick={() => setOpen(true)}
         >
-          {trimmed}
-        </div>
-        <span
-          className="pointer-events-none absolute right-0 bottom-0 left-0 flex items-end justify-end bg-gradient-to-t from-card from-50% to-transparent pb-0.5 pl-4 pt-8"
-          aria-hidden
-        >
-          <span className="shrink-0 text-lg font-medium text-foreground">
-            …
+          <div
+            ref={boxRef}
+            className="min-h-0 min-w-0 overflow-hidden whitespace-pre-wrap break-words pr-1"
+            style={{ maxHeight: `${previewMaxHeightRem}rem` }}
+          >
+            {trimmed}
+          </div>
+          <span
+            className="pointer-events-none absolute right-0 bottom-0 left-0 flex items-end justify-end bg-gradient-to-t from-card from-50% to-transparent pb-0.5 pl-4 pt-8"
+            aria-hidden
+          >
+            <span className="shrink-0 text-base font-medium text-foreground">
+              …
+            </span>
           </span>
-        </span>
-      </button>
+        </button>
+      </div>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
           className="max-h-[85vh] overflow-y-auto sm:max-w-lg"
@@ -101,6 +110,9 @@ export function BioPreview({ fullText, className }: BioPreviewProps) {
         >
           <DialogHeader>
             <DialogTitle>자기소개</DialogTitle>
+            <DialogDescription className="sr-only">
+              자기소개 전문을 확인할 수 있습니다.
+            </DialogDescription>
           </DialogHeader>
           <p className="whitespace-pre-wrap break-words text-base text-foreground">
             {trimmed}

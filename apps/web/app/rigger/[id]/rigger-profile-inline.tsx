@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { Copy, Check } from "lucide-react";
@@ -15,6 +16,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@workspace/ui/components/dialog";
@@ -31,7 +33,10 @@ import type { PublicClassPostCountsByLevel } from "@workspace/db";
 import { BioPreview } from "./bio-preview";
 import { ClassSummaryBadges } from "./class-summary-badges";
 import { dispatchProfileEditing } from "./profile-editing-events";
-import { saveRiggerProfile } from "./rigger-profile-actions";
+import {
+  requestRiggerApprovalAgainAction,
+  saveRiggerProfile,
+} from "./rigger-profile-actions";
 
 function normalizeYesNo(v: string | null | undefined): string {
   if (!v) return YES_NO_OPTIONS[0];
@@ -50,6 +55,8 @@ function normalizeDivision(v: string | null | undefined): string {
 export type RiggerProfileInlineProps = {
   riggerId: string;
   tierLabel: string;
+  /** pending | approved | rejected. 반려 시 등급 칸에 '승인 요청' 버튼 표시 */
+  approvalStatus?: "pending" | "approved" | "rejected";
   name: string;
   gender: string | null | undefined;
   division: string | null | undefined;
@@ -64,11 +71,18 @@ export type RiggerProfileInlineProps = {
   classCounts?: ApprovedClassCountsByLevel;
   /** 레벨별 공개 클래스 전체 수 */
   totalByLevel?: PublicClassPostCountsByLevel;
+  /** 가입 후 N시간 경과 시 true. 없으면 기본 true */
+  canCreateInviteKey?: boolean;
+  /** 인증키 생성 가능 시각 (ISO 문자열). 권한 없을 때 남은 시간 표시용 */
+  inviteKeyAllowedAt?: string | null;
+  /** 계정 사용 제한 중이면 인증키 버튼 숨김 */
+  suspended?: boolean;
 };
 
 export function RiggerProfileInline({
   riggerId,
   tierLabel,
+  approvalStatus,
   name,
   gender,
   division: initialDivision,
@@ -80,6 +94,9 @@ export function RiggerProfileInline({
   profileVisibility: initialProfileVisibility,
   classCounts,
   totalByLevel,
+  canCreateInviteKey = true,
+  inviteKeyAllowedAt: inviteKeyAllowedAtProp = null,
+  suspended = false,
 }: RiggerProfileInlineProps) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -101,9 +118,22 @@ export function RiggerProfileInline({
   const [expiresAtBunny, setExpiresAtBunny] = useState<number | null>(null);
   const [copiedKey, setCopiedKey] = useState<"rigger" | "bunny" | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  const [requestApprovalLoading, setRequestApprovalLoading] = useState(false);
 
-  /** 인증키 유효 시간 (밀리초). 10초 */
-  const AUTH_KEY_VALID_MS = 10 * 1000;
+  const inviteKeyAllowedAtMs =
+    inviteKeyAllowedAtProp != null
+      ? new Date(inviteKeyAllowedAtProp).getTime()
+      : null;
+  const remainingSecondsUntilInviteKey =
+    inviteKeyAllowedAtMs != null && !canCreateInviteKey
+      ? Math.max(
+          0,
+          Math.floor((inviteKeyAllowedAtMs - Date.now()) / 1000),
+        )
+      : null;
+
+  /** 인증키 유효 시간 (밀리초). 5분 */
+  const AUTH_KEY_VALID_MS = 5 * 60 * 1000;
 
   function formatRemaining(seconds: number): string {
     const h = Math.floor(seconds / 3600);
@@ -113,9 +143,28 @@ export function RiggerProfileInline({
     return `${pad(h)}:${pad(m)}:${pad(s)}`;
   }
 
+  function formatRemainingInviteKey(seconds: number): string {
+    const d = Math.floor(seconds / 86400);
+    const h = Math.floor((seconds % 86400) / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    const parts: string[] = [];
+    if (d > 0) parts.push(`${d}일`);
+    if (h > 0) parts.push(`${h}시간`);
+    if (m > 0) parts.push(`${m}분`);
+    parts.push(`${s}초`);
+    return parts.join(" ");
+  }
+
+  /** 회원가입 페이지 URL (인증키 쿼리 포함). 복사 시 이 URL을 붙여넣으면 회원가입 폼에 인증키가 자동 입력됨 */
+  function getSignupUrl(key: string): string {
+    if (typeof window === "undefined") return "";
+    return `${window.location.origin}/register?invite=${encodeURIComponent(key)}`;
+  }
+
   async function copyAuthKey(key: string, type: "rigger" | "bunny") {
     try {
-      await navigator.clipboard.writeText(key);
+      await navigator.clipboard.writeText(getSignupUrl(key));
       setCopiedKey(type);
       setTimeout(() => setCopiedKey(null), 2000);
     } catch {
@@ -141,9 +190,22 @@ export function RiggerProfileInline({
     }
   }
 
-  function handleGenerateAuthKey(type: "rigger" | "bunny") {
+  async function handleGenerateAuthKey(type: "rigger" | "bunny") {
     const key = generateAuthKey();
     const expiresAt = Date.now() + AUTH_KEY_VALID_MS;
+    try {
+      const res = await fetch("/api/invite-keys", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key, memberType: type }),
+      });
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) return;
+        console.warn("invite-keys register failed", res.status);
+      }
+    } catch (e) {
+      console.warn("invite-keys register error", e);
+    }
     if (type === "rigger") {
       setGeneratedKeyRigger(key);
       setExpiresAtRigger(expiresAt);
@@ -201,6 +263,13 @@ export function RiggerProfileInline({
     }, 1000);
     return () => clearInterval(id);
   }, [authKeyModalOpen, expiresAtRigger, expiresAtBunny]);
+
+  // 인증키 생성 가능까지 남은 시간 1초마다 갱신
+  useEffect(() => {
+    if (canCreateInviteKey || inviteKeyAllowedAtMs == null) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [canCreateInviteKey, inviteKeyAllowedAtMs]);
 
   // 정보수정 진입/이탈 시 등급카드 마크 편집 허용 여부 동기화
   useEffect(() => {
@@ -336,6 +405,17 @@ export function RiggerProfileInline({
     );
   }
 
+  async function handleRequestApprovalAgain() {
+    setRequestApprovalLoading(true);
+    try {
+      const res = await requestRiggerApprovalAgainAction(riggerId);
+      if (res.ok) router.refresh();
+      else alert(res.error);
+    } finally {
+      setRequestApprovalLoading(false);
+    }
+  }
+
   if (!editing) {
     const row2 = [pair("성별", genderDisplay), pair("구분", division)];
     const row3 = [pair("버니구인", bunnyRecruit), pair("본러팅", bondageRating)];
@@ -359,7 +439,14 @@ export function RiggerProfileInline({
       <>
         <dl className="grid grid-cols-[5rem_1fr_5rem_1fr] gap-x-3 gap-y-1.5 items-baseline">
           {[row1, row2, row3, row4].map((pairs, rowIndex) => (
-            <FragmentBlock key={rowIndex} pairs={pairs} />
+            <FragmentBlock
+              key={rowIndex}
+              pairs={pairs}
+              approvalStatus={approvalStatus}
+              riggerId={riggerId}
+              onRequestApproval={handleRequestApprovalAgain}
+              requestApprovalLoading={requestApprovalLoading}
+            />
           ))}
           <Fragment>
             <dt className="shrink-0 text-sm font-medium text-muted-foreground">
@@ -393,15 +480,37 @@ export function RiggerProfileInline({
             >
               정보수정
             </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="shrink-0 min-w-[4.5rem] border-amber-500/70 text-amber-800 hover:bg-amber-50 hover:border-amber-600 hover:text-amber-900 dark:border-amber-500/60 dark:text-amber-400 dark:hover:bg-amber-950/40 dark:hover:text-amber-300"
-              onClick={() => setAuthKeyModalOpen(true)}
-            >
-              인증키
-            </Button>
+            {approvalStatus === "approved" && !suspended && (
+              canCreateInviteKey ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="shrink-0 min-w-[4.5rem] border-amber-500/70 text-amber-800 hover:bg-amber-50 hover:border-amber-600 hover:text-amber-900 dark:border-amber-500/60 dark:text-amber-400 dark:hover:bg-amber-950/40 dark:hover:text-amber-300"
+                  onClick={() => setAuthKeyModalOpen(true)}
+                >
+                  인증키
+                </Button>
+              ) : (
+                <span className="flex shrink-0 min-w-0 flex-wrap items-center gap-2">
+                  {remainingSecondsUntilInviteKey != null &&
+                    remainingSecondsUntilInviteKey > 0 && (
+                      <span className="font-mono text-xs font-medium tabular-nums text-muted-foreground">
+                        {formatRemainingInviteKey(remainingSecondsUntilInviteKey)}
+                      </span>
+                    )}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="min-w-[4.5rem] border-amber-500/70 text-amber-800 opacity-70 dark:border-amber-500/60 dark:text-amber-400"
+                    disabled
+                  >
+                    인증키
+                  </Button>
+                </span>
+              )
+            )}
           </dd>
           <dd className="col-start-2 min-w-0">
             <BioPreview
@@ -417,6 +526,12 @@ export function RiggerProfileInline({
               <DialogTitle className="text-center text-primary font-semibold">
                 인증키 생성
               </DialogTitle>
+              <DialogDescription className="sr-only">
+                복사한 링크를 전달하면 회원가입 페이지에서 인증키가 자동 입력됩니다.
+              </DialogDescription>
+              <p className="text-center text-xs text-muted-foreground">
+                복사한 링크를 전달하면 회원가입 페이지에서 인증키가 자동 입력됩니다.
+              </p>
             </DialogHeader>
             <div className="flex flex-col items-center space-y-6 pt-2">
               <div
@@ -463,7 +578,7 @@ export function RiggerProfileInline({
                               e.stopPropagation();
                               copyAuthKey(generatedKeyRigger, "rigger");
                             }}
-                            aria-label="인증키 복사"
+                            aria-label="회원가입 링크 복사"
                           >
                             {copiedKey === "rigger" ? (
                               <Check className="size-4 text-green-600" />
@@ -535,7 +650,7 @@ export function RiggerProfileInline({
                               e.stopPropagation();
                               copyAuthKey(generatedKeyBunny, "bunny");
                             }}
-                            aria-label="인증키 복사"
+                            aria-label="회원가입 링크 복사"
                           >
                             {copiedKey === "bunny" ? (
                               <Check className="size-4 text-green-600" />
@@ -579,7 +694,7 @@ export function RiggerProfileInline({
         <dt className="shrink-0 text-sm font-medium text-muted-foreground">
           성별
         </dt>
-        <dd className="min-w-0 text-lg font-medium">{genderDisplay}</dd>
+        <dd className="min-w-0 text-base font-medium">{genderDisplay}</dd>
         <dt className="shrink-0 text-sm font-medium text-muted-foreground">
           구분
         </dt>
@@ -697,7 +812,7 @@ export function RiggerProfileInline({
         <dt className="col-span-4 mt-2 shrink-0 text-sm font-medium text-muted-foreground sm:col-span-1 sm:mt-0">
           공개
         </dt>
-        <dd className="col-span-4 min-w-0 sm:col-span-3">
+        <dd className="col-span-4 flex min-w-0 flex-wrap items-center gap-2 sm:col-span-3">
           <ToggleGroup
             type="single"
             value={profileVisibility}
@@ -714,6 +829,13 @@ export function RiggerProfileInline({
               비공개
             </ToggleGroupItem>
           </ToggleGroup>
+          <Button asChild size="sm" variant="outline">
+            <Link
+              href={`/change-password?callbackURL=${encodeURIComponent(`/rigger/${riggerId}`)}`}
+            >
+              비밀번호 변경
+            </Link>
+          </Button>
         </dd>
       </dl>
       <div className="border-t pt-4">
@@ -767,7 +889,19 @@ export function RiggerProfileInline({
 
 type PairItem = { label: string; value: string; ellipsis?: boolean };
 
-function FragmentBlock({ pairs }: { pairs: PairItem[] }) {
+function FragmentBlock({
+  pairs,
+  approvalStatus,
+  riggerId,
+  onRequestApproval,
+  requestApprovalLoading,
+}: {
+  pairs: PairItem[];
+  approvalStatus?: "pending" | "approved" | "rejected";
+  riggerId?: string;
+  onRequestApproval?: () => void | Promise<void>;
+  requestApprovalLoading?: boolean;
+}) {
   return (
     <>
       {pairs.map(({ label, value, ellipsis }) => (
@@ -776,6 +910,10 @@ function FragmentBlock({ pairs }: { pairs: PairItem[] }) {
           label={label}
           value={value}
           ellipsis={ellipsis}
+          approvalStatus={approvalStatus}
+          riggerId={riggerId}
+          onRequestApproval={onRequestApproval}
+          requestApprovalLoading={requestApprovalLoading}
         />
       ))}
     </>
@@ -788,14 +926,24 @@ function FragmentRow({
   label,
   value,
   ellipsis,
+  approvalStatus,
+  riggerId,
+  onRequestApproval,
+  requestApprovalLoading,
 }: {
   label: string;
   value: string;
   ellipsis?: boolean;
+  approvalStatus?: "pending" | "approved" | "rejected";
+  riggerId?: string;
+  onRequestApproval?: () => void | Promise<void>;
+  requestApprovalLoading?: boolean;
 }) {
   const display = value || "-";
   const isPendingTier =
     label === "등급" && value === PENDING_TIER_LABEL;
+  const isRejectedTier =
+    label === "등급" && approvalStatus === "rejected" && riggerId && onRequestApproval;
   return (
     <>
       <dt className="shrink-0 text-sm font-medium text-muted-foreground">
@@ -804,14 +952,25 @@ function FragmentRow({
       <dd
         className={
           ellipsis
-            ? "min-w-0 overflow-hidden text-lg font-medium"
+            ? "min-w-0 overflow-hidden text-base font-medium"
             : isPendingTier
-              ? "min-w-0 text-lg font-medium text-blue-600"
-              : "min-w-0 text-lg font-medium"
+              ? "min-w-0 text-base font-medium text-blue-600"
+              : "min-w-0 text-base font-medium"
         }
         title={ellipsis && display !== "-" ? display : undefined}
       >
-        {ellipsis ? (
+        {isRejectedTier ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="text-blue-600 border-blue-600/50 hover:bg-blue-50 hover:text-blue-700 dark:text-blue-400 dark:border-blue-400/50 dark:hover:bg-blue-950/40 dark:hover:text-blue-300"
+            onClick={() => void onRequestApproval?.()}
+            disabled={requestApprovalLoading}
+          >
+            {requestApprovalLoading ? "처리 중…" : "승인 요청"}
+          </Button>
+        ) : ellipsis ? (
           <span className="block truncate">{display}</span>
         ) : (
           display

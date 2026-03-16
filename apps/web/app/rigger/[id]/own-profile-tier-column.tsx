@@ -14,9 +14,15 @@ import { uploadRiggerMarkImage } from "./mark-upload-actions";
 
 type OwnProfileTierColumnProps = {
   rigger: Rigger;
+  /** 계정 사용 제한 중이면 사진 등록 버튼 숨김 */
+  isSuspended?: boolean;
+  /** 계정 사용 제한 시 카드 위 감옥 이미지 URL */
+  jailOverlayUrl?: string | null;
+  /** 정지 해제 예정 시각 ISO. 상세보기에서 남은 시간 표시용 */
+  suspendedUntil?: string | null;
 };
 
-export function OwnProfileTierColumn({ rigger }: OwnProfileTierColumnProps) {
+export function OwnProfileTierColumn({ rigger, isSuspended, jailOverlayUrl, suspendedUntil }: OwnProfileTierColumnProps) {
   const router = useRouter();
   const [isProfileEditing, setIsProfileEditing] = useState(false);
   const initialUrl = rigger.markImageUrl?.trim() || "";
@@ -101,7 +107,7 @@ export function OwnProfileTierColumn({ rigger }: OwnProfileTierColumnProps) {
   }, [isProfileEditing, initialUrl]);
 
   return (
-    <div className="flex w-full max-w-[280px] flex-col gap-1 sm:col-start-1 sm:row-span-2 sm:row-start-1 sm:justify-end">
+    <div className="flex h-full w-full max-w-[280px] flex-col gap-1 sm:col-start-1 sm:row-start-1 sm:justify-start">
       <div className="w-full">
         <RiggerTierCard
           rigger={isProfileEditing ? displayRigger : rigger}
@@ -110,6 +116,8 @@ export function OwnProfileTierColumn({ rigger }: OwnProfileTierColumnProps) {
               ? { onChooseImage: (file) => setPendingFile(file) }
               : undefined
           }
+          jailOverlayUrl={jailOverlayUrl}
+          suspendedUntil={suspendedUntil}
         />
       </div>
       {dirty ? (
@@ -134,13 +142,13 @@ export function OwnProfileTierColumn({ rigger }: OwnProfileTierColumnProps) {
             취소
           </Button>
         </div>
-      ) : (
+      ) : !isSuspended ? (
         <Button asChild className="w-full" size="sm">
           <Link href={`/rigger/${encodeURIComponent(rigger.id)}/photos`}>
             사진 등록
           </Link>
         </Button>
-      )}
+      ) : null}
     </div>
   );
 }

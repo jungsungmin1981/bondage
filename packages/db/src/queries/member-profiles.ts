@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, isNotNull, isNull } from "drizzle-orm";
 import { db } from "../client/node";
 import * as schema from "../schema";
 
@@ -17,6 +17,7 @@ export type MemberProfileRow = {
   activityRegion: string | null;
   style: string | null;
   status: string;
+  rejectionNote?: string | null;
   createdAt: Date | null;
   updatedAt: Date | null;
 };
@@ -89,6 +90,30 @@ export async function getUserIdByMemberProfileId(
     .where(eq(schema.memberProfiles.id, profileId))
     .limit(1);
   return rows[0]?.userId ?? null;
+}
+
+/** 닉네임으로 회원 검색 (관리자 이용제한용). 최대 50건. */
+export async function searchMemberProfilesByNickname(
+  query: string,
+): Promise<{ id: string; userId: string; nickname: string; memberType: string }[]> {
+  const trimmed = query.trim().slice(0, 100);
+  if (!trimmed) return [];
+  const rows = await db
+    .select({
+      id: schema.memberProfiles.id,
+      userId: schema.memberProfiles.userId,
+      nickname: schema.memberProfiles.nickname,
+      memberType: schema.memberProfiles.memberType,
+    })
+    .from(schema.memberProfiles)
+    .where(ilike(schema.memberProfiles.nickname, `%${trimmed}%`))
+    .limit(50);
+  return rows.map((r) => ({
+    id: r.id,
+    userId: r.userId,
+    nickname: r.nickname,
+    memberType: r.memberType,
+  }));
 }
 
 /**
@@ -222,11 +247,12 @@ export async function getPendingRiggerProfiles(): Promise<
     .from(schema.memberProfiles)
     .innerJoin(schema.users, eq(schema.memberProfiles.userId, schema.users.id))
     .where(
-    and(
-      eq(schema.memberProfiles.memberType, "rigger"),
-      eq(schema.memberProfiles.status, "pending"),
-    ),
-  )
+      and(
+        eq(schema.memberProfiles.memberType, "rigger"),
+        eq(schema.memberProfiles.status, "pending"),
+        isNull(schema.memberProfiles.reRequestedAt),
+      ),
+    )
     .orderBy(asc(schema.memberProfiles.createdAt));
   return rows.map((r) => ({
     id: r.id,
@@ -243,6 +269,132 @@ export async function getPendingRiggerProfiles(): Promise<
     activityRegion: r.activityRegion ?? null,
     style: r.style ?? null,
     status: r.status,
+    createdAt: r.createdAt,
+    updatedAt: r.updatedAt,
+    email: r.email ?? null,
+    userName: r.userName ?? null,
+  }));
+}
+
+export type ReRequestedRiggerProfileRow = PendingRiggerProfileRow & {
+  reRequestedAt: Date | null;
+};
+
+/**
+ * 관리자용: status = 'pending' 이고 re_requested_at 이 있는 리거 (재승인 요청). 최근 재요청일 순.
+ */
+export async function getReRequestedRiggerProfiles(): Promise<
+  ReRequestedRiggerProfileRow[]
+> {
+  const rows = await db
+    .select({
+      id: schema.memberProfiles.id,
+      userId: schema.memberProfiles.userId,
+      memberType: schema.memberProfiles.memberType,
+      nickname: schema.memberProfiles.nickname,
+      iconUrl: schema.memberProfiles.iconUrl,
+      bio: schema.memberProfiles.bio,
+      cardImageUrl: schema.memberProfiles.cardImageUrl,
+      gender: schema.memberProfiles.gender,
+      division: schema.memberProfiles.division,
+      bunnyRecruit: schema.memberProfiles.bunnyRecruit,
+      bondageRating: schema.memberProfiles.bondageRating,
+      activityRegion: schema.memberProfiles.activityRegion,
+      style: schema.memberProfiles.style,
+      status: schema.memberProfiles.status,
+      reRequestedAt: schema.memberProfiles.reRequestedAt,
+      createdAt: schema.memberProfiles.createdAt,
+      updatedAt: schema.memberProfiles.updatedAt,
+      email: schema.users.email,
+      userName: schema.users.name,
+    })
+    .from(schema.memberProfiles)
+    .innerJoin(schema.users, eq(schema.memberProfiles.userId, schema.users.id))
+    .where(
+      and(
+        eq(schema.memberProfiles.memberType, "rigger"),
+        eq(schema.memberProfiles.status, "pending"),
+        // re_requested_at IS NOT NULL
+        isNotNull(schema.memberProfiles.reRequestedAt),
+      ),
+    )
+    .orderBy(desc(schema.memberProfiles.reRequestedAt));
+  return rows.map((r) => ({
+    id: r.id,
+    userId: r.userId,
+    memberType: r.memberType,
+    nickname: r.nickname,
+    iconUrl: r.iconUrl,
+    bio: r.bio,
+    cardImageUrl: r.cardImageUrl ?? null,
+    gender: r.gender ?? null,
+    division: r.division ?? null,
+    bunnyRecruit: r.bunnyRecruit ?? null,
+    bondageRating: r.bondageRating ?? null,
+    activityRegion: r.activityRegion ?? null,
+    style: r.style ?? null,
+    status: r.status,
+    reRequestedAt: r.reRequestedAt ?? null,
+    createdAt: r.createdAt,
+    updatedAt: r.updatedAt,
+    email: r.email ?? null,
+    userName: r.userName ?? null,
+  }));
+}
+
+/**
+ * 관리자용: status = 'rejected' 인 리거 프로필 목록 (users join). 최근 반려일 순.
+ */
+export async function getRejectedRiggerProfiles(): Promise<
+  PendingRiggerProfileRow[]
+> {
+  const rows = await db
+    .select({
+      id: schema.memberProfiles.id,
+      userId: schema.memberProfiles.userId,
+      memberType: schema.memberProfiles.memberType,
+      nickname: schema.memberProfiles.nickname,
+      iconUrl: schema.memberProfiles.iconUrl,
+      bio: schema.memberProfiles.bio,
+      cardImageUrl: schema.memberProfiles.cardImageUrl,
+      gender: schema.memberProfiles.gender,
+      division: schema.memberProfiles.division,
+      bunnyRecruit: schema.memberProfiles.bunnyRecruit,
+      bondageRating: schema.memberProfiles.bondageRating,
+      activityRegion: schema.memberProfiles.activityRegion,
+      style: schema.memberProfiles.style,
+      status: schema.memberProfiles.status,
+      rejectionNote: schema.memberProfiles.rejectionNote,
+      createdAt: schema.memberProfiles.createdAt,
+      updatedAt: schema.memberProfiles.updatedAt,
+      email: schema.users.email,
+      userName: schema.users.name,
+    })
+    .from(schema.memberProfiles)
+    .innerJoin(schema.users, eq(schema.memberProfiles.userId, schema.users.id))
+    .where(
+      and(
+        eq(schema.memberProfiles.memberType, "rigger"),
+        eq(schema.memberProfiles.status, "rejected"),
+      ),
+    )
+    .orderBy(desc(schema.memberProfiles.updatedAt));
+  return rows.map((r) => ({
+    id: r.id,
+    userId: r.userId,
+    memberType: r.memberType,
+    nickname: r.nickname,
+    iconUrl: r.iconUrl,
+    bio: r.bio,
+    cardImageUrl: r.cardImageUrl ?? null,
+    gender: r.gender ?? null,
+    division: r.division ?? null,
+    bunnyRecruit: r.bunnyRecruit ?? null,
+    bondageRating: r.bondageRating ?? null,
+    activityRegion: r.activityRegion ?? null,
+    style: r.style ?? null,
+    status: r.status,
+    rejectionNote: r.rejectionNote ?? null,
     createdAt: r.createdAt,
     updatedAt: r.updatedAt,
     email: r.email ?? null,
@@ -272,6 +424,68 @@ export async function approveRiggerProfile(
   await db
     .update(schema.memberProfiles)
     .set({ status: "approved", updatedAt: new Date() })
+    .where(eq(schema.memberProfiles.id, profileId));
+  return { ok: true };
+}
+
+/**
+ * 리거 프로필 반려 (관리자 전용). id는 member_profiles.id.
+ * rejectionNote: 반려 시 보낸 쪽지 내용 (저장해 두었다가 목록에서 확인용).
+ */
+export async function rejectRiggerProfile(
+  profileId: string,
+  rejectionNote?: string | null,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const rows = await db
+    .select({ id: schema.memberProfiles.id })
+    .from(schema.memberProfiles)
+    .where(
+      and(
+        eq(schema.memberProfiles.id, profileId),
+        eq(schema.memberProfiles.memberType, "rigger"),
+      ),
+    )
+    .limit(1);
+  if (!rows[0]) {
+    return { ok: false, error: "해당 리거 프로필을 찾을 수 없습니다." };
+  }
+  await db
+    .update(schema.memberProfiles)
+    .set({
+      status: "rejected",
+      updatedAt: new Date(),
+      ...(rejectionNote != null && { rejectionNote }),
+    })
+    .where(eq(schema.memberProfiles.id, profileId));
+  return { ok: true };
+}
+
+/**
+ * 리거 프로필 재승인 요청 (본인 전용). status가 'rejected'일 때만 'pending'으로 변경.
+ */
+export async function requestRiggerApprovalAgain(
+  profileId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const rows = await db
+    .select({ id: schema.memberProfiles.id, status: schema.memberProfiles.status })
+    .from(schema.memberProfiles)
+    .where(
+      and(
+        eq(schema.memberProfiles.id, profileId),
+        eq(schema.memberProfiles.memberType, "rigger"),
+      ),
+    )
+    .limit(1);
+  if (!rows[0]) {
+    return { ok: false, error: "해당 리거 프로필을 찾을 수 없습니다." };
+  }
+  if (rows[0].status !== "rejected") {
+    return { ok: false, error: "반려된 상태에서만 다시 승인을 요청할 수 있습니다." };
+  }
+  const now = new Date();
+  await db
+    .update(schema.memberProfiles)
+    .set({ status: "pending", updatedAt: now, reRequestedAt: now })
     .where(eq(schema.memberProfiles.id, profileId));
   return { ok: true };
 }

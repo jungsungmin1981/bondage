@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@workspace/ui/lib/utils";
 
 const tabs = [
-  { label: "리거 승인", href: "/admin/riggers" },
+  { label: "회원관리", href: "/admin/members" },
   { label: "클래스 등록", href: "/admin/class" },
   { label: "클래스 심사", href: "/admin/class-review" },
   { label: "공지사항", href: "/admin/notice/bunny" },
@@ -23,7 +23,9 @@ export function AdminTabs() {
           const active =
             tab.href === "/admin/notice/bunny"
               ? pathname.startsWith("/admin/notice")
-              : pathname === tab.href || pathname.startsWith(`${tab.href}/`);
+              : tab.href === "/admin/members"
+                ? pathname.startsWith("/admin/members")
+                : pathname === tab.href || pathname.startsWith(`${tab.href}/`);
           return (
             <Link
               key={tab.href}

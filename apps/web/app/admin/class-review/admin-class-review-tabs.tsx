@@ -5,9 +5,9 @@ import { usePathname } from "next/navigation";
 import { cn } from "@workspace/ui/lib/utils";
 
 const classReviewTabs = [
-  { label: "초급", href: "/admin/class-review/beginner" },
-  { label: "중급", href: "/admin/class-review/intermediate" },
-  { label: "고급", href: "/admin/class-review/advanced" },
+  { label: "초급", href: "/admin/class-review/beginner/pending", base: "/admin/class-review/beginner" },
+  { label: "중급", href: "/admin/class-review/intermediate/pending", base: "/admin/class-review/intermediate" },
+  { label: "고급", href: "/admin/class-review/advanced/pending", base: "/admin/class-review/advanced" },
 ] as const;
 
 export function AdminClassReviewTabs() {
@@ -18,7 +18,7 @@ export function AdminClassReviewTabs() {
       <div className="flex flex-wrap gap-2 text-sm">
         {classReviewTabs.map((tab) => {
           const active =
-            pathname === tab.href || pathname.startsWith(tab.href + "/");
+            pathname === tab.base || pathname.startsWith(tab.base + "/");
           return (
             <Link
               key={tab.href}

@@ -9,6 +9,7 @@ import {
 } from "@workspace/db";
 import { randomUUID } from "crypto";
 import sharp from "sharp";
+import { getSecretOrFallback } from "@/lib/env-secrets";
 import { uploadBufferToS3 } from "@/lib/s3-upload";
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const ALLOWED_EXTS = [".jpg", ".jpeg", ".png", ".webp"];
@@ -17,7 +18,6 @@ const ALLOWED_EXTS = [".jpg", ".jpeg", ".png", ".webp"];
 const MAX_ORIGINAL_SIZE = 60 * 1024 * 1024; // 60MB
 const SERVER_RESIZE = { maxWidthOrHeight: 1280, jpegQuality: 82 };
 const WS_PUBLISH_URL = process.env.WS_PUBLISH_URL || "http://localhost:3001/publish";
-const WS_PUBLISH_SECRET = process.env.WS_PUBLISH_SECRET || process.env.BETTER_AUTH_SECRET || "dev-secret";
 
 function getFileName(file: File): string {
   return (file as File & { name?: string }).name ?? "";
@@ -124,11 +124,15 @@ export async function sendThreadMessage(
     });
     // 실시간 전파 (실패해도 메시지 저장은 성공 처리)
     try {
+      const wsPublishSecret = getSecretOrFallback(
+        ["WS_PUBLISH_SECRET", "BETTER_AUTH_SECRET"],
+        "dev-secret",
+      );
       await fetch(WS_PUBLISH_URL, {
         method: "POST",
         headers: {
           "content-type": "application/json",
-          "x-ws-secret": WS_PUBLISH_SECRET,
+          "x-ws-secret": wsPublishSecret,
         },
         body: JSON.stringify({ threadId }),
       });

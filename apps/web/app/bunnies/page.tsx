@@ -1,75 +1,87 @@
 import Link from "next/link";
-import { getApprovedBunnyProfiles } from "@workspace/db";
+import { auth } from "@workspace/auth";
+import { getApprovedBunnyProfiles, getSuspendedUserIds } from "@workspace/db";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { BunnyCard } from "@/components/bunny-card";
 
 export default async function BunniesPage() {
-  const bunnies = await getApprovedBunnyProfiles();
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  if (!session) redirect("/login");
+
+  const [all, suspendedUserIds] = await Promise.all([
+    getApprovedBunnyProfiles(),
+    getSuspendedUserIds(),
+  ]);
+  const hasAny = all.length > 0;
+  const bunnies = hasAny
+    ? [
+        ...all.filter((p) => p.userId === session.user.id),
+        ...all.filter((p) => p.userId !== session.user.id),
+      ]
+    : [];
 
   return (
-    <main className="mx-auto flex min-h-svh w-full max-w-3xl flex-col gap-4 p-4 sm:p-6">
-      <div className="flex items-end justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="truncate text-2xl font-semibold tracking-tight">
-            버니 회원 목록
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {bunnies.length}명 (승인된 버니 프로필)
-          </p>
-        </div>
-        <Link
-          href="/users"
-          className="shrink-0 text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
-        >
-          전체 Users 보기
-        </Link>
+    <div className="min-h-[calc(100svh-3.5rem)] p-4 sm:p-6">
+      <div className="mb-8">
+        <h1 className="text-xl font-semibold sm:text-2xl">버니</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          승인된 버니 프로필을 확인하세요.
+        </p>
       </div>
 
-      <div className="overflow-hidden rounded-xl border bg-card">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-xs text-muted-foreground">
-              <tr>
-                <th className="px-3 py-2 text-left font-medium">닉네임</th>
-                <th className="px-3 py-2 text-left font-medium">이메일</th>
-                <th className="px-3 py-2 text-left font-medium">이름</th>
-                <th className="px-3 py-2 text-left font-medium">생성일</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {bunnies.map((p) => (
-                <tr key={p.id} className="hover:bg-muted/30">
-                  <td className="px-3 py-2">{p.nickname}</td>
-                  <td className="px-3 py-2 font-mono text-[12px] sm:text-sm">
-                    {p.email ?? "-"}
-                  </td>
-                  <td className="px-3 py-2">{p.userName ?? "-"}</td>
-                  <td className="px-3 py-2 text-muted-foreground">
-                    {p.createdAt
-                      ? new Date(p.createdAt).toLocaleString("ko-KR", {
-                          year: "numeric",
-                          month: "2-digit",
-                          day: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
-                      : "-"}
-                  </td>
-                </tr>
-              ))}
-              {bunnies.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={4}
-                    className="px-3 py-8 text-center text-sm text-muted-foreground"
+      {!hasAny ? (
+        <p className="text-sm text-muted-foreground">
+          현재 등록된 버니가 없습니다. 승인된 버니가 있으면 여기에 표시됩니다.
+        </p>
+      ) : (
+        <section
+          aria-labelledby="bunny-list-heading"
+          className="rounded-xl bg-rose-50/90 dark:bg-rose-950/40 px-4 py-5 sm:px-5 sm:py-6"
+        >
+          <h2
+            id="bunny-list-heading"
+            className="mb-4 text-lg font-semibold tracking-tight sm:text-xl"
+          >
+            버니 회원
+          </h2>
+          <ul className="grid list-none grid-cols-2 gap-4 sm:gap-6 lg:gap-8 sm:[grid-template-columns:repeat(auto-fill,minmax(min(100%,100px),280px))]">
+            {bunnies.map((p) => {
+              const name = (
+                p.nickname?.trim() ||
+                p.userName?.trim() ||
+                "버니"
+              ).slice(0, 50);
+
+              return (
+                <li key={p.id} className="min-w-0">
+                  <Link
+                    href={`/bunnies/${encodeURIComponent(p.id)}`}
+                    className="block rounded-xl transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   >
-                    승인된 버니가 없습니다.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </main>
+                    <div className="relative flex w-full flex-col items-center">
+                      <div className="w-full min-w-0 max-w-[280px] rounded-xl shadow-[0_12px_28px_-8px_rgba(0,0,0,0.22)] transition-all duration-200 hover:-translate-y-2 hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.28)]">
+                        <BunnyCard
+                        cardImageUrl={p.cardImageUrl}
+                        jailOverlay={suspendedUserIds.has(p.userId)}
+                      />
+                      </div>
+                      <p
+                        className="mt-2 w-full min-w-0 truncate text-center text-sm font-medium text-foreground"
+                        title={name}
+                      >
+                        {name}
+                      </p>
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+    </div>
   );
 }
-

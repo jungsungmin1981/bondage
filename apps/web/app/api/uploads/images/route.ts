@@ -1,7 +1,10 @@
 import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { auth } from "@workspace/auth";
 import { getS3Config } from "@/lib/s3";
 import { resizeToJpeg } from "@/lib/image/resize";
+import { isAdmin } from "@/lib/admin";
 
 export const runtime = "nodejs";
 
@@ -10,6 +13,14 @@ function randomId() {
 }
 
 export async function POST(req: Request) {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) {
+    return NextResponse.json({ ok: false, error: "로그인이 필요합니다." }, { status: 401 });
+  }
+  if (!isAdmin(session)) {
+    return NextResponse.json({ ok: false, error: "관리자만 업로드할 수 있습니다." }, { status: 403 });
+  }
+
   let s3: ReturnType<typeof getS3Config>["s3"];
   let bucket: string;
   let publicBaseUrl: string;

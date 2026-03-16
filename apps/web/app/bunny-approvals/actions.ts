@@ -68,7 +68,7 @@ export async function rejectBunnyPost(
 
   try {
     const result = isAdmin(session)
-      ? await rejectBunnyPostRequestAsAdmin(approvalId)
+      ? await rejectBunnyPostRequestAsAdmin(approvalId, session.user.id)
       : await rejectBunnyPostRequest(approvalId, session.user.id);
     if (!result.ok) return result;
     revalidatePath("/bunny-approvals");
