@@ -16,4 +16,7 @@ export * from "./queries/bunny-board";
 export * from "./queries/bunny-board-post-comment";
 export * from "./queries/bunny-photos";
 export * from "./queries/user-suspensions";
+export * from "./queries/monthly-hotpick";
+export * from "./queries/shared-board";
+export * from "./queries/shared-board-post-comment";
 

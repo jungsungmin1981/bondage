@@ -5,6 +5,7 @@ import {
   getActiveSuspensionForUser,
   getBunnyProfileById,
   getBunnyPhotos,
+  getMemberProfileByUserId,
   getUserCreatedAt,
 } from "@workspace/db";
 import { headers } from "next/headers";
@@ -28,8 +29,12 @@ export default async function BunnyDetailPage({
   if (!session) redirect("/login");
 
   const { id } = await params;
-  const profile = await getBunnyProfileById(id);
+  const [profile, viewerProfile] = await Promise.all([
+    getBunnyProfileById(id),
+    getMemberProfileByUserId(session.user.id),
+  ]);
   if (!profile) notFound();
+  const isViewerRigger = viewerProfile?.memberType === "rigger";
 
   const name = (
     profile.nickname?.trim() ||
@@ -181,7 +186,7 @@ export default async function BunnyDetailPage({
                           정보수정
                         </Link>
                       </Button>
-                    ) : (
+                    ) : !isViewerRigger ? (
                       <Button asChild size="sm" className="shrink-0">
                         <Link
                           href={`/messages/new?to=${encodeURIComponent(profile.id)}`}
@@ -189,7 +194,7 @@ export default async function BunnyDetailPage({
                           쪽지 보내기
                         </Link>
                       </Button>
-                    )}
+                    ) : null}
                   </dd>
                   <dd className="col-start-2 min-w-0">
                     <BioPreview

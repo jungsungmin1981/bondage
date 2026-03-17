@@ -1,8 +1,21 @@
 import Link from "next/link";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { auth } from "@workspace/auth";
+import { getInviteKeyMemberTypeByUserId } from "@workspace/db";
 import { UserCircle, Users } from "lucide-react";
 import { Button } from "@workspace/ui/components/button";
 
-export default function OnboardingPage() {
+export default async function OnboardingPage() {
+  const session = await auth.api.getSession({ headers: await headers() });
+  let inviteKeyType: "rigger" | "bunny" | null = null;
+  if (session?.user?.id) {
+    inviteKeyType = await getInviteKeyMemberTypeByUserId(session.user.id);
+    if (inviteKeyType === "rigger") redirect("/onboarding/rigger");
+    if (inviteKeyType === "bunny") redirect("/onboarding/bunny");
+    // 인증키에 종류가 없으면(레거시) 회원 종류 선택 화면 표시
+  }
+
   return (
     <div className="mx-auto w-full max-w-md rounded-2xl border border-blue-400/30 bg-blue-500/25 px-8 py-10 shadow-[0_0_40px_-10px_rgba(59,130,246,0.4)] backdrop-blur-xl sm:px-10 sm:py-12">
       <h1 className="text-center text-xl font-semibold text-blue-100">

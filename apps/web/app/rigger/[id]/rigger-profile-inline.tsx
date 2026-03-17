@@ -77,6 +77,8 @@ export type RiggerProfileInlineProps = {
   inviteKeyAllowedAt?: string | null;
   /** 계정 사용 제한 중이면 인증키 버튼 숨김 */
   suspended?: boolean;
+  /** 정보수정 진입/이탈 시 호출 (상단 폼 영역 고정/해제용) */
+  onEditModeChange?: (editing: boolean) => void;
 };
 
 export function RiggerProfileInline({
@@ -97,6 +99,7 @@ export function RiggerProfileInline({
   canCreateInviteKey = true,
   inviteKeyAllowedAt: inviteKeyAllowedAtProp = null,
   suspended = false,
+  onEditModeChange,
 }: RiggerProfileInlineProps) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -276,6 +279,10 @@ export function RiggerProfileInline({
     dispatchProfileEditing(editing);
     return () => dispatchProfileEditing(false);
   }, [editing]);
+
+  useEffect(() => {
+    onEditModeChange?.(editing);
+  }, [editing, onEditModeChange]);
   const [saving, setSaving] = useState(false);
   const [division, setDivision] = useState(() =>
     normalizeDivision(initialDivision),

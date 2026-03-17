@@ -17,10 +17,16 @@ export function OnboardingRedirect() {
     let cancelled = false;
     fetch("/api/me/profile", { credentials: "include" })
       .then((res) => res.json())
-      .then((data: { hasProfile?: boolean }) => {
+      .then((data: { hasProfile?: boolean; inviteKeyType?: "rigger" | "bunny" }) => {
         if (cancelled) return;
         if (data.hasProfile !== true) {
-          router.replace("/onboarding");
+          if (data.inviteKeyType === "rigger") {
+            router.replace("/onboarding/rigger");
+          } else if (data.inviteKeyType === "bunny") {
+            router.replace("/onboarding/bunny");
+          } else {
+            router.replace("/onboarding");
+          }
         }
       })
       .catch(() => {});

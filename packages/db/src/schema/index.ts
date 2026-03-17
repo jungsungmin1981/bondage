@@ -18,7 +18,10 @@ export * from "./class-challenge";
 export * from "./class-challenge-approval";
 export * from "./bunny-board";
 export * from "./bunny-board-post-comment";
+export * from "./shared-board";
+export * from "./shared-board-post-comment";
 export * from "./bunny-photo";
 export * from "./invite-key";
 export * from "./user-suspension";
+export * from "./monthly-hotpick";
 

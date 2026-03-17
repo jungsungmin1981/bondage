@@ -6,10 +6,8 @@ import { cn } from "@workspace/ui/lib/utils";
 
 const tabs = [
   { label: "회원관리", href: "/admin/members" },
-  { label: "클래스 등록", href: "/admin/class" },
-  { label: "클래스 심사", href: "/admin/class-review" },
+  { label: "클래스", href: "/admin/class" },
   { label: "공지사항", href: "/admin/notice/bunny" },
-  { label: "워터마크", href: "/admin/watermark" },
   { label: "이미지", href: "/admin/images" },
 ] as const;
 
@@ -17,31 +15,33 @@ export function AdminTabs() {
   const pathname = usePathname();
 
   return (
-    <div className="mb-4 flex justify-start">
-      <div className="inline-flex rounded-full bg-muted/60 p-1 text-sm shadow-sm">
-        {tabs.map((tab) => {
-          const active =
-            tab.href === "/admin/notice/bunny"
-              ? pathname.startsWith("/admin/notice")
-              : tab.href === "/admin/members"
-                ? pathname.startsWith("/admin/members")
-                : pathname === tab.href || pathname.startsWith(`${tab.href}/`);
-          return (
-            <Link
-              key={tab.href}
-              href={tab.href}
-              className={cn(
-                "rounded-full px-4 py-1.5 font-medium text-muted-foreground transition",
-                "hover:text-foreground",
-                active && "bg-background text-foreground shadow-sm",
-              )}
-            >
-              {tab.label}
-            </Link>
-          );
-        })}
-      </div>
-    </div>
+    <nav className="flex flex-col gap-0.5" aria-label="관리자 메뉴">
+      {tabs.map((tab) => {
+        const active =
+          tab.href === "/admin/notice/bunny"
+            ? pathname.startsWith("/admin/notice")
+            : tab.href === "/admin/members"
+              ? pathname.startsWith("/admin/members")
+              : tab.href === "/admin/class"
+                ? pathname.startsWith("/admin/class")
+                : tab.href === "/admin/images"
+                  ? pathname.startsWith("/admin/images") || pathname.startsWith("/admin/watermark")
+                  : pathname === tab.href || pathname.startsWith(`${tab.href}/`);
+        return (
+          <Link
+            key={tab.href}
+            href={tab.href}
+            className={cn(
+              "min-h-[44px] rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition",
+              "hover:bg-muted hover:text-foreground",
+              active && "bg-muted text-foreground",
+            )}
+          >
+            {tab.label}
+          </Link>
+        );
+      })}
+    </nav>
   );
 }
 

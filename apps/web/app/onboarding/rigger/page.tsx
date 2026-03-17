@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { MemberProfileForm } from "@/components/member-profile-form";
 import { submitRiggerProfile } from "../actions";
 import { OnboardingFormActions } from "../onboarding-form-actions";
@@ -6,13 +5,6 @@ import { OnboardingFormActions } from "../onboarding-form-actions";
 export default function OnboardingRiggerPage() {
   return (
     <div className="mx-auto w-full max-w-2xl">
-      <Link
-        href="/onboarding"
-        className="mb-6 inline-block text-sm text-blue-200/90 underline-offset-2 hover:text-blue-100"
-      >
-        ← 이전으로
-      </Link>
-
       <div>
         <div className="min-w-0 rounded-xl border border-blue-400/20 bg-white/95 shadow-lg dark:bg-slate-900/95">
           <div className="p-6">
@@ -29,6 +21,7 @@ export default function OnboardingRiggerPage() {
               formId="onboarding-rigger-form"
               hideSubmitButton
               confirmBeforeSubmitMessage="닉네임은 저장 후 변경할 수 없습니다. 한 번 더 확인 후 저장하시겠습니까?"
+              nicknamePlaceholder="한글을 사랑합시다. 닉네임 변경불가"
             />
           </div>
         </div>

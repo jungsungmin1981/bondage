@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import type { Metadata, Viewport } from "next";
+import { redirect } from "next/navigation";
 
 import "@workspace/ui/globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -54,16 +55,48 @@ const fontMono = Geist_Mono({
   variable: "--font-mono",
 });
 
+/** 리거 미승인 시 허용 경로: 본인 리거 상세 및 그 하위, 인증·온보딩 등 */
+function isAllowedForRiggerPending(pathname: string, profileId: string): boolean {
+  const base = `/rigger/${profileId}`;
+  if (pathname === base || pathname.startsWith(`${base}/`)) return true;
+  if (
+    pathname === "/login" ||
+    pathname === "/register" ||
+    pathname.startsWith("/onboarding") ||
+    pathname.startsWith("/reset-password") ||
+    pathname.startsWith("/change-password")
+  )
+    return true;
+  return false;
+}
+
 export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await auth.api.getSession({ headers: await headers() });
+  const headersList = await headers();
+  const session = await auth.api.getSession({ headers: headersList });
   const isAdminUser = session ? isAdmin(session) : false;
   const memberProfile = session
     ? await getMemberProfileByUserId(session.user.id)
     : null;
+
+  const pathname = headersList.get("x-pathname") ?? "";
+  const riggerPending =
+    memberProfile?.memberType === "rigger" && memberProfile?.status !== "approved";
+  const riggerRedirectTarget =
+    riggerPending && memberProfile?.id ? `/rigger/${memberProfile.id}` : null;
+  // x-pathname이 없거나 이미 허용/목적지일 때는 리다이렉트 안 함 → /rigger, /rigger/:id 등 무한루프 방지
+  if (
+    riggerRedirectTarget &&
+    pathname !== "" &&
+    pathname !== riggerRedirectTarget &&
+    !isAllowedForRiggerPending(pathname, memberProfile!.id)
+  ) {
+    redirect(riggerRedirectTarget);
+  }
+
   const showApprovalRequestLink =
     !!session && (isAdminUser || memberProfile?.memberType === "bunny");
   const showBunnyBoardLink = memberProfile?.memberType === "bunny" || isAdminUser;
@@ -104,7 +137,11 @@ export default async function RootLayout({
             >
               <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
                 <Link
-                  href="/"
+                  href={
+                    riggerPending && memberProfile?.id
+                      ? `/rigger/${memberProfile.id}`
+                      : "/"
+                  }
                   className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center text-sm font-medium sm:min-h-0 sm:min-w-0"
                 >
                   Bondage
@@ -115,6 +152,9 @@ export default async function RootLayout({
                   unreadNotesCount={unreadNotesCount}
                   showApprovalRequestLink={showApprovalRequestLink}
                   showBunnyBoardLink={showBunnyBoardLink}
+                  showBoardLink={!!session}
+                  riggerPendingRestriction={riggerPending && !!memberProfile?.id}
+                  riggerProfileId={memberProfile?.id ?? undefined}
                 />
               </div>
               <div className="flex items-center gap-2">
@@ -127,7 +167,11 @@ export default async function RootLayout({
                   </Link>
                 )}
                 <Link
-                  href="/messages"
+                  href={
+                    riggerPending && memberProfile?.id
+                      ? `/rigger/${memberProfile.id}`
+                      : "/messages"
+                  }
                   className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border bg-muted/30 px-2 shadow-sm shadow-black/5 transition hover:bg-muted/60"
                   aria-label="채팅"
                 >

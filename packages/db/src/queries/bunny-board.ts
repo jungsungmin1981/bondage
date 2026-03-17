@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNull, lte, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, lte, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "../client/node";
 import * as schema from "../schema";
@@ -36,10 +36,15 @@ export type BunnyBoardPostListItemWithRecommend = BunnyBoardPostListItem & {
   recommendCount: number;
 };
 
+/** Q&A 아코디언용: 목록 + 추천 수 + 본문 */
+export type BunnyBoardPostListItemWithRecommendAndBody =
+  BunnyBoardPostListItemWithRecommend & { body: string };
+
 export type BunnyBoardPostDetail = BunnyBoardPostListItem & {
   body: string;
   boardSlug: string;
   boardName: string;
+  sortOrder: number;
 };
 
 /** 진입 페이지용: 정렬된 게시판 목록 */
@@ -126,7 +131,10 @@ export async function getBunnyBoardPosts(
       eq(schema.bunnyBoardPosts.updatedByUserId, updaterProfile.userId),
     )
     .where(where)
-    .orderBy(desc(schema.bunnyBoardPosts.createdAt))
+    .orderBy(
+      asc(schema.bunnyBoardPosts.sortOrder), // Q&A 등 게시물 정리 순서 우선
+      desc(schema.bunnyBoardPosts.createdAt),
+    )
     .limit(limit)
     .offset(offset);
 
@@ -206,7 +214,10 @@ export async function getBunnyBoardPostsWithRecommendCounts(
       eq(schema.bunnyBoardPosts.id, recCountSubq.postId),
     )
     .where(where)
-    .orderBy(desc(schema.bunnyBoardPosts.createdAt))
+    .orderBy(
+      asc(schema.bunnyBoardPosts.sortOrder), // Q&A 등 게시물 정리 순서 우선
+      desc(schema.bunnyBoardPosts.createdAt),
+    )
     .limit(limit)
     .offset(offset);
 
@@ -215,6 +226,92 @@ export async function getBunnyBoardPostsWithRecommendCounts(
     boardId: r.boardId,
     postNumber: r.postNumber,
     title: r.title,
+    authorUserId: r.authorUserId,
+    authorNickname: r.nickname ?? null,
+    coverImageUrl: r.coverImageUrl ?? null,
+    isPublished: r.isPublished ?? true,
+    scheduledPublishAt: r.scheduledPublishAt ?? null,
+    updatedByUserId: r.updatedByUserId ?? null,
+    updatedByNickname: r.updaterNickname ?? null,
+    createdAt: r.createdAt,
+    updatedAt: r.updatedAt ?? null,
+    recommendCount: r.recommendCount ?? 0,
+  }));
+}
+
+/** Q&A 아코디언용: 목록 + 추천 수 + 본문 (onlyPublished 권장) */
+export async function getBunnyBoardPostsWithBodies(
+  boardId: string,
+  limit: number,
+  offset: number,
+  options?: { onlyPublished?: boolean },
+): Promise<BunnyBoardPostListItemWithRecommendAndBody[]> {
+  const recCountSubq = db
+    .select({
+      postId: schema.bunnyBoardPostRecommends.postId,
+      recommendCount: sql<number>`count(*)::int`.as("recommend_count"),
+    })
+    .from(schema.bunnyBoardPostRecommends)
+    .groupBy(schema.bunnyBoardPostRecommends.postId)
+    .as("rec_count");
+
+  const now = new Date();
+  const where = options?.onlyPublished
+    ? and(
+        eq(schema.bunnyBoardPosts.boardId, boardId),
+        eq(schema.bunnyBoardPosts.isPublished, true),
+        or(
+          isNull(schema.bunnyBoardPosts.scheduledPublishAt),
+          lte(schema.bunnyBoardPosts.scheduledPublishAt, now),
+        ),
+      )
+    : eq(schema.bunnyBoardPosts.boardId, boardId);
+
+  const rows = await db
+    .select({
+      id: schema.bunnyBoardPosts.id,
+      boardId: schema.bunnyBoardPosts.boardId,
+      postNumber: schema.bunnyBoardPosts.postNumber,
+      title: schema.bunnyBoardPosts.title,
+      body: schema.bunnyBoardPosts.body,
+      authorUserId: schema.bunnyBoardPosts.authorUserId,
+      coverImageUrl: schema.bunnyBoardPosts.coverImageUrl,
+      isPublished: schema.bunnyBoardPosts.isPublished,
+      scheduledPublishAt: schema.bunnyBoardPosts.scheduledPublishAt,
+      updatedByUserId: schema.bunnyBoardPosts.updatedByUserId,
+      createdAt: schema.bunnyBoardPosts.createdAt,
+      updatedAt: schema.bunnyBoardPosts.updatedAt,
+      nickname: schema.memberProfiles.nickname,
+      updaterNickname: updaterProfile.nickname,
+      recommendCount: recCountSubq.recommendCount,
+    })
+    .from(schema.bunnyBoardPosts)
+    .leftJoin(
+      schema.memberProfiles,
+      eq(schema.bunnyBoardPosts.authorUserId, schema.memberProfiles.userId),
+    )
+    .leftJoin(
+      updaterProfile,
+      eq(schema.bunnyBoardPosts.updatedByUserId, updaterProfile.userId),
+    )
+    .leftJoin(
+      recCountSubq,
+      eq(schema.bunnyBoardPosts.id, recCountSubq.postId),
+    )
+    .where(where)
+    .orderBy(
+      asc(schema.bunnyBoardPosts.sortOrder), // Q&A 등 게시물 정리 순서 우선
+      desc(schema.bunnyBoardPosts.createdAt),
+    )
+    .limit(limit)
+    .offset(offset);
+
+  return rows.map((r) => ({
+    id: r.id,
+    boardId: r.boardId,
+    postNumber: r.postNumber,
+    title: r.title,
+    body: r.body,
     authorUserId: r.authorUserId,
     authorNickname: r.nickname ?? null,
     coverImageUrl: r.coverImageUrl ?? null,
@@ -266,6 +363,7 @@ export async function getBunnyBoardPostById(
       coverImageUrl: schema.bunnyBoardPosts.coverImageUrl,
       isPublished: schema.bunnyBoardPosts.isPublished,
       scheduledPublishAt: schema.bunnyBoardPosts.scheduledPublishAt,
+      sortOrder: schema.bunnyBoardPosts.sortOrder,
       updatedByUserId: schema.bunnyBoardPosts.updatedByUserId,
       createdAt: schema.bunnyBoardPosts.createdAt,
       updatedAt: schema.bunnyBoardPosts.updatedAt,
@@ -309,6 +407,7 @@ export async function getBunnyBoardPostById(
     updatedAt: r.updatedAt ?? null,
     boardSlug: r.boardSlug,
     boardName: r.boardName,
+    sortOrder: r.sortOrder ?? 0,
   };
 }
 
@@ -321,6 +420,7 @@ export async function createBunnyBoardPost(
   coverImageUrl?: string | null,
   isPublished: boolean = true,
   scheduledPublishAt?: Date | null,
+  sortOrder: number = 0,
 ): Promise<{ ok: true; postId: string } | { ok: false; error: string }> {
   const nextNumRows = await db.execute<{ next: number }>(sql`
     SELECT COALESCE(MAX(post_number), 0) + 1 AS next
@@ -339,6 +439,7 @@ export async function createBunnyBoardPost(
     coverImageUrl: coverImageUrl ?? null,
     isPublished,
     scheduledPublishAt: scheduledPublishAt ?? null,
+    sortOrder,
     updatedAt: new Date(),
   });
   return { ok: true, postId: id };
@@ -399,6 +500,7 @@ export async function updateBunnyBoardPostByAdmin(
     coverImageUrl?: string | null;
     isPublished?: boolean;
     scheduledPublishAt?: Date | null;
+    sortOrder?: number;
     updatedByUserId?: string | null;
   },
 ): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -414,6 +516,7 @@ export async function updateBunnyBoardPostByAdmin(
       ...(data.scheduledPublishAt !== undefined && {
         scheduledPublishAt: data.scheduledPublishAt ?? null,
       }),
+      ...(data.sortOrder !== undefined && { sortOrder: data.sortOrder }),
       ...(data.updatedByUserId !== undefined && {
         updatedByUserId: data.updatedByUserId ?? null,
       }),

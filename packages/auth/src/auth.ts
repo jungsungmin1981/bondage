@@ -189,24 +189,70 @@ export const auth = betterAuth({
       }
       const row = await validateInviteKey(key);
       const { inviteKey: _drop, ...bodyWithoutKey } = bodyWithUsername as Record<string, unknown>;
+      // body에 넣어 after 훅에서 확실히 읽을 수 있게 함 (context는 프레임워크가 덮을 수 있음)
+      const bodyWithInviteKeyId = { ...bodyWithoutKey, __inviteKeyId: row.id };
       return {
         context: {
           ...ctx,
-          body: bodyWithoutKey,
+          body: bodyWithInviteKeyId,
           __inviteKeyId: row.id,
         },
       };
     }),
     after: createAuthMiddleware(async (ctx) => {
-      if (!ctx.path.includes("sign-up/email") || !ctx.context.newSession?.user?.id) return;
-      const inviteKeyId = (ctx.context as Record<string, unknown>).__inviteKeyId as string | undefined;
-      const userId = ctx.context.newSession!.user!.id;
+      if (!ctx.path.includes("sign-up/email")) return;
+      const c = ctx.context as Record<string, unknown> | undefined;
+      const body = (ctx.body ?? c?.body) as Record<string, unknown> | undefined;
+      let inviteKeyId = (c?.__inviteKeyId ?? body?.__inviteKeyId) as string | undefined;
+      if (!inviteKeyId && typeof body?.inviteKey === "string") {
+        try {
+          const row = await validateInviteKey(body.inviteKey.trim());
+          inviteKeyId = row.id;
+        } catch {
+          inviteKeyId = undefined;
+        }
+      }
+      let userId: string | undefined = (c?.newSession as { user?: { id?: string } } | undefined)?.user?.id;
+      if (!userId && body) {
+        const email = typeof body.email === "string" ? body.email.trim() : "";
+        if (email) {
+          const [row] = await db
+            .select({ id: schema.users.id })
+            .from(schema.users)
+            .where(eq(schema.users.email, email))
+            .limit(1);
+          userId = row?.id;
+        }
+      }
+      if (!userId) return;
       if (inviteKeyId) {
-        await db.update(schema.users).set({ inviteKeyId }).where(eq(schema.users.id, userId));
+        const [keyRow] = await db
+          .select({ memberType: schema.inviteKeys.memberType })
+          .from(schema.inviteKeys)
+          .where(eq(schema.inviteKeys.id, inviteKeyId))
+          .limit(1);
+        const memberType =
+          keyRow?.memberType === "rigger" || keyRow?.memberType === "bunny"
+            ? keyRow.memberType
+            : undefined;
+        await db
+          .update(schema.users)
+          .set({
+            inviteKeyId,
+            ...(memberType && { memberType }),
+          })
+          .where(eq(schema.users.id, userId));
         await db
           .update(schema.inviteKeys)
           .set({ usedAt: new Date() })
           .where(eq(schema.inviteKeys.id, inviteKeyId));
+      }
+      // 메일 미연결 시 가입한 사용자는 자동 인증 처리. 나중에 메일 연결 후 requireEmailVerification 켜도 기존 사용자는 로그인 가능
+      if (!resendApiKey) {
+        await db
+          .update(schema.users)
+          .set({ emailVerified: true })
+          .where(eq(schema.users.id, userId));
       }
     }),
   },
@@ -248,7 +294,8 @@ export const auth = betterAuth({
   },
   emailAndPassword: {
     enabled: true,
-    requireEmailVerification: true,
+    /** 메일 발송 연결 전까지 비활성화. 연결 후 true로 변경하면 인증 메일 흐름이 자동 적용됨 */
+    requireEmailVerification: false,
     sendResetPassword: async ({ user, url }) => {
       if (!resendApiKey) return;
       const resend = new Resend(resendApiKey);

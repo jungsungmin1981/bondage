@@ -99,6 +99,13 @@
       "when": 1773700000000,
       "tag": "0019_invite_keys_and_user_invite_key_id",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1773743477560,
+      "tag": "0020_add_sort_order_to_board_posts",
+      "breakpoints": true
     }
   ]
 }

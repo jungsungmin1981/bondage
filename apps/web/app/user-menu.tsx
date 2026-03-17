@@ -12,19 +12,23 @@ export function UserMenu() {
   const pathname = usePathname();
   const [nickname, setNickname] = useState<string | null>(null);
   const [profileLink, setProfileLink] = useState<string | null>(null);
-  const lastFetchedUserIdRef = useRef<string | null>(null);
+  /** 경로가 바뀔 때(예: 온보딩 저장 후 / 로 이동) 프로필 재조회해 닉네임·상세 링크 갱신 */
+  const lastFetchedRef = useRef<{ userId: string; pathname: string } | null>(null);
 
   useEffect(() => {
     if (!session?.user?.id) {
       setNickname(null);
       setProfileLink(null);
-      lastFetchedUserIdRef.current = null;
+      lastFetchedRef.current = null;
       return;
     }
-    if (lastFetchedUserIdRef.current === session.user.id) {
+    if (
+      lastFetchedRef.current?.userId === session.user.id &&
+      lastFetchedRef.current?.pathname === pathname
+    ) {
       return;
     }
-    lastFetchedUserIdRef.current = session.user.id;
+    lastFetchedRef.current = { userId: session.user.id, pathname };
     fetch("/api/me/profile")
       .then((res) => res.json())
       .then(
@@ -71,7 +75,7 @@ export function UserMenu() {
 
   const handleSignOut = async () => {
     await authClient.signOut();
-    router.push("/login");
+    window.location.href = "/";
   };
 
   /** 닉네임 작성 완료 후에는 닉네임, 미완료 시 이메일(회원가입 아이디) 표시 */

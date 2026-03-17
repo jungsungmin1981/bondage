@@ -4,6 +4,7 @@ import { auth } from "@workspace/auth";
 import { headers } from "next/headers";
 import {
   getBunnyBoardPostById,
+  getBunnyBoards,
   getTopLevelCommentsByPostId,
   getRepliesByCommentId,
   getRecommendCount,
@@ -13,6 +14,7 @@ import { isAdmin } from "@/lib/admin";
 import type { CommentRow } from "@workspace/db";
 import { Button } from "@workspace/ui/components/button";
 import { Pencil } from "lucide-react";
+import { BunnyBoardTabs } from "../board-tabs";
 import { PostDetailActions } from "./post-detail-actions";
 import { CommentSection } from "./comment-section";
 import { PostBodyMarkdown } from "./post-body-markdown";
@@ -51,6 +53,8 @@ export default async function BunnyBoardPostDetailPage({
   const isAuthor = !!session && post.authorUserId === session.user.id;
   const isFreeBoard = boardSlug === "free";
 
+  const boards = await getBunnyBoards();
+
   let commentsWithReplies: (CommentRow & { replies: CommentRow[] })[] = [];
   let recommendCount = 0;
   let hasRecommended = false;
@@ -81,6 +85,9 @@ export default async function BunnyBoardPostDetailPage({
 
   return (
     <div className="mx-auto min-h-[calc(100svh-3.5rem)] w-full max-w-2xl p-4 sm:p-6">
+      <div className="mb-4">
+        <BunnyBoardTabs boards={boards.map((b) => ({ slug: b.slug, name: b.name }))} />
+      </div>
       <Link
         href={`/bunnies/board/${encodeURIComponent(boardSlug)}`}
         className="mb-4 inline-block min-h-[44px] text-sm text-muted-foreground underline-offset-2 hover:underline"

@@ -14,7 +14,7 @@ const INVITE_KEY_VALID_MS = 5 * 60 * 1000;
 
 /**
  * POST /api/invite-keys - 리거/버니가 인증키 생성 시 서버에 등록.
- * body: { key: string, memberType?: "rigger" | "bunny" }
+ * body: { key: string, memberType: "rigger" | "bunny" } — memberType 필수.
  */
 export async function POST(request: Request) {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -68,6 +68,12 @@ export async function POST(request: Request) {
   const rawType = body?.memberType;
   const memberType =
     rawType === "rigger" || rawType === "bunny" ? rawType : null;
+  if (!memberType) {
+    return NextResponse.json(
+      { error: "memberType는 'rigger' 또는 'bunny' 중 하나여야 합니다." },
+      { status: 400 },
+    );
+  }
   const id = crypto.randomUUID();
   const expiresAt = new Date(Date.now() + INVITE_KEY_VALID_MS);
   try {

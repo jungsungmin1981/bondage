@@ -19,7 +19,7 @@ const DEFAULT_BOARDS = [
   { slug: "notice", name: "공지사항", description: "버니 게시판 공지", sortOrder: 0 },
   { slug: "free", name: "자유게시판", description: "자유롭게 이야기해요", sortOrder: 1 },
   { slug: "review", name: "후기", description: "체험·활동 후기", sortOrder: 2 },
-  { slug: "qna", name: "질문·답변", description: "궁금한 점을 묻고 답해요", sortOrder: 3 },
+  { slug: "qna", name: "Q & A", description: null, sortOrder: 3 },
 ] as const;
 
 async function main() {
@@ -213,7 +213,16 @@ async function main() {
     const existing = await db.execute<{ n: number }>(sql`
       SELECT 1 AS n FROM bunny_boards WHERE slug = ${b.slug}
     `);
-    if (Array.isArray(existing) && existing.length > 0) continue;
+    if (Array.isArray(existing) && existing.length > 0) {
+      if (b.slug === "qna") {
+        await db.execute(sql`
+          UPDATE bunny_boards SET name = ${b.name}, description = NULL, updated_at = now()
+          WHERE slug = 'qna'
+        `);
+        console.log(`기본 게시판 이름 업데이트: ${b.name} (${b.slug})`);
+      }
+      continue;
+    }
     const id = crypto.randomUUID();
     await db.execute(sql`
       INSERT INTO bunny_boards (id, slug, name, description, sort_order, created_at, updated_at)

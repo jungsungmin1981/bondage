@@ -38,6 +38,7 @@ const TITLE_MAX_LENGTH = 200;
 const BODY_MAX_LENGTH = 10_000;
 const FREE_BOARD_SLUG = "free";
 const NOTICE_BOARD_SLUG = "notice";
+const QNA_BOARD_SLUG = "qna";
 
 /** "YYYY-MM-DDTHH:mm" 또는 빈 문자열 → Date | null */
 function parseScheduledPublishAt(value: FormDataEntryValue | null): Date | null {
@@ -52,6 +53,7 @@ export type CreatePostFormValues = {
   body: string;
   isPublished?: boolean;
   scheduledPublishAt?: string | null;
+  sortOrder?: number;
 };
 
 export async function createBunnyBoardPostAction(
@@ -193,6 +195,194 @@ export async function createBunnyBoardNoticePostAction(
   revalidatePath("/bunnies/board/notice");
   revalidatePath("/admin/notice/bunny");
   redirect("/admin/notice/bunny");
+}
+
+/** 관리자 전용: 버니 전용 Q&A 게시판에 글 작성 (제목 + 본문만) */
+export async function createBunnyBoardQnaPostAction(
+  _prev: unknown,
+  formData: FormData,
+): Promise<
+  | { ok: true }
+  | { ok: false; error: string; values?: CreatePostFormValues }
+> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) {
+    return { ok: false, error: "로그인이 필요합니다." };
+  }
+  if (!isAdmin(session)) {
+    return { ok: false, error: "관리자만 작성할 수 있습니다." };
+  }
+
+  const title = (formData.get("title") as string)?.trim() ?? "";
+  const body = (formData.get("body") as string)?.trim() ?? "";
+  const isPublishedRaw = formData.get("isPublished");
+  const isPublished =
+    isPublishedRaw !== "false" && isPublishedRaw !== "0";
+  const sortOrderRaw = (formData.get("sortOrder") as string)?.trim() ?? "";
+  const sortOrder = sortOrderRaw === "" ? 0 : parseInt(sortOrderRaw, 10);
+  const values = { title, body, isPublished, sortOrder };
+
+  if (!title) return { ok: false, error: "제목을 입력해 주세요.", values };
+  if (title.length > TITLE_MAX_LENGTH) {
+    return {
+      ok: false,
+      error: `제목은 ${TITLE_MAX_LENGTH}자 이하여야 합니다.`,
+      values,
+    };
+  }
+  if (!body) return { ok: false, error: "내용을 입력해 주세요.", values };
+  if (body.length > BODY_MAX_LENGTH) {
+    return {
+      ok: false,
+      error: `내용은 ${BODY_MAX_LENGTH}자 이하여야 합니다.`,
+      values,
+    };
+  }
+  if (Number.isNaN(sortOrder) || sortOrder < 0 || !Number.isInteger(sortOrder)) {
+    return {
+      ok: false,
+      error: "순서에는 0 이상의 정수만 입력할 수 있습니다.",
+      values,
+    };
+  }
+
+  const board = await getBunnyBoardBySlug(QNA_BOARD_SLUG);
+  if (!board) {
+    return {
+      ok: false,
+      error: "버니 전용 Q & A 게시판을 찾을 수 없습니다.",
+      values,
+    };
+  }
+
+  const result = await createBunnyBoardPost(
+    board.id,
+    session.user.id,
+    title,
+    body,
+    null,
+    isPublished,
+    null,
+    sortOrder,
+  );
+  if (!result.ok) return { ok: false, error: result.error, values };
+
+  revalidatePath("/bunnies/board/qna");
+  revalidatePath("/admin/notice/bunny-qna");
+  redirect("/admin/notice/bunny-qna");
+}
+
+/** 관리자 전용: 버니 전용 Q&A 글 수정 */
+export async function updateBunnyBoardQnaPostAction(
+  postId: string,
+  _prev: unknown,
+  formData: FormData,
+): Promise<
+  | { ok: true }
+  | { ok: false; error: string; values?: CreatePostFormValues }
+> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) {
+    return { ok: false, error: "로그인이 필요합니다." };
+  }
+  if (!isAdmin(session)) {
+    return { ok: false, error: "권한이 없습니다." };
+  }
+
+  const post = await getBunnyBoardPostById(postId);
+  if (!post) {
+    return { ok: false, error: "글을 찾을 수 없습니다." };
+  }
+  if (post.boardSlug !== QNA_BOARD_SLUG) {
+    return { ok: false, error: "버니 전용 Q & A 글만 수정할 수 있습니다." };
+  }
+
+  const title = (formData.get("title") as string)?.trim() ?? "";
+  const body = (formData.get("body") as string)?.trim() ?? "";
+  const isPublishedRaw = formData.get("isPublished");
+  const isPublished =
+    isPublishedRaw !== "false" && isPublishedRaw !== "0";
+  const sortOrderRaw = (formData.get("sortOrder") as string)?.trim() ?? "";
+  const sortOrder = sortOrderRaw === "" ? 0 : parseInt(sortOrderRaw, 10);
+  const values = { title, body, isPublished, sortOrder };
+
+  if (!title) return { ok: false, error: "제목을 입력해 주세요.", values };
+  if (title.length > TITLE_MAX_LENGTH) {
+    return {
+      ok: false,
+      error: `제목은 ${TITLE_MAX_LENGTH}자 이하여야 합니다.`,
+      values,
+    };
+  }
+  if (!body) return { ok: false, error: "내용을 입력해 주세요.", values };
+  if (body.length > BODY_MAX_LENGTH) {
+    return {
+      ok: false,
+      error: `내용은 ${BODY_MAX_LENGTH}자 이하여야 합니다.`,
+      values,
+    };
+  }
+  if (Number.isNaN(sortOrder) || sortOrder < 0 || !Number.isInteger(sortOrder)) {
+    return {
+      ok: false,
+      error: "순서에는 0 이상의 정수만 입력할 수 있습니다.",
+      values,
+    };
+  }
+
+  const result = await updateBunnyBoardPostByAdmin(postId, {
+    title,
+    body,
+    isPublished,
+    sortOrder,
+    updatedByUserId: session.user.id,
+  });
+  if (!result.ok) return { ok: false, error: result.error, values };
+
+  revalidatePath("/bunnies/board/qna");
+  revalidatePath("/admin/notice/bunny-qna");
+  revalidatePath(`/admin/notice/bunny-qna/${postId}/edit`);
+  redirect("/admin/notice/bunny-qna");
+}
+
+/** 관리자 전용: 버니 전용 Q&A 글 삭제 */
+export async function deleteBunnyBoardQnaPostAction(
+  postId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) {
+    return { ok: false, error: "로그인이 필요합니다." };
+  }
+  if (!isAdmin(session)) {
+    return { ok: false, error: "관리자만 삭제할 수 있습니다." };
+  }
+
+  const post = await getBunnyBoardPostById(postId);
+  if (!post) {
+    return { ok: false, error: "글을 찾을 수 없습니다." };
+  }
+  if (post.boardSlug !== QNA_BOARD_SLUG) {
+    return { ok: false, error: "버니 전용 Q & A 글만 삭제할 수 있습니다." };
+  }
+
+  const result = await deleteBunnyBoardPostByAdmin(postId);
+  if (!result.ok) return result;
+
+  revalidatePath("/bunnies/board/qna");
+  revalidatePath("/admin/notice/bunny-qna");
+  redirect("/admin/notice/bunny-qna");
+}
+
+/** 관리자 전용: 버니 전용 Q&A 글 삭제 (폼에서 postId 전달용) */
+export async function deleteBunnyBoardQnaPostFormAction(
+  _prev: unknown,
+  formData: FormData,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const postId = formData.get("postId");
+  if (typeof postId !== "string" || !postId) {
+    return { ok: false, error: "잘못된 요청입니다." };
+  }
+  return deleteBunnyBoardQnaPostAction(postId);
 }
 
 /** 관리자 전용: 버니 공지 수정 */

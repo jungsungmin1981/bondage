@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@workspace/ui/lib/utils";
 
 const imageTabs = [
+  { label: "워터마크", href: "/admin/watermark" },
   { label: "메인 백그라운드", href: "/admin/images/main-background" },
   { label: "이미지 리사이징", href: "/admin/images/resize" },
   { label: "브론즈", href: "/admin/images/bronze" },

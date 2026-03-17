@@ -13,7 +13,7 @@ export default async function AdminMembersRestrictionsPage() {
   const initialSuspensionList = await getActiveSuspensionsWithProfile(100);
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10">
+    <div className="max-w-3xl px-4 py-10">
       <h1 className="text-lg font-semibold">이용제한</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         닉네임으로 회원을 검색한 뒤 정지 기간을 선택해 이용제한을 적용합니다. 정지 기간 중에는 해당 회원의 프로필 페이지만 접속 가능합니다.

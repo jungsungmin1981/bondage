@@ -21,11 +21,7 @@ import {
 } from "@workspace/ui/components/dropdown-menu";
 
 const navItems = [
-  { label: "리거", href: "/rigger" },
-  { label: "버니", href: "/bunnies" },
-  { label: "버니 게시판", href: "/bunnies/board" },
-  { label: "승인 요청", href: "/bunny-approvals" },
-  { label: "쪽지", href: "/notes" },
+  { label: "월간 핫픽", href: "/showoff" },
   {
     label: "클래스",
     sub: [
@@ -34,8 +30,13 @@ const navItems = [
       { label: "고급", href: "/class/advanced" },
     ],
   },
+  { label: "리거", href: "/rigger" },
+  { label: "버니", href: "/bunnies" },
+  { label: "게시판", href: "/board", showWhen: "board" as const },
+  { label: "버니 게시판", href: "/bunnies/board" },
+  { label: "승인 요청", href: "/bunny-approvals" },
   { label: "기타", href: "/etc" },
-  { label: "뽐내기", href: "/showoff" },
+  { label: "쪽지", href: "/notes" },
 ] as const;
 
 const navLinkClass =
@@ -47,6 +48,9 @@ export function MainNav({
   unreadNotesCount = 0,
   showApprovalRequestLink = false,
   showBunnyBoardLink = false,
+  showBoardLink = false,
+  riggerPendingRestriction = false,
+  riggerProfileId,
 }: {
   pendingBunnyApprovalsCount?: number;
   unreadMessagesCount?: number;
@@ -55,16 +59,27 @@ export function MainNav({
   showApprovalRequestLink?: boolean;
   /** 버니·관리자만 true. 리거일 때는 버니 게시판 숨김 */
   showBunnyBoardLink?: boolean;
+  /** 로그인 시 true. 공용 게시판 링크 표시 */
+  showBoardLink?: boolean;
+  /** 리거 미승인 시 true. 메뉴 클릭 시 다른 페이지 진입 없이 본인 리거 페이지만 이동 */
+  riggerPendingRestriction?: boolean;
+  riggerProfileId?: string;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const pendingCount = pendingBunnyApprovalsCount ?? 0;
   const unreadCount = unreadMessagesCount ?? 0;
   const hasUnreadNotes = (unreadNotesCount ?? 0) > 0;
+  const onlyRiggerHref =
+    riggerPendingRestriction && riggerProfileId
+      ? `/rigger/${riggerProfileId}`
+      : null;
+
   const itemsToShow = navItems.filter((item) => {
     if ("href" in item && item.href === "/bunny-approvals")
       return showApprovalRequestLink;
     if ("href" in item && item.href === "/bunnies/board") return showBunnyBoardLink;
+    if ("showWhen" in item && item.showWhen === "board") return showBoardLink;
     return true;
   });
 
@@ -97,12 +112,13 @@ export function MainNav({
                     {item.sub.map((sub) => (
                       <Link
                         key={sub.href}
-                        href={sub.href}
+                        href={onlyRiggerHref ?? sub.href}
                         onClick={() => setOpen(false)}
                         className={cn(
                           navLinkClass,
                           "pl-8",
-                          pathname === sub.href && "bg-muted font-semibold",
+                          pathname === (onlyRiggerHref ?? sub.href) &&
+                            "bg-muted font-semibold",
                         )}
                       >
                         {sub.label}
@@ -112,14 +128,18 @@ export function MainNav({
                 ) : (
                   <Link
                     key={item.href}
-                    href={item.href}
+                    href={onlyRiggerHref ?? item.href}
                     onClick={() => setOpen(false)}
                     aria-label={item.href === "/notes" ? "쪽지" : undefined}
                     className={cn(
                       navLinkClass,
-                      (pathname === item.href ||
-                        (item.href === "/notes" &&
-                          pathname.startsWith("/notes"))) &&
+                      (pathname === (onlyRiggerHref ?? item.href) ||
+                        (!onlyRiggerHref &&
+                          item.href === "/notes" &&
+                          pathname.startsWith("/notes")) ||
+                        (!onlyRiggerHref &&
+                          item.href === "/board" &&
+                          pathname.startsWith("/board"))) &&
                         "bg-muted font-semibold",
                     )}
                   >
@@ -173,9 +193,10 @@ export function MainNav({
                 {item.sub.map((sub) => (
                   <DropdownMenuItem key={sub.href} asChild>
                     <Link
-                      href={sub.href}
+                      href={onlyRiggerHref ?? sub.href}
                       className={cn(
-                        pathname === sub.href && "bg-muted font-medium",
+                        pathname === (onlyRiggerHref ?? sub.href) &&
+                          "bg-muted font-medium",
                       )}
                     >
                       {sub.label}
@@ -191,15 +212,19 @@ export function MainNav({
               size="sm"
               className={cn(
                 "min-h-9 font-medium",
-                (pathname === item.href ||
-                  (item.href === "/notes" &&
-                    pathname.startsWith("/notes"))) &&
+                (pathname === (onlyRiggerHref ?? item.href) ||
+                  (!onlyRiggerHref &&
+                    item.href === "/notes" &&
+                    pathname.startsWith("/notes")) ||
+                  (!onlyRiggerHref &&
+                    item.href === "/board" &&
+                    pathname.startsWith("/board"))) &&
                   "bg-muted",
               )}
               asChild
             >
               <Link
-                href={item.href}
+                href={onlyRiggerHref ?? item.href}
                 aria-label={item.href === "/notes" ? "쪽지" : undefined}
               >
                 <span className="inline-flex items-center gap-2">

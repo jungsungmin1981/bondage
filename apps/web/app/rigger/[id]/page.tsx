@@ -25,7 +25,7 @@ import { getRiggerOverride } from "@/lib/rigger-overrides";
 import { RiggerPostsFeed } from "./rigger-posts-feed";
 import { BioPreview } from "./bio-preview";
 import { ClassSummaryBadges } from "./class-summary-badges";
-import { RiggerProfileInline } from "./rigger-profile-inline";
+import { RiggerDetailFormCard } from "./rigger-detail-form-card";
 
 export default async function RiggerDetailPage({
   params,
@@ -159,37 +159,37 @@ export default async function RiggerDetailPage({
           </div>
         )}
 
-        <div
-          className={`min-w-0 sm:col-start-2 sm:row-start-1 ${isOwnProfile ? "flex flex-col gap-8" : "min-h-0"}`}
-        >
+        {isOwnProfile ? (
+          <RiggerDetailFormCard
+            riggerId={rigger.id}
+            tierLabel={tierLabel}
+            approvalStatus={dbProfile.status as "pending" | "approved" | "rejected"}
+            name={rigger.name}
+            gender={rigger.gender}
+            division={rigger.division}
+            bunnyRecruit={rigger.bunnyRecruit}
+            bondageRating={rigger.bondageRating}
+            activityRegion={rigger.activityRegion}
+            style={rigger.style}
+            bio={rigger.bio}
+            profileVisibility={rigger.profileVisibility ?? "public"}
+            classCounts={classCounts}
+            totalByLevel={totalByLevel}
+            canCreateInviteKey={canCreateInviteKey}
+            inviteKeyAllowedAt={inviteKeyAllowedAt}
+            suspended={isSuspended}
+          />
+        ) : (
           <div
-            className={`rounded-xl border bg-card shadow-sm ${!isOwnProfile ? "sm:h-full sm:min-h-0 sm:relative" : ""}`}
+            className="min-w-0 sm:col-start-2 sm:row-start-1 min-h-0"
           >
             <div
-              className={`p-6 ${!isOwnProfile ? "sm:absolute sm:inset-0 sm:overflow-visible sm:rounded-xl" : ""}`}
+              className="sm:h-full sm:min-h-0 sm:relative rounded-xl border bg-card shadow-sm"
             >
-              {isOwnProfile ? (
-                <RiggerProfileInline
-                  riggerId={rigger.id}
-                  tierLabel={tierLabel}
-                  approvalStatus={dbProfile.status as "pending" | "approved" | "rejected"}
-                  name={rigger.name}
-                  gender={rigger.gender}
-                  division={rigger.division}
-                  bunnyRecruit={rigger.bunnyRecruit}
-                  bondageRating={rigger.bondageRating}
-                  activityRegion={rigger.activityRegion}
-                  style={rigger.style}
-                  bio={rigger.bio}
-                  profileVisibility={rigger.profileVisibility ?? "public"}
-                  classCounts={classCounts}
-                  totalByLevel={totalByLevel}
-                  canCreateInviteKey={canCreateInviteKey}
-                  inviteKeyAllowedAt={inviteKeyAllowedAt}
-                  suspended={isSuspended}
-                />
-              ) : (
-              <>
+              <div
+                className="p-6 sm:absolute sm:inset-0 sm:overflow-visible sm:rounded-xl"
+              >
+                <>
                 <dl className="grid grid-cols-[5rem_1fr_5rem_1fr] gap-x-3 gap-y-1.5 items-baseline">
                   {[row1, row2, row3, row4].map((pairs, rowIndex) => (
                     <Fragment key={rowIndex}>
@@ -267,10 +267,10 @@ export default async function RiggerDetailPage({
                   </dd>
                 </dl>
               </>
-            )}
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       <div className="mx-auto mt-8 max-w-4xl">

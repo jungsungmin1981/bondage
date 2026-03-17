@@ -7,9 +7,11 @@ import {
   getBunnyBoards,
   getBunnyBoardPosts,
   getBunnyBoardPostsWithRecommendCounts,
+  getBunnyBoardPostsWithBodies,
   getBunnyBoardPostCount,
 } from "@workspace/db";
-import { BoardSelect } from "./board-select";
+import { BunnyBoardTabs } from "./board-tabs";
+import { BunnyQnaAccordionList } from "./qna-accordion-list";
 import { Button } from "@workspace/ui/components/button";
 import { Pencil } from "lucide-react";
 
@@ -56,8 +58,22 @@ export default async function BunnyBoardListPage({
   let posts: Awaited<ReturnType<typeof getBunnyBoardPosts>>;
   let postCount: number;
   let recommendCounts: Record<string, number>;
+  let qnaPostsWithBodies: Awaited<
+    ReturnType<typeof getBunnyBoardPostsWithBodies>
+  > | null = null;
 
-  if (boardSlug === "free") {
+  if (boardSlug === "qna") {
+    const [postsWithBodies, count] = await Promise.all([
+      getBunnyBoardPostsWithBodies(board.id, POSTS_PER_PAGE, 0, {
+        onlyPublished: true,
+      }),
+      getBunnyBoardPostCount(board.id, { onlyPublished: true }),
+    ]);
+    qnaPostsWithBodies = postsWithBodies;
+    posts = postsWithBodies;
+    postCount = count;
+    recommendCounts = {};
+  } else if (boardSlug === "free") {
     const [postsWithRec, count] = await Promise.all([
       getBunnyBoardPostsWithRecommendCounts(board.id, POSTS_PER_PAGE, 0),
       getBunnyBoardPostCount(board.id),
@@ -84,19 +100,11 @@ export default async function BunnyBoardListPage({
 
   return (
     <div className="mx-auto min-h-[calc(100svh-3.5rem)] w-full max-w-2xl p-4 sm:p-6">
-      <Link
-        href="/bunnies/board"
-        className="mb-4 inline-block min-h-[44px] text-sm text-muted-foreground underline-offset-2 hover:underline"
-      >
-        ← 버니 게시판
-      </Link>
+      <div className="mb-4">
+        <BunnyBoardTabs boards={boards.map((b) => ({ slug: b.slug, name: b.name }))} />
+      </div>
 
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <BoardSelect
-          currentSlug={board.slug}
-          currentName={board.name}
-          boards={boards.map((b) => ({ slug: b.slug, name: b.name }))}
-        />
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
         {boardSlug === "free" && session && (
           <Button asChild className="min-h-[44px] shrink-0">
             <Link href="/bunnies/board/free/new">
@@ -151,6 +159,8 @@ export default async function BunnyBoardListPage({
             ))
           )}
         </ul>
+      ) : boardSlug === "qna" && qnaPostsWithBodies ? (
+        <BunnyQnaAccordionList posts={qnaPostsWithBodies} />
       ) : (
         <ul className="flex flex-col gap-0 border-t border-border">
           {posts.length === 0 ? (

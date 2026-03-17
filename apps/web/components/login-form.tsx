@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Lock, User, Mail } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@workspace/ui/lib/utils";
@@ -43,7 +43,6 @@ export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -87,7 +86,7 @@ export function LoginForm({
           : (signInError as { message?: string }).message ?? "Login failed";
       setError((prev) => prev ?? getLoginErrorMessage(msg));
     } else {
-      router.push("/");
+      window.location.href = "/";
     }
   };
 

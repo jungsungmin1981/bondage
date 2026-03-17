@@ -213,7 +213,7 @@ export function getRiggerIdForUserId(_userId: string): string {
   return SAMPLE_RIGGERS[0]?.id ?? "rigger-0";
 }
 
-/** 로그인 사용자에게 매핑된 리거일 때 이름·아바타만 현재 로그인 정보로 덮어씁니다. (DB 리거는 rigger.userId로 판별, 없으면 getRiggerIdForUserId 사용) */
+/** 로그인 사용자에게 매핑된 리거일 때 아바타만 현재 로그인 정보로 덮어씁니다. 이름은 회원이 입력한 닉네임(rigger.name) 유지. */
 export function applyCurrentUserToRigger<T extends Rigger>(
   rigger: T,
   currentUserId: string | null,
@@ -224,14 +224,9 @@ export function applyCurrentUserToRigger<T extends Rigger>(
     (rigger.userId === currentUserId ||
       getRiggerIdForUserId(currentUserId) === rigger.id);
   if (!isOwn) return rigger;
-  const displayName = (user.name?.trim() || user.email?.trim() || "회원").slice(0, 50);
-  const fallback =
-    displayName.length >= 2 ? displayName.slice(0, 2) : displayName.slice(0, 1);
   return {
     ...rigger,
-    name: displayName,
     avatarUrl: user.image ?? rigger.avatarUrl,
-    avatarFallback: fallback,
   };
 }
 

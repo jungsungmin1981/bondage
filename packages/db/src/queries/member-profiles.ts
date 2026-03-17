@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, ilike, isNotNull, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import { db } from "../client/node";
 import * as schema from "../schema";
 
@@ -92,6 +92,30 @@ export async function getUserIdByMemberProfileId(
   return rows[0]?.userId ?? null;
 }
 
+/**
+ * 닉네임이 이미 다른 회원 프로필에서 사용 중인지 조회.
+ * 대소문자·앞뒤 공백 무시. excludeUserId 지정 시 해당 유저 프로필은 제외 (수정 시 본인 닉네임 허용).
+ */
+export async function isNicknameTaken(
+  nickname: string,
+  excludeUserId?: string,
+): Promise<boolean> {
+  const trimmed = nickname.trim().slice(0, 200);
+  if (!trimmed) return false;
+  const conditions = [
+    sql`lower(trim(${schema.memberProfiles.nickname})) = lower(${trimmed})`,
+  ];
+  if (excludeUserId) {
+    conditions.push(ne(schema.memberProfiles.userId, excludeUserId));
+  }
+  const rows = await db
+    .select({ id: schema.memberProfiles.id })
+    .from(schema.memberProfiles)
+    .where(and(...conditions))
+    .limit(1);
+  return rows.length > 0;
+}
+
 /** 닉네임으로 회원 검색 (관리자 이용제한용). 최대 50건. */
 export async function searchMemberProfilesByNickname(
   query: string,
@@ -127,6 +151,9 @@ export async function updateMemberProfile(
   if (data.nickname !== undefined) {
     const v = data.nickname.trim().slice(0, 200);
     if (!v) return { ok: false, error: "닉네임을 입력해 주세요." };
+    if (await isNicknameTaken(v, userId)) {
+      return { ok: false, error: "이미 사용 중인 닉네임입니다." };
+    }
     set.nickname = v;
   }
   if (data.iconUrl !== undefined) set.iconUrl = data.iconUrl?.trim() ?? null;
@@ -160,6 +187,9 @@ export async function createBunnyProfile(
   if (existing) {
     return { ok: false, error: "이미 프로필이 있습니다." };
   }
+  if (await isNicknameTaken(data.nickname)) {
+    return { ok: false, error: "이미 사용 중인 닉네임입니다." };
+  }
   const id = crypto.randomUUID();
   await db.insert(schema.memberProfiles).values({
     id,
@@ -191,6 +221,9 @@ export async function createRiggerProfile(
   const existing = await getMemberProfileByUserId(userId);
   if (existing) {
     return { ok: false, error: "이미 프로필이 있습니다." };
+  }
+  if (await isNicknameTaken(data.nickname)) {
+    return { ok: false, error: "이미 사용 중인 닉네임입니다." };
   }
   const id = crypto.randomUUID();
   await db.insert(schema.memberProfiles).values({

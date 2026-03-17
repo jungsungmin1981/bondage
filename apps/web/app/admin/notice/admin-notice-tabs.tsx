@@ -5,8 +5,10 @@ import { usePathname } from "next/navigation";
 import { cn } from "@workspace/ui/lib/utils";
 
 const noticeTabs = [
-  { label: "버니-공지사항", href: "/admin/notice/bunny" },
-  { label: "리거-공지사항", href: "/admin/notice/rigger" },
+  { label: "공지사항", href: "/admin/notice/rigger" },
+  { label: "Q & A", href: "/admin/notice/qna" },
+  { label: "버니 전용 공지사항", href: "/admin/notice/bunny" },
+  { label: "버니 전용 Q & A", href: "/admin/notice/bunny-qna" },
 ] as const;
 
 export function AdminNoticeTabs() {

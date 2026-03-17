@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useActionState, useState } from "react";
+import { useCallback, useEffect, useActionState, useRef, useState } from "react";
 import { Button } from "@workspace/ui/components/button";
 import { Checkbox } from "@workspace/ui/components/checkbox";
 import { Input } from "@workspace/ui/components/input";
@@ -100,6 +100,8 @@ type MemberProfileFormProps = {
   hideSubmitButton?: boolean;
   /** 제출 전 확인 메시지. 있으면 확인 후에만 제출 (저장하고 승인 대기용) */
   confirmBeforeSubmitMessage?: string;
+  /** 닉네임 입력 placeholder. 미지정 시 "한글로 부탁드립니다." */
+  nicknamePlaceholder?: string;
 };
 
 export function MemberProfileForm({
@@ -110,12 +112,53 @@ export function MemberProfileForm({
   formId,
   hideSubmitButton = false,
   confirmBeforeSubmitMessage,
+  nicknamePlaceholder = "한글로 부탁드립니다.",
 }: MemberProfileFormProps) {
   const [state, action, isPending] = useActionState(formAction, null);
   const error = state && !state.ok ? state.error : null;
   const isRigger = memberType === "rigger";
 
   const [nickname, setNickname] = useState(initialValues.nickname ?? "");
+  type NicknameCheckStatus = "idle" | "checking" | "available" | "taken";
+  const [nicknameCheckStatus, setNicknameCheckStatus] = useState<NicknameCheckStatus>("idle");
+  const nicknameCheckAbortRef = useRef<AbortController | null>(null);
+  const nicknameCheckTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const checkNickname = useCallback((value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      setNicknameCheckStatus("idle");
+      return;
+    }
+    nicknameCheckAbortRef.current?.abort();
+    nicknameCheckAbortRef.current = new AbortController();
+    setNicknameCheckStatus("checking");
+    const url = `/api/check-nickname?nickname=${encodeURIComponent(trimmed)}`;
+    fetch(url, { credentials: "include", signal: nicknameCheckAbortRef.current.signal })
+      .then((res) => res.json())
+      .then((data: { available?: boolean }) => {
+        setNicknameCheckStatus(data.available ? "available" : "taken");
+      })
+      .catch(() => {
+        setNicknameCheckStatus("idle");
+      })
+      .finally(() => {
+        nicknameCheckAbortRef.current = null;
+      });
+  }, []);
+
+  useEffect(() => {
+    if (nicknameCheckTimeoutRef.current) clearTimeout(nicknameCheckTimeoutRef.current);
+    const trimmed = nickname.trim();
+    if (!trimmed) {
+      setNicknameCheckStatus("idle");
+      return;
+    }
+    nicknameCheckTimeoutRef.current = setTimeout(() => checkNickname(nickname), 400);
+    return () => {
+      if (nicknameCheckTimeoutRef.current) clearTimeout(nicknameCheckTimeoutRef.current);
+    };
+  }, [nickname, checkNickname]);
   const [gender, setGender] = useState(
     initialValues.gender && GENDER_OPTIONS.includes(initialValues.gender as (typeof GENDER_OPTIONS)[number])
       ? initialValues.gender
@@ -154,6 +197,7 @@ export function MemberProfileForm({
       return;
     const v = state.values;
     setNickname(v.nickname ?? "");
+    setNicknameCheckStatus("idle");
     setGender(
       v.gender && GENDER_OPTIONS.includes(v.gender as (typeof GENDER_OPTIONS)[number])
         ? v.gender
@@ -236,19 +280,28 @@ export function MemberProfileForm({
         <dt className="shrink-0 text-sm font-medium text-muted-foreground">
           닉네임 <span className="text-destructive" aria-hidden>*</span>
         </dt>
-        <dd className="min-w-0">
+        <dd className="min-w-0 space-y-1">
           <Input
             id="nickname"
             name="nickname"
             type="text"
             value={nickname}
             onChange={(e) => setNickname(e.target.value)}
-            placeholder="한글로 부탁드립니다."
+            placeholder={nicknamePlaceholder}
             required
             maxLength={200}
             disabled={isPending}
             className="h-9 w-full max-w-md"
           />
+          {nicknameCheckStatus === "checking" && (
+            <p className="text-xs text-muted-foreground">확인 중…</p>
+          )}
+          {nicknameCheckStatus === "available" && (
+            <p className="text-xs text-green-600 dark:text-green-500">사용 가능</p>
+          )}
+          {nicknameCheckStatus === "taken" && (
+            <p className="text-xs text-destructive">이미 사용 중인 닉네임입니다.</p>
+          )}
         </dd>
 
         <dt className="shrink-0 text-sm font-medium text-muted-foreground">

@@ -1,4 +1,5 @@
 import { getPendingChallengeCountsByLevel } from "@workspace/db";
+import { AdminClassSectionTabs } from "../admin-class-section-tabs";
 import { AdminClassReviewTabs } from "./admin-class-review-tabs";
 
 export default async function AdminClassReviewLayout({
@@ -11,6 +12,7 @@ export default async function AdminClassReviewLayout({
 
   return (
     <div className="space-y-4">
+      <AdminClassSectionTabs />
       <div>
         <h1 className="text-lg font-semibold">클래스 심사</h1>
         <p className="text-sm text-muted-foreground">

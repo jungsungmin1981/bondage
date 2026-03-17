@@ -1,3 +1,4 @@
+import { AdminClassSectionTabs } from "../admin-class-section-tabs";
 import { AdminClassTabs } from "./admin-class-tabs";
 
 export default function AdminClassLayout({
@@ -7,6 +8,7 @@ export default function AdminClassLayout({
 }) {
   return (
     <div className="space-y-4">
+      <AdminClassSectionTabs />
       <AdminClassTabs />
       {children}
     </div>

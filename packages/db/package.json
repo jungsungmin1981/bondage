@@ -32,16 +32,21 @@
     "db:ensure-class-challenges": "tsx scripts/ensure-class-challenges.ts",
     "db:ensure-class-challenge-approvals": "tsx scripts/ensure-class-challenge-approvals.ts",
     "db:ensure-approval-comment-columns": "tsx scripts/ensure-approval-comment-columns.ts",
+    "db:ensure-board-posts-sort-order": "tsx scripts/ensure-board-posts-sort-order.ts",
     "db:ensure-bunny-boards": "tsx scripts/ensure-bunny-boards.ts",
+    "db:ensure-shared-boards": "tsx scripts/ensure-shared-boards.ts",
     "db:ensure-bunny-photos": "tsx scripts/ensure-bunny-photos.ts",
     "db:ensure-verification": "tsx scripts/ensure-verification.ts",
     "db:ensure-invite-keys": "tsx scripts/ensure-invite-keys.ts",
     "db:ensure-user-suspensions": "tsx scripts/ensure-user-suspensions.ts",
+    "db:ensure-monthly-hotpick": "tsx scripts/ensure-monthly-hotpick.ts",
     "db:verify-admin-email": "tsx scripts/verify-admin-email.ts",
     "db:verify-all-users-email": "tsx scripts/verify-all-users-email.ts",
     "db:delete-user": "tsx scripts/delete-user-by-username.ts",
+    "db:delete-users-created-today": "tsx scripts/delete-users-created-today.ts",
     "db:normalize-usernames-lowercase": "tsx scripts/normalize-usernames-to-lowercase.ts",
-    "db:cleanup-expired-invite-keys": "tsx scripts/cleanup-expired-invite-keys.ts"
+    "db:cleanup-expired-invite-keys": "tsx scripts/cleanup-expired-invite-keys.ts",
+    "db:delete-admin-hotpick-votes": "tsx scripts/delete-admin-hotpick-votes.ts"
   },
   "dependencies": {
     "dotenv": "^17.3.1",

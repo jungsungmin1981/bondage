@@ -28,8 +28,19 @@ function parsePoolMax(): number {
 
 const max = parsePoolMax();
 
+/**
+ * statement_timeout(초). 풀러(Supabase 등)가 URL options를 무시하면 DB/대시보드에서 따로 늘려야 함.
+ * env: DATABASE_STATEMENT_TIMEOUT (기본 120)
+ */
+function parseStatementTimeout(): number {
+  const raw = String(process.env.DATABASE_STATEMENT_TIMEOUT ?? "120").trim();
+  const n = parseInt(raw, 10);
+  if (!Number.isFinite(n) || n < 5) return 120;
+  return Math.min(n, 600);
+}
+
 /** 연결 URL에 statement_timeout 추가 (서버 기본값이 짧을 때 쿼리 취소 방지) */
-function withStatementTimeout(url: string, seconds = 60): string {
+function withStatementTimeout(url: string, seconds: number): string {
   const option = encodeURIComponent(`-c statement_timeout=${seconds}s`);
   return url.includes("?") ? `${url}&options=${option}` : `${url}?options=${option}`;
 }
@@ -40,7 +51,8 @@ function createClient() {
       "DATABASE_URL 또는 DATABASE_HOST/USER/PASSWORD/NAME 이 설정되지 않았습니다.",
     );
   }
-  const urlWithTimeout = withStatementTimeout(connectionString);
+  const statementTimeoutSec = parseStatementTimeout();
+  const urlWithTimeout = withStatementTimeout(connectionString, statementTimeoutSec);
   return postgres(urlWithTimeout, {
     max,
     idle_timeout: 20,

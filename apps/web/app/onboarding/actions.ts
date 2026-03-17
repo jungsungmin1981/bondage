@@ -94,5 +94,5 @@ export async function submitRiggerProfile(
   if (!result.ok) return result;
   await setUserMemberType(session.user.id, "rigger");
   revalidatePath("/", "layout");
-  redirect("/");
+  redirect(`/rigger/${result.profileId}`);
 }

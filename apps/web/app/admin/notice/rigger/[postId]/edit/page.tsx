@@ -1,0 +1,47 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { getSharedBoardPostById } from "@workspace/db";
+import { AdminNoticeRiggerPostForm } from "../../new/notice-post-form";
+
+const NOTICE_BOARD_SLUG = "notice";
+
+function formatDatetimeLocal(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+export default async function AdminNoticeRiggerEditPage({
+  params,
+}: {
+  params: Promise<{ postId: string }>;
+}) {
+  const { postId } = await params;
+  const post = await getSharedBoardPostById(postId);
+  if (!post || post.boardSlug !== NOTICE_BOARD_SLUG) {
+    notFound();
+  }
+
+  return (
+    <div className="space-y-4">
+      <Link
+        href="/admin/notice/rigger"
+        className="inline-block min-h-[44px] text-sm text-muted-foreground underline-offset-2 hover:underline"
+      >
+        ← 공지 목록
+      </Link>
+      <h2 className="text-lg font-semibold text-foreground">공지 수정</h2>
+      <AdminNoticeRiggerPostForm
+        postId={postId}
+        initialValues={{
+          title: post.title,
+          body: post.body,
+          coverImageUrl: post.coverImageUrl ?? null,
+          isPublished: post.isPublished,
+          scheduledPublishAt: post.scheduledPublishAt
+            ? formatDatetimeLocal(new Date(post.scheduledPublishAt))
+            : "",
+        }}
+      />
+    </div>
+  );
+}

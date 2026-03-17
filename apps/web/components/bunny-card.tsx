@@ -7,12 +7,15 @@ export function BunnyCard({
   cardImageUrl,
   jailOverlay,
   suspendedUntil,
+  objectFit = "cover",
 }: {
   cardImageUrl: string | null | undefined;
   /** 계정 사용 제한 시 감옥 이미지 오버레이 */
   jailOverlay?: boolean;
   /** 정지 해제 예정 시각 ISO 문자열. null이면 영구. 상세보기에서만 전달 시 남은 시간 표시 */
   suspendedUntil?: string | null;
+  /** 이미지 맞춤 방식. contain이면 비율 유지하며 전부 노출, cover가 기본 */
+  objectFit?: "cover" | "contain";
 }) {
   const url = cardImageUrl?.trim();
   return (
@@ -24,7 +27,7 @@ export function BunnyCard({
         <img
           src={url}
           alt=""
-          className="h-full w-full object-cover object-center"
+          className={`h-full w-full object-center ${objectFit === "contain" ? "object-contain" : "object-cover"}`}
         />
       ) : (
         <div className="flex flex-1 flex-col items-center justify-center gap-2 p-4 text-center">

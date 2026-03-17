@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@workspace/auth";
@@ -15,18 +14,17 @@ export default async function AdminLayout({
   if (!isAdmin(session)) redirect("/");
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6 sm:py-8">
-      <div className="mb-6 flex items-center justify-between gap-2">
+    <div className="-ml-3 sm:-ml-6">
+      <aside
+        className="fixed bottom-0 left-0 top-14 z-20 flex w-52 flex-col gap-4 border-r border-border bg-background py-6"
+        style={{ paddingLeft: "max(1rem, env(safe-area-inset-left))", paddingRight: "1rem" }}
+      >
         <h1 className="text-xl font-semibold sm:text-2xl">관리자</h1>
-        <Link
-          href="/"
-          className="text-xs font-medium text-muted-foreground underline-offset-4 hover:underline sm:text-sm"
-        >
-          홈으로
-        </Link>
-      </div>
-      <AdminTabs />
-      <div>{children}</div>
+        <AdminTabs />
+      </aside>
+      <main className="min-h-0 min-w-0 py-6 sm:py-8" style={{ paddingLeft: "calc(13rem + env(safe-area-inset-left))" }}>
+        <div className="px-4">{children}</div>
+      </main>
     </div>
   );
 }
