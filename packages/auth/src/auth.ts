@@ -158,6 +158,12 @@ async function validateInviteKey(key: string): Promise<{ id: string }> {
 export const auth = betterAuth({
   baseURL,
   trustedOrigins: [baseURL, ...extraOrigins],
+  session: {
+    cookieCache: {
+      enabled: true,
+      maxAge: 5 * 60, // 5분 동안 DB 조회 없이 쿠키에서 세션 읽기
+    },
+  },
   user: {
     additionalFields: {
       memberType: {

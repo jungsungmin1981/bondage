@@ -1,6 +1,7 @@
 import { auth } from "@workspace/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { unstable_cache } from "next/cache";
 import {
   getSubmissionByUserAndMonth,
   getMonthlyHotpickSubmissionCount,
@@ -19,6 +20,20 @@ import { ShowoffSubmissionsGrid } from "./showoff-submissions-grid";
 
 const LATEST_COUNT = 5;
 
+function getCachedHotpickPublicData(monthKey: string) {
+  return unstable_cache(
+    async () => {
+      const [totalCount, latestItems] = await Promise.all([
+        getMonthlyHotpickSubmissionCount(monthKey),
+        getMonthlyHotpickSubmissionsLatest(monthKey, LATEST_COUNT),
+      ]);
+      return { totalCount, latestItems };
+    },
+    [`hotpick-public-${monthKey}`],
+    { revalidate: 30 },
+  )();
+}
+
 export default async function ShowoffRegisterPage() {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -31,10 +46,9 @@ export default async function ShowoffRegisterPage() {
 
   if (!admin && phase === "voting") redirect("/showoff/vote");
 
-  const [mySubmission, totalCount, latestItems] = await Promise.all([
+  const [mySubmission, { totalCount, latestItems }] = await Promise.all([
     getSubmissionByUserAndMonth(monthKey, session.user.id),
-    getMonthlyHotpickSubmissionCount(monthKey),
-    getMonthlyHotpickSubmissionsLatest(monthKey, LATEST_COUNT),
+    getCachedHotpickPublicData(monthKey),
   ]);
 
   return (

@@ -3,7 +3,23 @@ import { auth } from "@workspace/auth";
 import { getApprovedBunnyProfiles, getSuspendedUserIds } from "@workspace/db";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { unstable_cache } from "next/cache";
 import { BunnyCard } from "@/components/bunny-card";
+
+const getCachedApprovedBunnies = unstable_cache(
+  () => getApprovedBunnyProfiles(),
+  ["approved-bunny-profiles"],
+  { revalidate: 30 },
+);
+
+const getCachedSuspendedUserIds = unstable_cache(
+  async () => {
+    const set = await getSuspendedUserIds();
+    return Array.from(set);
+  },
+  ["suspended-user-ids"],
+  { revalidate: 30 },
+);
 
 export default async function BunniesPage() {
   const session = await auth.api.getSession({
@@ -11,10 +27,11 @@ export default async function BunniesPage() {
   });
   if (!session) redirect("/login");
 
-  const [all, suspendedUserIds] = await Promise.all([
-    getApprovedBunnyProfiles(),
-    getSuspendedUserIds(),
+  const [all, suspendedArr] = await Promise.all([
+    getCachedApprovedBunnies(),
+    getCachedSuspendedUserIds(),
   ]);
+  const suspendedUserIds = new Set(suspendedArr);
   const hasAny = all.length > 0;
   const bunnies = hasAny
     ? [
