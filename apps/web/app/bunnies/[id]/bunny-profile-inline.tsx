@@ -97,7 +97,7 @@ export function BunnyProfileInline({
         )
       : null;
 
-  const AUTH_KEY_VALID_MS = 5 * 60 * 1000;
+  const AUTH_KEY_VALID_MS = 24 * 60 * 60 * 1000; // 24시간 (API와 동일)
 
   function formatRemaining(seconds: number): string {
     const h = Math.floor(seconds / 3600);

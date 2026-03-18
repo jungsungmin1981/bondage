@@ -137,8 +137,8 @@ export function RiggerProfileInline({
         )
       : null;
 
-  /** 인증키 유효 시간 (밀리초). 5분 */
-  const AUTH_KEY_VALID_MS = 5 * 60 * 1000;
+  /** 인증키 유효 시간 (밀리초). 24시간 */
+  const AUTH_KEY_VALID_MS = 24 * 60 * 60 * 1000;
 
   function formatRemaining(seconds: number): string {
     const h = Math.floor(seconds / 3600);
