@@ -147,6 +147,13 @@ Next.js는 Vercel에, WebSocket 서버는 별도 서비스(Railway, Render, Fly.
    - Vercel이 `pnpm build`(또는 지정한 Build Command)를 실행하고, Next는 자동으로 `next start`에 해당하는 서빙을 합니다.  
    - **WS 서버는 Vercel에 배포하지 않습니다.** (서버리스 함수는 장기 WebSocket 연결에 부적합합니다.)
 
+4. **빌드가 중간에 멈추거나 오류 없이 실패할 때**
+   - **원인**: 메모리 부족(OOM)이나 타임아웃일 수 있습니다. Next 빌드(정적 페이지 생성·트레이스 수집) 단계에서 자주 발생합니다.
+   - **조치**:
+     - `apps/web` 빌드 스크립트에 `--max-old-space-size=4096`이 적용되어 있어, Node 힙이 4GB로 늘어나 있습니다. 그래도 실패하면 Vercel 대시보드에서 **Deployments → 해당 배포 → Building** 로그 끝부분을 확인하세요. (상세 오류가 로그 하단에만 나올 수 있습니다.)
+     - (선택) Environment Variables에 `NEXT_TELEMETRY_DISABLED` = `1`을 넣으면 텔레메트리 안내 메시지가 사라집니다.
+     - Pro 플랜이라면 빌드 메모리/시간 한도를 늘리는 옵션을 검토할 수 있습니다.
+
 #### WebSocket 서버 (Railway / Render / Fly.io / VM 등)
 
 1. **실행 방식**
