@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Mail, Menu } from "lucide-react";
 import { cn } from "@workspace/ui/lib/utils";
 import { Button } from "@workspace/ui/components/button";
@@ -69,6 +69,7 @@ export function MainNav({
   operatorPendingRestriction?: boolean;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const pendingCount = pendingBunnyApprovalsCount ?? 0;
   const unreadCount = unreadMessagesCount ?? 0;
@@ -118,6 +119,9 @@ export function MainNav({
                       <Link
                         key={sub.href}
                         href={onlyHref ?? sub.href}
+                        prefetch={false}
+                        onMouseEnter={() => router.prefetch(onlyHref ?? sub.href)}
+                        onTouchStart={() => router.prefetch(onlyHref ?? sub.href)}
                         onClick={() => setOpen(false)}
                         className={cn(
                           navLinkClass,
@@ -134,6 +138,9 @@ export function MainNav({
                   <Link
                     key={item.href}
                     href={onlyHref ?? item.href}
+                    prefetch={false}
+                    onMouseEnter={() => router.prefetch(onlyHref ?? item.href)}
+                    onTouchStart={() => router.prefetch(onlyHref ?? item.href)}
                     onClick={() => setOpen(false)}
                     aria-label={item.href === "/notes" ? "쪽지" : undefined}
                     className={cn(
@@ -199,6 +206,9 @@ export function MainNav({
                   <DropdownMenuItem key={sub.href} asChild>
                     <Link
                       href={onlyHref ?? sub.href}
+                      prefetch={false}
+                      onMouseEnter={() => router.prefetch(onlyHref ?? sub.href)}
+                      onTouchStart={() => router.prefetch(onlyHref ?? sub.href)}
                       className={cn(
                         pathname === (onlyHref ?? sub.href) &&
                           "bg-muted font-medium",
@@ -230,6 +240,9 @@ export function MainNav({
             >
               <Link
                 href={onlyHref ?? item.href}
+                prefetch={false}
+                onMouseEnter={() => router.prefetch(onlyHref ?? item.href)}
+                onTouchStart={() => router.prefetch(onlyHref ?? item.href)}
                 aria-label={item.href === "/notes" ? "쪽지" : undefined}
               >
                 <span className="inline-flex items-center gap-2">

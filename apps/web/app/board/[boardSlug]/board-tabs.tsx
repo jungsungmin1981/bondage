@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@workspace/ui/lib/utils";
 
 const TABS = [
@@ -13,6 +13,7 @@ const TABS = [
 
 export function BoardTabs() {
   const pathname = usePathname();
+  const router = useRouter();
 
   return (
     <div className="border-b border-border">
@@ -28,6 +29,9 @@ export function BoardTabs() {
             <Link
               key={tab.slug}
               href={href}
+              prefetch={false}
+              onMouseEnter={() => router.prefetch(href)}
+              onTouchStart={() => router.prefetch(href)}
               className={cn(
                 "min-h-[44px] flex-1 border-b-2 px-3 py-2.5 text-center font-medium transition sm:flex-initial sm:px-4",
                 "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/50",

@@ -28,6 +28,11 @@ const nextConfig = {
     // Vercel 등 메모리 제한 환경에서 정적 생성 시 OOM 방지
     staticGenerationMaxConcurrency: 4,
     staticGenerationMinPagesPerWorker: 25,
+    // 클라이언트 라우터 캐시: 한 번 방문한 페이지를 재방문 시 캐시에서 즉시 렌더링
+    staleTimes: {
+      dynamic: 30,  // 동적 페이지: 30초간 클라이언트 캐시 유지
+      static: 300,  // 정적 페이지: 5분간 클라이언트 캐시 유지
+    },
   },
   transpilePackages: ["@workspace/ui", "better-auth"],
   webpack: (config) => {
