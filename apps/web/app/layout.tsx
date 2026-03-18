@@ -10,7 +10,7 @@ import { UserMenu } from "./user-menu";
 import { MainNav } from "@/components/main-nav";
 import { headers } from "next/headers";
 import { auth } from "@workspace/auth";
-import { isAdmin } from "@/lib/admin";
+import { isAdmin, isPrimaryAdmin } from "@/lib/admin";
 import {
   getAllPendingApprovalsCount,
   getPendingApprovalsCountForBunny,
@@ -19,7 +19,6 @@ import {
   getMemberProfileByUserId,
 } from "@workspace/db";
 import { MessageIcon } from "@/components/message-icon";
-import { SuspensionGuard } from "@/components/suspension-guard";
 import { SessionRevokedGuard } from "@/components/session-revoked-guard";
 import { HeaderGuard } from "./header-guard";
 
@@ -140,6 +139,27 @@ export default async function RootLayout({
     !!session && (isAdminUser || memberProfile?.memberType === "bunny");
   const showBunnyBoardLink = memberProfile?.memberType === "bunny" || isAdminUser;
 
+  // UserMenu에 내려줄 닉네임·프로필 링크 (서버에서 계산 → 클라이언트 API 호출 불필요)
+  const adminNickname =
+    isPrimaryAdmin(session) && process.env.ADMIN_NICKNAME?.trim()
+      ? process.env.ADMIN_NICKNAME.trim()
+      : null;
+  const menuNickname =
+    adminNickname ?? memberProfile?.nickname?.trim() ?? session?.user?.email ?? null;
+
+  let menuProfileLink: string | null = null;
+  if (session) {
+    if (isAdminUser) {
+      menuProfileLink = `/admin/operators/${encodeURIComponent(session.user.id)}`;
+    } else if (memberProfile?.memberType === "rigger" && memberProfile?.id) {
+      menuProfileLink = `/rigger/${encodeURIComponent(memberProfile.id)}`;
+    } else if (memberProfile?.memberType === "bunny" && memberProfile?.id) {
+      menuProfileLink = `/bunnies/${encodeURIComponent(memberProfile.id)}`;
+    } else if (memberProfile) {
+      menuProfileLink = "/profile/edit";
+    }
+  }
+
   return (
     <html
       lang="en"
@@ -158,7 +178,6 @@ export default async function RootLayout({
       >
         <ThemeProvider>
           <SessionRevokedGuard />
-          <SuspensionGuard>
           <div className="flex min-h-[100dvh] flex-col">
             <HeaderGuard operatorPending={operatorPending}>
               <header
@@ -220,7 +239,11 @@ export default async function RootLayout({
                   >
                     <MessageIcon hasUnread={unreadMessagesCount > 0} />
                   </Link>
-                  <UserMenu />
+                  <UserMenu
+                    nickname={menuNickname}
+                    profileLink={menuProfileLink}
+                    isLoggedIn={!!session}
+                  />
                 </div>
               </header>
             </HeaderGuard>
@@ -228,7 +251,6 @@ export default async function RootLayout({
               {children}
             </main>
           </div>
-          </SuspensionGuard>
         </ThemeProvider>
       </body>
     </html>

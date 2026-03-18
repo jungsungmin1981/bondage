@@ -37,7 +37,7 @@ export function SessionRevokedGuard() {
       return;
     }
 
-    void checkSession();
+    // 마운트 즉시 체크 없이 폴링 주기 후부터 체크 (Cold Start 방지)
     intervalRef.current = setInterval(checkSession, POLL_INTERVAL_MS);
     return () => {
       if (intervalRef.current) {
