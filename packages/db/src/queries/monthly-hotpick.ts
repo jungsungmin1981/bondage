@@ -236,48 +236,6 @@ export async function getSubmissionIdsNotVotedByUser(
 }
 
 /** 해당 월에서 이 유저가 아직 투표하지 않은 submission id 목록 전체 (limit 없음). */
-export async function getAllSubmissionIdsNotVotedByUser(
-  month: string,
-  voterUserId: string,
-): Promise<string[]> {
-  const voted = await db
-    .select({ submissionId: schema.monthlyHotpickVotes.submissionId })
-    .from(schema.monthlyHotpickVotes)
-    .innerJoin(
-      schema.monthlyHotpickSubmissions,
-      eq(schema.monthlyHotpickVotes.submissionId, schema.monthlyHotpickSubmissions.id),
-    )
-    .where(
-      and(
-        eq(schema.monthlyHotpickSubmissions.month, month),
-        eq(schema.monthlyHotpickVotes.voterUserId, voterUserId),
-      ),
-    );
-
-  const votedIds = voted.map((r) => r.submissionId);
-  if (votedIds.length === 0) {
-    const all = await db
-      .select({ id: schema.monthlyHotpickSubmissions.id })
-      .from(schema.monthlyHotpickSubmissions)
-      .where(eq(schema.monthlyHotpickSubmissions.month, month))
-      .orderBy(asc(schema.monthlyHotpickSubmissions.createdAt));
-    return all.map((r) => r.id);
-  }
-
-  const notVoted = await db
-    .select({ id: schema.monthlyHotpickSubmissions.id })
-    .from(schema.monthlyHotpickSubmissions)
-    .where(
-      and(
-        eq(schema.monthlyHotpickSubmissions.month, month),
-        notInArray(schema.monthlyHotpickSubmissions.id, votedIds),
-      ),
-    )
-    .orderBy(asc(schema.monthlyHotpickSubmissions.createdAt));
-
-  return notVoted.map((r) => r.id);
-}
-
 /** 해당 월에 등록된 submission id 목록 전체 (투표 여부 무관). */
 export async function getAllSubmissionIdsForMonth(
   month: string,

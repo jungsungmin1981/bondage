@@ -10,14 +10,24 @@ import { getRiggerOverride } from "@/lib/rigger-overrides";
 import { mapRiggerProfileToRigger } from "@/lib/rigger-from-db";
 import { RiggerTierSection } from "@/components/rigger-tier-section";
 
+function getAdminExcludeForRiggerList() {
+  const email = process.env.ADMIN_EMAIL?.trim();
+  const username = process.env.ADMIN_USERNAME?.trim();
+  return {
+    excludeEmails: email ? [email] : [],
+    excludeUsernames: username ? [username] : [],
+  };
+}
+
 export default async function RiggerPage() {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
   if (!session) redirect("/login");
 
+  const adminExclude = getAdminExcludeForRiggerList();
   const [approved, suspendedUserIds] = await Promise.all([
-    getApprovedRiggerProfiles(),
+    getApprovedRiggerProfiles(adminExclude),
     getSuspendedUserIds(),
   ]);
   const list = approved.map(mapRiggerProfileToRigger);

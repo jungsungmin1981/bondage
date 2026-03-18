@@ -7,6 +7,15 @@ import { isAdmin } from "@/lib/admin";
 import { OperatorCardColumn } from "./operator-card-column";
 import { OperatorInviteKeyButton } from "./operator-invite-key-button";
 
+function getOperatorUserByIdOptions() {
+  const email = process.env.ADMIN_EMAIL;
+  const username = process.env.ADMIN_USERNAME;
+  return {
+    adminEmails: typeof email === "string" && email.trim() ? [email.trim()] : [],
+    adminUsernames: typeof username === "string" && username.trim() ? [username.trim()] : [],
+  };
+}
+
 export default async function AdminOperatorDetailPage({
   params,
 }: {
@@ -21,16 +30,28 @@ export default async function AdminOperatorDetailPage({
   if (!isAdmin(session) && !isApprovedOperator) redirect("/");
 
   const { userId } = await params;
+  const options = getOperatorUserByIdOptions();
   const [op, profile] = await Promise.all([
-    getOperatorUserById(userId),
+    getOperatorUserById(userId, options),
     getMemberProfileByUserId(userId),
   ]);
   if (!op) notFound();
 
-  /** 닉네임(member_profiles.nickname) 우선, 없으면 username·이메일 */
+  const isPrimaryAdminUser =
+    (options.adminEmails.length > 0 && op.email && options.adminEmails.includes(op.email)) ||
+    (options.adminUsernames.length > 0 && op.username && options.adminUsernames.includes(op.username));
+  const adminNickname = process.env.ADMIN_NICKNAME?.trim();
+  /** 주 관리자면 ADMIN_NICKNAME, 아니면 닉네임(member_profiles.nickname) 우선, 없으면 username·이메일 */
   const displayName =
-    profile?.nickname?.trim() || op.username?.trim() || op.email || "—";
-  const canEditCard = session.user.id === userId || isAdmin(session);
+    (isPrimaryAdminUser && adminNickname) ||
+    profile?.nickname?.trim() ||
+    op.username?.trim() ||
+    op.email ||
+    "—";
+  /** 카드 이미지 수정: 본인 또는 관리자이며, 대상이 운영진 프로필을 가진 경우에만(주 관리자는 프로필 없을 수 있음) */
+  const canEditCard =
+    (session.user.id === userId || isAdmin(session)) &&
+    profile?.memberType === "operator";
   const statusLabel =
     op.status === "approved" ? "승인" : op.status === "pending" ? "승인대기" : op.status ?? "-";
 

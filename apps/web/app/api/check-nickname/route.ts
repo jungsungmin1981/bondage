@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
 
   const session = await auth.api.getSession({ headers: await headers() });
   const profile = session?.user?.id ? await getMemberProfileByUserId(session.user.id) : null;
-  const excludeUserId = profile ? session!.user.id : undefined;
+  const excludeUserId = profile ? session?.user?.id : undefined;
   const taken = await isNicknameTaken(trimmed, excludeUserId);
   return NextResponse.json({ available: !taken });
 }

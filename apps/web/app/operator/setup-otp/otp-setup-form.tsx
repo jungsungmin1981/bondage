@@ -98,29 +98,23 @@ export function OtpSetupForm() {
     );
   }
 
-  if (enabled === true && step !== "qr") {
-    return (
-      <div className="space-y-4">
-        <p className="rounded-lg bg-green-500/10 px-4 py-3 text-sm text-green-700 dark:text-green-400">
-          이미 2단계 인증(OTP)이 설정되어 있습니다. 다음 로그인부터 앱에서 나오는
-          6자리 코드를 입력하면 됩니다.
-        </p>
-        <p className="text-sm text-muted-foreground">
-          OTP 설정 페이지 URL (관리자 확인용):{" "}
-          <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
-            /operator/setup-otp
-          </code>
-        </p>
-      </div>
-    );
-  }
-
   if (step === "done") {
     return (
       <div className="space-y-4">
         <p className="rounded-lg bg-green-500/10 px-4 py-3 text-sm text-green-700 dark:text-green-400">
           2단계 인증이 등록되었습니다. 다음 로그인부터 앱에서 나오는 6자리
           코드를 입력해 주세요.
+        </p>
+      </div>
+    );
+  }
+
+  if (enabled === true && step === "idle") {
+    return (
+      <div className="space-y-4">
+        <p className="rounded-lg bg-green-500/10 px-4 py-3 text-sm text-green-700 dark:text-green-400">
+          이미 2단계 인증(OTP)이 설정되어 있습니다. 다음 로그인부터 앱에서 나오는
+          6자리 코드를 입력하면 됩니다.
         </p>
       </div>
     );

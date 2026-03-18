@@ -8,14 +8,6 @@ export type PhotoCommentWithAuthor = PhotoCommentRow & {
   authorName: string | null;
 };
 
-export async function getCommentsByPhotoId(photoId: string): Promise<PhotoCommentRow[]> {
-  return db
-    .select()
-    .from(schema.photoComments)
-    .where(eq(schema.photoComments.photoId, photoId))
-    .orderBy(asc(schema.photoComments.createdAt));
-}
-
 /** 댓글 + 작성자 닉네임(users.name), 없으면 null */
 export async function getCommentsByPhotoIdWithAuthor(
   photoId: string,

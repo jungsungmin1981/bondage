@@ -1,5 +1,6 @@
 import { jsonb, pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
 import { classChallenges } from "./class-challenge";
+import { users } from "./user";
 
 export const classChallengeApprovals = pgTable(
   "class_challenge_approvals",
@@ -7,7 +8,7 @@ export const classChallengeApprovals = pgTable(
     challengeId: text("challenge_id")
       .notNull()
       .references(() => classChallenges.id, { onDelete: "cascade" }),
-    staffUserId: text("staff_user_id").notNull(),
+    staffUserId: text("staff_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     decision: text("decision").notNull(), // "approved" | "rejected"
     /** 승인 시 리거에게 보여줄 코멘트 */
     comment: text("comment"),

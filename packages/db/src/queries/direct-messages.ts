@@ -13,14 +13,6 @@ export async function getUnreadDirectMessagesCountForUser(
   return Number(rows[0]?.count ?? 0);
 }
 
-export async function listInboxDirectMessagesForUser(userId: string) {
-  return db
-    .select()
-    .from(schema.directMessages)
-    .where(eq(schema.directMessages.toUserId, userId))
-    .orderBy(desc(schema.directMessages.createdAt));
-}
-
 /** 수신 목록 + 발신자 이름 (users 조인) + 클래스 도전 반려 시 게시물 레벨·제목 (class_posts 조인) */
 export async function listInboxDirectMessagesForUserWithSender(userId: string) {
   const rows = await db

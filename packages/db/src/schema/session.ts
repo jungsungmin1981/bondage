@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 export const sessions = pgTable("session", {
   id: text("id").primaryKey(),
@@ -9,4 +9,6 @@ export const sessions = pgTable("session", {
   userAgent: text("user_agent"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (t) => [
+  index("session_user_id_idx").on(t.userId),
+]);

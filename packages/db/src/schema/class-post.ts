@@ -1,4 +1,4 @@
-import { integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { index, integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 export const classPosts = pgTable("class_posts", {
   id: text("id").primaryKey(),
@@ -14,5 +14,7 @@ export const classPosts = pgTable("class_posts", {
   videoUrl: text("video_url"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (t) => [
+  index("class_posts_level_visibility_idx").on(t.level, t.visibility),
+]);
 

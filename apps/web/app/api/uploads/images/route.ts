@@ -14,7 +14,7 @@ function randomId() {
 
 export async function POST(req: Request) {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) {
+  if (!session?.user?.id) {
     return NextResponse.json({ ok: false, error: "로그인이 필요합니다." }, { status: 401 });
   }
   if (!isAdmin(session)) {
@@ -51,23 +51,31 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "이미지 파일만 업로드할 수 있습니다." }, { status: 400 });
   }
 
-  const bytes = await file.arrayBuffer();
-  const inputBuffer = Buffer.from(bytes);
-  const resizedBuffer = await resizeToJpeg(inputBuffer);
-  const ext = "jpg";
-  const key = `class/${level}/${postId}/${randomId()}.${ext}`;
+  try {
+    const bytes = await file.arrayBuffer();
+    const inputBuffer = Buffer.from(bytes);
+    const resizedBuffer = await resizeToJpeg(inputBuffer);
+    const ext = "jpg";
+    const key = `class/${level}/${postId}/${randomId()}.${ext}`;
 
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: bucket,
-      Key: key,
-      Body: resizedBuffer,
-      ContentType: "image/jpeg",
-      CacheControl: "public, max-age=31536000, immutable",
-    }),
-  );
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: key,
+        Body: resizedBuffer,
+        ContentType: "image/jpeg",
+        CacheControl: "public, max-age=31536000, immutable",
+      }),
+    );
 
-  const url = `${publicBaseUrl}/${key}`;
-  return NextResponse.json({ ok: true, url });
+    const url = `${publicBaseUrl}/${key}`;
+    return NextResponse.json({ ok: true, url });
+  } catch (e) {
+    console.error("[uploads/images] failed", e);
+    return NextResponse.json(
+      { ok: false, error: "이미지 업로드에 실패했습니다." },
+      { status: 500 },
+    );
+  }
 }
 

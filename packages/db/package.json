@@ -50,7 +50,9 @@
     "db:delete-unused-invite-keys": "tsx scripts/delete-unused-invite-keys.ts",
     "db:ensure-user-totp": "tsx scripts/ensure-user-totp.ts",
     "db:ensure-operator-admin-tabs": "tsx scripts/ensure-operator-admin-tabs.ts",
-    "db:delete-admin-hotpick-votes": "tsx scripts/delete-admin-hotpick-votes.ts"
+    "db:delete-admin-hotpick-votes": "tsx scripts/delete-admin-hotpick-votes.ts",
+    "db:clear-all-posts-and-comments": "tsx scripts/clear-all-posts-and-comments.ts",
+    "db:delete-all-users": "tsx scripts/delete-all-users.ts"
   },
   "dependencies": {
     "dotenv": "^17.3.1",

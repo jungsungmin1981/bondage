@@ -187,6 +187,19 @@ export const auth = betterAuth({
       if (!key) {
         throw new APIError("BAD_REQUEST", { message: "INVITE_KEY_REQUIRED" });
       }
+      /** env ADMIN_INVITE_KEY와 일치하면 DB 인증키 없이 관리자(운영진)로 가입. 그 키로 등록한 사람만 관리자 등록. */
+      const adminInviteKey = process.env.ADMIN_INVITE_KEY?.trim();
+      if (adminInviteKey && key === adminInviteKey) {
+        const { inviteKey: _drop, ...bodyWithoutKey } = bodyWithUsername as Record<string, unknown>;
+        const bodyWithAdminFlag = { ...bodyWithoutKey, __adminInviteKey: true };
+        return {
+          context: {
+            ...ctx,
+            body: bodyWithAdminFlag,
+            __adminInviteKey: true,
+          },
+        };
+      }
       const row = await validateInviteKey(key);
       const { inviteKey: _drop, ...bodyWithoutKey } = bodyWithUsername as Record<string, unknown>;
       // body에 넣어 after 훅에서 확실히 읽을 수 있게 함 (context는 프레임워크가 덮을 수 있음)
@@ -240,7 +253,27 @@ export const auth = betterAuth({
         }
       }
       if (!userId) return;
-      if (inviteKeyId) {
+      const isAdminInviteKey = !!(c?.__adminInviteKey ?? body?.__adminInviteKey);
+      if (isAdminInviteKey) {
+        await db
+          .update(schema.users)
+          .set({ memberType: "operator" })
+          .where(eq(schema.users.id, userId));
+        const nickname =
+          (typeof body?.username === "string" && body.username.trim()) ||
+          (typeof body?.email === "string" && body.email.trim().slice(0, 50)) ||
+          "관리자";
+        const profileId = crypto.randomUUID();
+        const now = new Date();
+        await db.insert(schema.memberProfiles).values({
+          id: profileId,
+          userId,
+          memberType: "operator",
+          nickname: nickname.slice(0, 200),
+          status: "approved",
+          updatedAt: now,
+        });
+      } else if (inviteKeyId) {
         const [keyRow] = await db
           .select({ memberType: schema.inviteKeys.memberType })
           .from(schema.inviteKeys)

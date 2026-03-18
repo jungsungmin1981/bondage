@@ -2,9 +2,18 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@workspace/auth";
-import { getOperatorUsers, getMemberProfileByUserId } from "@workspace/db";
+import { getOperatorUsersIncludingAdminIdentifiers, getMemberProfileByUserId } from "@workspace/db";
 import { isAdmin } from "@/lib/admin";
 import { UserCircle } from "lucide-react";
+
+function getAdminIdentifiers() {
+  const email = process.env.ADMIN_EMAIL;
+  const username = process.env.ADMIN_USERNAME;
+  return {
+    adminEmails: typeof email === "string" && email.trim() ? [email.trim()] : [],
+    adminUsernames: typeof username === "string" && username.trim() ? [username.trim()] : [],
+  };
+}
 
 export default async function AdminOperatorsPage() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -15,14 +24,20 @@ export default async function AdminOperatorsPage() {
     memberProfile?.memberType === "operator" && memberProfile?.status === "approved";
   if (!isAdmin(session) && !isApprovedOperator) redirect("/");
 
-  const operators = await getOperatorUsers();
+  const { adminEmails, adminUsernames } = getAdminIdentifiers();
+  const adminNickname = process.env.ADMIN_NICKNAME?.trim();
+  const operators = await getOperatorUsersIncludingAdminIdentifiers(adminEmails, adminUsernames);
+
+  const isPrimaryAdminRow = (op: { email: string; username?: string | null }) =>
+    (adminEmails.length > 0 && op.email && adminEmails.includes(op.email)) ||
+    (adminUsernames.length > 0 && op.username && adminUsernames.includes(op.username));
 
   return (
     <div className="min-h-[calc(100svh-3.5rem)] p-4 sm:p-6">
       <div className="mb-8">
         <h1 className="text-xl font-semibold sm:text-2xl">운영진</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          운영자 인증키로 가입한 계정 목록입니다.
+          운영자 인증키로 가입한 계정과 주 관리자(ADMIN_EMAIL/ADMIN_USERNAME) 계정 목록입니다.
         </p>
       </div>
 
@@ -42,6 +57,7 @@ export default async function AdminOperatorsPage() {
           <ul className="grid list-none grid-cols-2 gap-4 sm:gap-6 lg:gap-8 sm:[grid-template-columns:repeat(auto-fill,minmax(min(100%,100px),280px))]">
             {operators.map((op) => {
               const displayName = (
+                (isPrimaryAdminRow(op) && adminNickname) ||
                 op.nickname?.trim() ||
                 op.name?.trim() ||
                 op.username?.trim() ||

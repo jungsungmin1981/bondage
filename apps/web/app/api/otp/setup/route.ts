@@ -4,7 +4,6 @@ import { auth } from "@workspace/auth";
 import { db, schema, eq } from "@workspace/db";
 import { generateSecret, generateURI } from "otplib";
 import QRCode from "qrcode";
-import { getMemberProfileByUserId } from "@workspace/db";
 import { isAdmin } from "@/lib/admin";
 
 const OTP_PENDING_EXPIRES_MS = 10 * 60 * 1000; // 10분
@@ -18,9 +17,7 @@ export async function GET() {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const profile = await getMemberProfileByUserId(session.user.id);
-  const allowed = isAdmin(session) || profile?.memberType === "operator";
-  if (!allowed) {
+  if (!isAdmin(session)) {
     return NextResponse.json(
       { error: "운영진만 2단계 인증(OTP)을 설정할 수 있습니다." },
       { status: 403 },

@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 import { auth } from "@workspace/auth";
 import { db, schema, eq } from "@workspace/db";
 import { verify } from "otplib";
-import { getMemberProfileByUserId } from "@workspace/db";
 import { isAdmin } from "@/lib/admin";
 import {
   createOtpVerifiedCookieValue,
@@ -20,9 +19,7 @@ export async function POST(request: Request) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const profile = await getMemberProfileByUserId(session.user.id);
-  const allowed = isAdmin(session) || profile?.memberType === "operator";
-  if (!allowed) {
+  if (!isAdmin(session)) {
     return NextResponse.json(
       { error: "운영진만 2단계 인증(OTP)을 설정할 수 있습니다." },
       { status: 403 },

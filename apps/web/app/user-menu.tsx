@@ -37,14 +37,17 @@ export function UserMenu() {
           memberType?: string;
           profileId?: string;
           hasProfile?: boolean;
+          operatorDetailUserId?: string;
         }) => {
           setNickname(data.nickname ?? null);
-          if (data.memberType === "rigger" && data.profileId) {
+          if (data.operatorDetailUserId) {
+            setProfileLink(
+              `/admin/operators/${encodeURIComponent(data.operatorDetailUserId)}`,
+            );
+          } else if (data.memberType === "rigger" && data.profileId) {
             setProfileLink(`/rigger/${encodeURIComponent(data.profileId)}`);
           } else if (data.memberType === "bunny" && data.profileId) {
             setProfileLink(`/bunnies/${encodeURIComponent(data.profileId)}`);
-          } else if (data.memberType === "operator" && session?.user?.id) {
-            setProfileLink(`/admin/operators/${encodeURIComponent(session.user.id)}`);
           } else if (data.hasProfile) {
             setProfileLink("/profile/edit");
           } else {
@@ -93,7 +96,13 @@ export function UserMenu() {
       >
         <Link
           href={profileLink ?? pathname ?? "/"}
-          title={profileLink ? "내 상세정보로 이동" : "현재 페이지로 이동"}
+          title={
+            profileLink
+              ? profileLink.startsWith("/admin/operators")
+                ? "운영진 상세로 이동"
+                : "내 상세정보로 이동"
+              : "현재 페이지로 이동"
+          }
         >
           {displayName}
         </Link>

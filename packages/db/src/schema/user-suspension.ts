@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { users } from "./user";
 
 /**
@@ -7,15 +7,13 @@ import { users } from "./user";
  */
 export const userSuspensions = pgTable("user_suspensions", {
   id: text("id").primaryKey(),
-  /** 정지 대상 user id */
   userId: text("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
-  /** 정지 해제 시각. null이면 영구 정지 */
   suspendedUntil: timestamp("suspended_until"),
-  /** 사유 (선택) */
   reason: text("reason"),
-  /** 정지한 관리자 user id */
   createdByUserId: text("created_by_user_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (t) => [
+  index("user_suspensions_user_id_idx").on(t.userId),
+]);

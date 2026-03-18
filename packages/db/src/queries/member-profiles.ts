@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, ilike, isNotNull, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, ne, not, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "../client/node";
 import * as schema from "../schema";
@@ -791,12 +791,39 @@ export async function getRiggerProfileByUserId(
   };
 }
 
+export type GetApprovedRiggerProfilesOptions = {
+  /** 이메일 목록에 해당하는 사용자 제외 (주 관리자 등) */
+  excludeEmails?: string[];
+  /** 아이디(username) 목록에 해당하는 사용자 제외 */
+  excludeUsernames?: string[];
+};
+
 /**
  * 승인된 리거 목록: memberType = 'rigger', status = 'approved' + users join.
+ * options.excludeEmails / excludeUsernames 에 해당하는 사용자는 목록에서 제외.
  */
-export async function getApprovedRiggerProfiles(): Promise<
-  RiggerProfileWithUser[]
-> {
+export async function getApprovedRiggerProfiles(
+  options?: GetApprovedRiggerProfilesOptions,
+): Promise<RiggerProfileWithUser[]> {
+  const excludeEmails = (options?.excludeEmails ?? []).filter(
+    (e): e is string => typeof e === "string" && e.trim().length > 0,
+  );
+  const excludeUsernames = (options?.excludeUsernames ?? []).filter(
+    (u): u is string => typeof u === "string" && u.trim().length > 0,
+  );
+
+  const conditions = [
+    eq(schema.memberProfiles.memberType, "rigger"),
+    eq(schema.memberProfiles.status, "approved"),
+  ];
+  if (excludeEmails.length > 0 || excludeUsernames.length > 0) {
+    const excludeConditions = [
+      ...(excludeEmails.length > 0 ? [inArray(schema.users.email, excludeEmails)] : []),
+      ...(excludeUsernames.length > 0 ? [inArray(schema.users.username, excludeUsernames)] : []),
+    ];
+    conditions.push(not(or(...excludeConditions)));
+  }
+
   const rows = await db
     .select({
       id: schema.memberProfiles.id,
@@ -820,12 +847,7 @@ export async function getApprovedRiggerProfiles(): Promise<
     })
     .from(schema.memberProfiles)
     .innerJoin(schema.users, eq(schema.memberProfiles.userId, schema.users.id))
-    .where(
-      and(
-        eq(schema.memberProfiles.memberType, "rigger"),
-        eq(schema.memberProfiles.status, "approved"),
-      ),
-    );
+    .where(and(...conditions));
   return rows.map((r) => ({
     id: r.id,
     userId: r.userId,

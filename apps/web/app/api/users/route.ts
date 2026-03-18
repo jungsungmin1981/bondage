@@ -6,7 +6,7 @@ import { isAdmin } from "@/lib/admin";
 
 export async function GET() {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) {
+  if (!session?.user?.id) {
     return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
   }
   if (!isAdmin(session)) {

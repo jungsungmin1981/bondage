@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 
@@ -12,6 +12,22 @@ export function SessionRevokedGuard() {
   const { data: session } = authClient.useSession();
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const checkSession = useCallback(async () => {
+    const { data: current } = await authClient.getSession({
+      query: { disableCookieCache: true },
+    });
+    if (!current?.user) {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      await authClient.signOut();
+      router.replace(
+        `/login?reason=${encodeURIComponent("다른 기기에서 로그인되어 로그아웃되었습니다.")}`,
+      );
+    }
+  }, [router]);
+
   useEffect(() => {
     if (!session?.user) {
       if (intervalRef.current) {
@@ -21,22 +37,7 @@ export function SessionRevokedGuard() {
       return;
     }
 
-    const checkSession = async () => {
-      const { data: current } = await authClient.getSession({
-        query: { disableCookieCache: true },
-      });
-      if (!current?.user) {
-        if (intervalRef.current) {
-          clearInterval(intervalRef.current);
-          intervalRef.current = null;
-        }
-        await authClient.signOut();
-        router.replace(
-          `/login?reason=${encodeURIComponent("다른 기기에서 로그인되어 로그아웃되었습니다.")}`,
-        );
-      }
-    };
-
+    void checkSession();
     intervalRef.current = setInterval(checkSession, POLL_INTERVAL_MS);
     return () => {
       if (intervalRef.current) {
@@ -44,7 +45,7 @@ export function SessionRevokedGuard() {
         intervalRef.current = null;
       }
     };
-  }, [session?.user?.id, router]);
+  }, [session?.user?.id, router, checkSession]);
 
   return null;
 }

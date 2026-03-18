@@ -8,7 +8,6 @@ export async function GET() {
   const profiles = await getApprovedBunnyProfiles();
   const list = profiles.map((p) => ({
     id: p.userId,
-    email: p.email ?? "",
     name: p.nickname ?? p.userName ?? null,
   }));
   return Response.json(list);

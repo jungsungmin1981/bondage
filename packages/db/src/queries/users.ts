@@ -83,6 +83,26 @@ export async function getUserIdListByEmails(emails: string[]): Promise<string[]>
   return rows.map((r) => r.id).filter((id): id is string => Boolean(id));
 }
 
+/**
+ * 이메일 또는 아이디(username)에 해당하는 사용자 id 목록. 관리자 식별용.
+ */
+export async function getUserIdListByEmailOrUsername(
+  emails: string[],
+  usernames: string[],
+): Promise<string[]> {
+  const conditions: ReturnType<typeof sql>[] = [];
+  if (emails.length > 0)
+    conditions.push(inArray(schema.users.email, emails));
+  if (usernames.length > 0)
+    conditions.push(inArray(schema.users.username, usernames));
+  if (conditions.length === 0) return [];
+  const rows = await db
+    .select({ id: schema.users.id })
+    .from(schema.users)
+    .where(or(...conditions));
+  return [...new Set(rows.map((r) => r.id).filter((id): id is string => Boolean(id)))];
+}
+
 export type OperatorUserRow = {
   id: string;
   email: string;
@@ -135,10 +155,69 @@ export async function getOperatorUsers(): Promise<OperatorUserRow[]> {
 }
 
 /**
+ * 운영진 목록 + 주 관리자(adminEmails/adminUsernames에 해당하는 계정) 포함.
+ * 관리자 계정은 member_type이 operator가 아니어도 목록에 포함되며 status는 'approved'로 표시.
+ */
+export async function getOperatorUsersIncludingAdminIdentifiers(
+  adminEmails: string[],
+  adminUsernames: string[],
+): Promise<OperatorUserRow[]> {
+  const operators = await getOperatorUsers();
+  const operatorIds = new Set(operators.map((o) => o.id));
+  const adminIds = await getUserIdListByEmailOrUsername(
+    adminEmails.filter((e) => typeof e === "string" && e.trim().length > 0),
+    adminUsernames.filter((u) => typeof u === "string" && u.trim().length > 0),
+  );
+  const toFetch = adminIds.filter((id) => !operatorIds.has(id));
+  if (toFetch.length === 0) return operators;
+
+  const adminRows = await db
+    .select({
+      id: schema.users.id,
+      email: schema.users.email,
+      name: schema.users.name,
+      username: schema.users.username,
+      createdAt: schema.users.createdAt,
+      nickname: schema.memberProfiles.nickname,
+      cardImageUrl: schema.memberProfiles.cardImageUrl,
+    })
+    .from(schema.users)
+    .leftJoin(
+      schema.memberProfiles,
+      eq(schema.memberProfiles.userId, schema.users.id),
+    )
+    .where(inArray(schema.users.id, toFetch));
+
+  const adminAsRows: OperatorUserRow[] = adminRows.map((r) => ({
+    id: r.id,
+    email: r.email,
+    name: r.name ?? null,
+    username: r.username ?? null,
+    createdAt: r.createdAt,
+    status: "approved",
+    nickname: r.nickname ?? null,
+    cardImageUrl: r.cardImageUrl ?? null,
+  }));
+
+  const merged = [...adminAsRows, ...operators];
+  merged.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  return merged;
+}
+
+export type GetOperatorUserByIdOptions = {
+  /** 주 관리자로 취급할 이메일 목록. 해당 사용자도 운영진 상세로 조회됨 */
+  adminEmails?: string[];
+  /** 주 관리자로 취급할 아이디(username) 목록 */
+  adminUsernames?: string[];
+};
+
+/**
  * member_type이 'operator'인 사용자 한 명 조회. 없으면 null.
+ * options에 adminEmails/adminUsernames를 넘기면, 해당 식별자에 맞는 사용자도 운영진 상세로 조회됨(status 'approved').
  */
 export async function getOperatorUserById(
   userId: string,
+  options?: GetOperatorUserByIdOptions,
 ): Promise<OperatorUserRow | null> {
   const rows = await db
     .select({
@@ -164,17 +243,57 @@ export async function getOperatorUserById(
     )
     .limit(1);
   const r = rows[0];
-  if (!r) return null;
-  return {
-    id: r.id,
-    email: r.email,
-    name: r.name ?? null,
-    username: r.username ?? null,
-    createdAt: r.createdAt,
-    status: r.status ?? null,
-    nickname: r.nickname ?? null,
-    cardImageUrl: r.cardImageUrl ?? null,
-  };
+  if (r) {
+    return {
+      id: r.id,
+      email: r.email,
+      name: r.name ?? null,
+      username: r.username ?? null,
+      createdAt: r.createdAt,
+      status: r.status ?? null,
+      nickname: r.nickname ?? null,
+      cardImageUrl: r.cardImageUrl ?? null,
+    };
+  }
+
+  if (options?.adminEmails?.length || options?.adminUsernames?.length) {
+    const adminIds = await getUserIdListByEmailOrUsername(
+      options.adminEmails ?? [],
+      options.adminUsernames ?? [],
+    );
+    if (!adminIds.includes(userId)) return null;
+    const userRows = await db
+      .select({
+        id: schema.users.id,
+        email: schema.users.email,
+        name: schema.users.name,
+        username: schema.users.username,
+        createdAt: schema.users.createdAt,
+        nickname: schema.memberProfiles.nickname,
+        cardImageUrl: schema.memberProfiles.cardImageUrl,
+      })
+      .from(schema.users)
+      .leftJoin(
+        schema.memberProfiles,
+        eq(schema.memberProfiles.userId, schema.users.id),
+      )
+      .where(eq(schema.users.id, userId))
+      .limit(1);
+    const u = userRows[0];
+    if (!u) return null;
+    return {
+      id: u.id,
+      email: u.email,
+      name: u.name ?? null,
+      username: u.username ?? null,
+      createdAt: u.createdAt,
+      status: "approved",
+      nickname: u.nickname ?? null,
+      cardImageUrl: u.cardImageUrl ?? null,
+    };
+  }
+
+  return null;
 }
 
 /** 발급자가 만료·미사용인 인증키 조회. memberType별 최신 1건. */

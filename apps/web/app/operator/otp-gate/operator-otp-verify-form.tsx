@@ -41,7 +41,6 @@ export function OperatorOtpVerifyForm() {
       } else {
         router.replace("/");
       }
-      router.refresh();
     } finally {
       setLoading(false);
     }
