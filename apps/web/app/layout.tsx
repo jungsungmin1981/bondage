@@ -94,11 +94,21 @@ export default async function RootLayout({
   const headersList = await headers();
   const session = await auth.api.getSession({ headers: headersList });
   const isAdminUser = session ? isAdmin(session) : false;
-  const memberProfile = session
-    ? await getMemberProfileByUserId(session.user.id)
-    : null;
 
   const pathname = headersList.get("x-pathname") ?? "";
+
+  const [memberProfile, pendingBunnyApprovalsCount, unreadMessagesCount, unreadNotesCount] =
+    await Promise.all([
+      session ? getMemberProfileByUserId(session.user.id) : Promise.resolve(null),
+      !session
+        ? Promise.resolve(0)
+        : isAdminUser
+          ? getAllPendingApprovalsCount()
+          : getPendingApprovalsCountForBunny(session.user.id),
+      session ? getUnreadCountForUser(session.user.id).catch(() => 0) : Promise.resolve(0),
+      session ? getUnreadDirectMessagesCountForUser(session.user.id).catch(() => 0) : Promise.resolve(0),
+    ]);
+
   const riggerPending =
     memberProfile?.memberType === "rigger" && memberProfile?.status !== "approved";
   const operatorPending =
@@ -108,7 +118,7 @@ export default async function RootLayout({
   const operatorRedirectTarget = operatorPending ? "/admin/pending" : null;
   const isApprovedOperator =
     memberProfile?.memberType === "operator" && memberProfile?.status === "approved";
-  // x-pathname이 없거나 이미 허용/목적지일 때는 리다이렉트 안 함
+
   if (
     riggerRedirectTarget &&
     pathname !== "" &&
@@ -129,17 +139,6 @@ export default async function RootLayout({
   const showApprovalRequestLink =
     !!session && (isAdminUser || memberProfile?.memberType === "bunny");
   const showBunnyBoardLink = memberProfile?.memberType === "bunny" || isAdminUser;
-  const pendingBunnyApprovalsCount = !session
-    ? 0
-    : isAdminUser
-      ? await getAllPendingApprovalsCount()
-      : await getPendingApprovalsCountForBunny(session.user.id);
-  const unreadMessagesCount = !session
-    ? 0
-    : await getUnreadCountForUser(session.user.id).catch(() => 0);
-  const unreadNotesCount = !session
-    ? 0
-    : await getUnreadDirectMessagesCountForUser(session.user.id).catch(() => 0);
 
   return (
     <html

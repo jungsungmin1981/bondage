@@ -5,9 +5,16 @@ import {
   getPublicClassPostsByLevel,
 } from "@workspace/db";
 import { headers } from "next/headers";
+import { unstable_cache } from "next/cache";
 import { redirect } from "next/navigation";
 import { ClassImagePreviewClient } from "../beginner/class-image-preview-client";
 import type { ClassCard as ClassCardType } from "../beginner/data";
+
+const getCachedIntermediatePosts = unstable_cache(
+  () => getPublicClassPostsByLevel("intermediate"),
+  ["class-posts-intermediate"],
+  { revalidate: 60 },
+);
 
 export default async function ClassIntermediatePage() {
   const session = await auth.api.getSession({
@@ -15,7 +22,7 @@ export default async function ClassIntermediatePage() {
   });
   if (!session) redirect("/login");
 
-  const rows = await getPublicClassPostsByLevel("intermediate");
+  const rows = await getCachedIntermediatePosts();
   const postIds = rows.map((r) => r.id);
   const [statusMap, countsMap] =
     postIds.length > 0
