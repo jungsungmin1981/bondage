@@ -1,4 +1,4 @@
-CREATE TABLE "bunny_board_post_comments" (
+CREATE TABLE IF NOT EXISTS "bunny_board_post_comments" (
 	"id" text PRIMARY KEY NOT NULL,
 	"post_id" text NOT NULL,
 	"parent_id" text,
@@ -9,13 +9,13 @@ CREATE TABLE "bunny_board_post_comments" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "bunny_board_post_recommends" (
+CREATE TABLE IF NOT EXISTS "bunny_board_post_recommends" (
 	"post_id" text NOT NULL,
 	"user_id" text NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "bunny_board_posts" (
+CREATE TABLE IF NOT EXISTS "bunny_board_posts" (
 	"id" text PRIMARY KEY NOT NULL,
 	"board_id" text NOT NULL,
 	"author_user_id" text NOT NULL,
@@ -30,7 +30,7 @@ CREATE TABLE "bunny_board_posts" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "bunny_boards" (
+CREATE TABLE IF NOT EXISTS "bunny_boards" (
 	"id" text PRIMARY KEY NOT NULL,
 	"slug" text NOT NULL,
 	"name" text NOT NULL,
@@ -41,7 +41,7 @@ CREATE TABLE "bunny_boards" (
 	CONSTRAINT "bunny_boards_slug_unique" UNIQUE("slug")
 );
 --> statement-breakpoint
-CREATE TABLE "class_challenge_approvals" (
+CREATE TABLE IF NOT EXISTS "class_challenge_approvals" (
 	"challenge_id" text NOT NULL,
 	"staff_user_id" text NOT NULL,
 	"decision" text NOT NULL,
@@ -52,7 +52,7 @@ CREATE TABLE "class_challenge_approvals" (
 	CONSTRAINT "class_challenge_approvals_challenge_id_staff_user_id_pk" PRIMARY KEY("challenge_id","staff_user_id")
 );
 --> statement-breakpoint
-CREATE TABLE "class_challenges" (
+CREATE TABLE IF NOT EXISTS "class_challenges" (
 	"id" text PRIMARY KEY NOT NULL,
 	"class_post_id" text NOT NULL,
 	"user_id" text NOT NULL,
@@ -62,7 +62,7 @@ CREATE TABLE "class_challenges" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "class_posts" (
+CREATE TABLE IF NOT EXISTS "class_posts" (
 	"id" text PRIMARY KEY NOT NULL,
 	"level" text NOT NULL,
 	"visibility" text DEFAULT 'private' NOT NULL,
@@ -78,7 +78,7 @@ CREATE TABLE "class_posts" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "direct_messages" (
+CREATE TABLE IF NOT EXISTS "direct_messages" (
 	"id" text PRIMARY KEY NOT NULL,
 	"from_user_id" text NOT NULL,
 	"to_user_id" text NOT NULL,
@@ -91,7 +91,7 @@ CREATE TABLE "direct_messages" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "dm_attachments" (
+CREATE TABLE IF NOT EXISTS "dm_attachments" (
 	"id" text PRIMARY KEY NOT NULL,
 	"message_id" text NOT NULL,
 	"type" text NOT NULL,
@@ -100,7 +100,7 @@ CREATE TABLE "dm_attachments" (
 	"height" text
 );
 --> statement-breakpoint
-CREATE TABLE "dm_messages" (
+CREATE TABLE IF NOT EXISTS "dm_messages" (
 	"id" text PRIMARY KEY NOT NULL,
 	"thread_id" text NOT NULL,
 	"sender_user_id" text NOT NULL,
@@ -108,7 +108,7 @@ CREATE TABLE "dm_messages" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "dm_participants" (
+CREATE TABLE IF NOT EXISTS "dm_participants" (
 	"id" text PRIMARY KEY NOT NULL,
 	"thread_id" text NOT NULL,
 	"user_id" text NOT NULL,
@@ -116,13 +116,13 @@ CREATE TABLE "dm_participants" (
 	"last_read_at" timestamp
 );
 --> statement-breakpoint
-CREATE TABLE "dm_threads" (
+CREATE TABLE IF NOT EXISTS "dm_threads" (
 	"id" text PRIMARY KEY NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"last_message_at" timestamp
 );
 --> statement-breakpoint
-CREATE TABLE "verification" (
+CREATE TABLE IF NOT EXISTS "verification" (
 	"id" text PRIMARY KEY NOT NULL,
 	"identifier" text NOT NULL,
 	"value" text NOT NULL,
@@ -131,12 +131,18 @@ CREATE TABLE "verification" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-ALTER TABLE "rigger_photos" ADD COLUMN "visibility_after_approval" text;--> statement-breakpoint
-ALTER TABLE "member_profiles" ADD COLUMN "card_image_url" text;--> statement-breakpoint
-ALTER TABLE "member_profiles" ADD COLUMN "rejection_note" text;--> statement-breakpoint
-ALTER TABLE "member_profiles" ADD COLUMN "re_requested_at" timestamp;--> statement-breakpoint
-ALTER TABLE "bunny_board_post_comments" ADD CONSTRAINT "bunny_board_post_comments_post_id_bunny_board_posts_id_fk" FOREIGN KEY ("post_id") REFERENCES "public"."bunny_board_posts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "bunny_board_post_comments" ADD CONSTRAINT "bunny_board_post_comments_author_user_id_users_id_fk" FOREIGN KEY ("author_user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "rigger_photos" ADD COLUMN IF NOT EXISTS "visibility_after_approval" text;--> statement-breakpoint
+ALTER TABLE "member_profiles" ADD COLUMN IF NOT EXISTS "card_image_url" text;--> statement-breakpoint
+ALTER TABLE "member_profiles" ADD COLUMN IF NOT EXISTS "rejection_note" text;--> statement-breakpoint
+ALTER TABLE "member_profiles" ADD COLUMN IF NOT EXISTS "re_requested_at" timestamp;--> statement-breakpoint
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'bunny_board_post_comments_post_id_bunny_board_posts_id_fk') THEN
+    ALTER TABLE "bunny_board_post_comments" ADD CONSTRAINT "bunny_board_post_comments_post_id_bunny_board_posts_id_fk" FOREIGN KEY ("post_id") REFERENCES "public"."bunny_board_posts"("id") ON DELETE cascade ON UPDATE no action;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'bunny_board_post_comments_author_user_id_users_id_fk') THEN
+    ALTER TABLE "bunny_board_post_comments" ADD CONSTRAINT "bunny_board_post_comments_author_user_id_users_id_fk" FOREIGN KEY ("author_user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+  END IF;
+END $$;--> statement-breakpoint
 ALTER TABLE "bunny_board_post_recommends" ADD CONSTRAINT "bunny_board_post_recommends_post_id_bunny_board_posts_id_fk" FOREIGN KEY ("post_id") REFERENCES "public"."bunny_board_posts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "bunny_board_post_recommends" ADD CONSTRAINT "bunny_board_post_recommends_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "bunny_board_posts" ADD CONSTRAINT "bunny_board_posts_board_id_bunny_boards_id_fk" FOREIGN KEY ("board_id") REFERENCES "public"."bunny_boards"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -151,11 +157,11 @@ ALTER TABLE "dm_messages" ADD CONSTRAINT "dm_messages_thread_id_dm_threads_id_fk
 ALTER TABLE "dm_messages" ADD CONSTRAINT "dm_messages_sender_user_id_users_id_fk" FOREIGN KEY ("sender_user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "dm_participants" ADD CONSTRAINT "dm_participants_thread_id_dm_threads_id_fk" FOREIGN KEY ("thread_id") REFERENCES "public"."dm_threads"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "dm_participants" ADD CONSTRAINT "dm_participants_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-CREATE UNIQUE INDEX "bunny_board_post_recommends_post_user_idx" ON "bunny_board_post_recommends" USING btree ("post_id","user_id");--> statement-breakpoint
-CREATE UNIQUE INDEX "bunny_board_posts_board_post_number_idx" ON "bunny_board_posts" USING btree ("board_id","post_number");--> statement-breakpoint
-CREATE INDEX "direct_messages_to_user_id_created_at_idx" ON "direct_messages" USING btree ("to_user_id","created_at");--> statement-breakpoint
-CREATE INDEX "direct_messages_from_user_id_created_at_idx" ON "direct_messages" USING btree ("from_user_id","created_at");--> statement-breakpoint
-CREATE INDEX "dm_attachments_message_id_idx" ON "dm_attachments" USING btree ("message_id");--> statement-breakpoint
-CREATE INDEX "dm_messages_thread_created_at_idx" ON "dm_messages" USING btree ("thread_id","created_at");--> statement-breakpoint
-CREATE UNIQUE INDEX "dm_participants_thread_user_idx" ON "dm_participants" USING btree ("thread_id","user_id");--> statement-breakpoint
-CREATE INDEX "dm_participants_user_thread_idx" ON "dm_participants" USING btree ("user_id","thread_id");
+CREATE UNIQUE INDEX IF NOT EXISTS "bunny_board_post_recommends_post_user_idx" ON "bunny_board_post_recommends" USING btree ("post_id","user_id");--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "bunny_board_posts_board_post_number_idx" ON "bunny_board_posts" USING btree ("board_id","post_number");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "direct_messages_to_user_id_created_at_idx" ON "direct_messages" USING btree ("to_user_id","created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "direct_messages_from_user_id_created_at_idx" ON "direct_messages" USING btree ("from_user_id","created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "dm_attachments_message_id_idx" ON "dm_attachments" USING btree ("message_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "dm_messages_thread_created_at_idx" ON "dm_messages" USING btree ("thread_id","created_at");--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "dm_participants_thread_user_idx" ON "dm_participants" USING btree ("thread_id","user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "dm_participants_user_thread_idx" ON "dm_participants" USING btree ("user_id","thread_id");

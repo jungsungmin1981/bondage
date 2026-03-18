@@ -65,7 +65,12 @@ export function AdminNoticePostForm({
     null as { ok: true } | { ok: false; error: string } | null,
   );
 
-  const state = isEdit ? updateState : createState;
+  type FormState = {
+    ok: false;
+    error: string;
+    values?: CreatePostFormValues;
+  } | null;
+  const state = (isEdit ? updateState : createState) as FormState;
   const formAction = isEdit ? updateFormAction : createFormAction;
 
   const [coverPreview, setCoverPreview] = useState<string | null>(

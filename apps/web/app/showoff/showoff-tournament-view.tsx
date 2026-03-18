@@ -104,7 +104,7 @@ export function ShowoffTournamentView({
         return next;
       });
     });
-  }, [phase, leftId, rightId, monthKey, cache[leftId], cache[rightId]]);
+  }, [phase, leftId, rightId, monthKey, leftId != null ? cache[leftId] : undefined, rightId != null ? cache[rightId] : undefined]);
 
   useEffect(() => {
     if (phase !== "vote" || round.length !== 1) return;

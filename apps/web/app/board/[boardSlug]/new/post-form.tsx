@@ -52,7 +52,7 @@ export function BoardPostForm({
     if (state?.ok === false && state?.values) {
       setFormKey((k) => k + 1);
     }
-  }, [state?.ok, state?.values]);
+  }, [state?.ok, state?.ok === false ? state.values : undefined]);
 
   useEffect(() => {
     if (editableRef.current) {

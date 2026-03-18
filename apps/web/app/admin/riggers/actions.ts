@@ -36,6 +36,9 @@ export async function rejectRiggerProfileWithNoteAction(
   if (!isAdmin(session)) {
     return { ok: false, error: "관리자만 반려할 수 있습니다." };
   }
+  if (!session?.user?.id) {
+    return { ok: false, error: "로그인이 필요합니다." };
+  }
   const toUserId = await getUserIdByMemberProfileId(profileId);
   if (!toUserId) {
     return { ok: false, error: "해당 리거를 찾을 수 없습니다." };

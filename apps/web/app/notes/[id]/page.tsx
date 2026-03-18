@@ -19,7 +19,7 @@ function formatDate(d: Date) {
 /** 계정 사용 제한 쪽지 본문에서 "정지 기간: ..." 추출 */
 function getSuspensionPeriodFromBody(body: string): string | null {
   const match = body.match(/정지\s*기간:\s*(.+)/);
-  return match ? match[1].trim() || null : null;
+  return match?.[1] != null ? match[1].trim() || null : null;
 }
 
 export default async function NoteDetailPage({

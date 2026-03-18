@@ -114,7 +114,7 @@ export function SignupForm({ className, ...props }: React.ComponentProps<"div">)
         username: trimmedId,
         callbackURL: "/login",
         inviteKey: key,
-      },
+      } as unknown as Parameters<typeof authClient.signUp.email>[0],
       {
         onError: (ctx) => {
           setError(getSignupErrorMessage(ctx.error));

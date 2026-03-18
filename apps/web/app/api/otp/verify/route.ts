@@ -84,9 +84,12 @@ export async function POST(request: Request) {
 
   const cookieValue = createOtpVerifiedCookieValue(session.user.id);
   const res = NextResponse.json({ ok: true });
+  // http://localhost에서는 Secure 쿠키가 저장되지 않으므로, 실제 HTTPS일 때만 secure: true
+  const baseUrl = process.env.BETTER_AUTH_URL || "";
+  const isSecureOrigin = baseUrl.startsWith("https://");
   res.cookies.set(OTP_VERIFIED_COOKIE_NAME, cookieValue, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: isSecureOrigin,
     sameSite: "lax",
     path: "/",
     maxAge: OTP_VERIFIED_COOKIE_MAX_AGE,

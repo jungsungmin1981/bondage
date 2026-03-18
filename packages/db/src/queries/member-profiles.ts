@@ -1,3 +1,4 @@
+import type { SQL } from "drizzle-orm";
 import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, ne, not, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "../client/node";
@@ -817,11 +818,18 @@ export async function getApprovedRiggerProfiles(
     eq(schema.memberProfiles.status, "approved"),
   ];
   if (excludeEmails.length > 0 || excludeUsernames.length > 0) {
-    const excludeConditions = [
-      ...(excludeEmails.length > 0 ? [inArray(schema.users.email, excludeEmails)] : []),
-      ...(excludeUsernames.length > 0 ? [inArray(schema.users.username, excludeUsernames)] : []),
-    ];
-    conditions.push(not(or(...excludeConditions)));
+    const parts: SQL[] = [];
+    if (excludeEmails.length > 0) parts.push(inArray(schema.users.email, excludeEmails));
+    if (excludeUsernames.length > 0) parts.push(inArray(schema.users.username, excludeUsernames));
+    if (parts.length === 2) {
+      const a = parts[0]!;
+      const b = parts[1]!;
+      // drizzle or() types expect SQLWrapper; inArray() returns SQL<unknown>
+      // @ts-expect-error - runtime types are correct
+      conditions.push(not(or(a, b)));
+    } else if (parts.length === 1) {
+      conditions.push(not(parts[0]!));
+    }
   }
 
   const rows = await db

@@ -18,7 +18,7 @@ function getLastDayOfMonth(year: number, month: number): number {
 
 /** 해당 월의 접수 마감 시각 (말일 - 5일 23:59:59.999) */
 export function getRegistrationEnd(monthKey: string): Date {
-  const [y, m] = monthKey.split("-").map(Number);
+  const [y = 0, m = 1] = monthKey.split("-").map(Number);
   const lastDay = getLastDayOfMonth(y, m);
   const regEndDay = Math.max(1, lastDay - 5);
   return new Date(y, m - 1, regEndDay, 23, 59, 59, 999);
@@ -26,7 +26,7 @@ export function getRegistrationEnd(monthKey: string): Date {
 
 /** 해당 월의 투표 마감 시각 (말일 23:59:59.999) */
 export function getVotingEnd(monthKey: string): Date {
-  const [y, m] = monthKey.split("-").map(Number);
+  const [y = 0, m = 1] = monthKey.split("-").map(Number);
   const lastDay = getLastDayOfMonth(y, m);
   return new Date(y, m - 1, lastDay, 23, 59, 59, 999);
 }

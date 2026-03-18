@@ -77,7 +77,12 @@ export function AdminBunnyQnaPostForm({
     null as { ok: true } | { ok: false; error: string } | null,
   );
 
-  const state = isEdit ? updateState : createState;
+  type FormState = {
+    ok: false;
+    error: string;
+    values?: CreatePostFormValues;
+  } | null;
+  const state = (isEdit ? updateState : createState) as FormState;
   const formAction = isEdit ? updateFormAction : createFormAction;
 
   const values =
@@ -102,7 +107,7 @@ export function AdminBunnyQnaPostForm({
       setSortOrder(state.values.sortOrder ?? 0);
       setFormKey((k) => k + 1);
     }
-  }, [state?.ok, state?.values]);
+  }, [state?.ok, state?.ok === false ? state.values : undefined]);
 
   useEffect(() => {
     if (editableRef.current) {

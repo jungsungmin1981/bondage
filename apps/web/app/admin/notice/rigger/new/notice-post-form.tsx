@@ -79,7 +79,12 @@ export function AdminNoticeRiggerPostForm({
     null as { ok: true } | { ok: false; error: string } | null,
   );
 
-  const state = isEdit ? updateState : createState;
+  type FormState = {
+    ok: false;
+    error: string;
+    values?: AdminNoticeFormValues;
+  } | null;
+  const state = (isEdit ? updateState : createState) as FormState;
   const formAction = isEdit ? updateFormAction : createFormAction;
 
   const [coverPreview, setCoverPreview] = useState<string | null>(

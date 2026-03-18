@@ -59,6 +59,7 @@ export default async function RiggerDetailPage({
     session.user.id,
     session.user,
   );
+  if (!rigger.userId) notFound();
 
   const PENDING_TIER_LABEL = "승인 대기중";
   const tierLabel =
@@ -80,7 +81,7 @@ export default async function RiggerDetailPage({
           0,
           INITIAL_SIZE,
           session.user.id,
-          isAdmin(session) ? { visibilityAsUserId: rigger.userId } : undefined,
+          isAdmin(session) ? { visibilityAsUserId: rigger.userId ?? undefined } : undefined,
         )
       : null;
 

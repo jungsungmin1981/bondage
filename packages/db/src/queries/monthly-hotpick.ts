@@ -108,11 +108,12 @@ export type SubmissionWithUserId = SubmissionRow;
 export async function getMonthlyHotpickSubmissionCount(
   month: string,
 ): Promise<number> {
-  const [{ count }] = await db
+  const rows = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(schema.monthlyHotpickSubmissions)
     .where(eq(schema.monthlyHotpickSubmissions.month, month));
-  return count ?? 0;
+  const first = rows[0];
+  return first?.count ?? 0;
 }
 
 /** 해당 월 접수 목록 최신순 limit건. (등록·수정일 기준: COALESCE(updated_at, created_at) DESC) */
@@ -151,10 +152,11 @@ export async function getMonthlyHotpickSubmissionsPage(
     .offset(offset)
     .limit(limit);
 
-  const [{ count }] = await db
+  const countRows = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(schema.monthlyHotpickSubmissions)
     .where(eq(schema.monthlyHotpickSubmissions.month, month));
+  const totalCount = countRows[0]?.count ?? 0;
 
   return {
     items: items.map((r) => ({
@@ -164,7 +166,7 @@ export async function getMonthlyHotpickSubmissionsPage(
       imageUrl: r.imageUrl,
       createdAt: r.createdAt,
     })),
-    totalCount: count ?? 0,
+    totalCount,
   };
 }
 

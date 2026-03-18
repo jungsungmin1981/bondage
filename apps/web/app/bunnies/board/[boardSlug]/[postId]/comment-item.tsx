@@ -42,16 +42,17 @@ export function CommentItem({
     !!comment.createdAt &&
     new Date(comment.updatedAt).getTime() > new Date(comment.createdAt).getTime();
 
+  type CommentState = { ok: true } | { ok: false; error: string } | null;
   const [updateState, updateFormAction] = useActionState(
-    (prev: { ok: false; error: string } | null, formData: FormData) =>
+    (prev: CommentState, formData: FormData) =>
       updateCommentAction(comment.id, prev, formData),
-    null as { ok: false; error: string } | null,
+    null as CommentState,
   );
 
   const [replyState, replyFormAction] = useActionState(
-    (prev: { ok: false; error: string } | null, formData: FormData) =>
+    (prev: CommentState, formData: FormData) =>
       createCommentAction(postId, prev, formData),
-    null as { ok: false; error: string } | null,
+    null as CommentState,
   );
 
   useEffect(() => {

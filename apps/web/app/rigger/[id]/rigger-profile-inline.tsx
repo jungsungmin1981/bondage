@@ -404,7 +404,7 @@ export function RiggerProfileInline({
     setActivityRegion(baseline.activityRegion);
     setStyles(styleStringToArray(initialStyle));
     setBio(baseline.bio);
-    setProfileVisibility(baseline.profileVisibility);
+    setProfileVisibility(baseline.profileVisibility === "private" ? "private" : "public");
   }
 
   function exitToDetail() {
@@ -880,7 +880,7 @@ export function RiggerProfileInline({
           <ToggleGroup
             type="single"
             value={profileVisibility}
-            onValueChange={(v) => v && setProfileVisibility(v)}
+            onValueChange={(v) => (v === "public" || v === "private") && setProfileVisibility(v)}
             variant="outline"
             size="sm"
             spacing={0}

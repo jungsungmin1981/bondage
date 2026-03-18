@@ -8,7 +8,7 @@ import { Button } from "@workspace/ui/components/button";
 
 export default async function OnboardingPage() {
   const session = await auth.api.getSession({ headers: await headers() });
-  let inviteKeyType: "rigger" | "bunny" | null = null;
+  let inviteKeyType: "rigger" | "bunny" | "operator" | null = null;
   if (session?.user?.id) {
     inviteKeyType = await getInviteKeyMemberTypeByUserId(session.user.id);
     if (inviteKeyType === "rigger") redirect("/onboarding/rigger");

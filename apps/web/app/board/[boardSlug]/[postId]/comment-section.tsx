@@ -37,10 +37,11 @@ export function BoardCommentSection({
     (acc, c) => acc + 1 + c.replies.length,
     0,
   );
+  type CommentState = { ok: true } | { ok: false; error: string } | null;
   const [state, formAction] = useActionState(
-    (prev: { ok: false; error: string } | null, formData: FormData) =>
+    (prev: CommentState, formData: FormData) =>
       createSharedBoardCommentAction(postId, prev, formData),
-    null as { ok: false; error: string } | null,
+    null as CommentState,
   );
 
   return (

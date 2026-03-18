@@ -35,14 +35,16 @@ export function OperatorPermissionsForm({
   const setTab = (index: number, update: Partial<{ full: boolean; subIds: Set<string> }>) => {
     setTabState((prev) => {
       const next = [...prev];
+      const item = next[index];
       const opt = ADMIN_TAB_SUB_OPTIONS[index];
-      let { full, subIds } = next[index];
+      if (item == null || opt == null) return prev;
+      let { full, subIds } = item;
       if (update.full !== undefined) {
         full = update.full;
         subIds = full ? new Set(opt.subTabs.map((s) => s.id)) : new Set(update.subIds ?? subIds);
       }
       if (update.subIds !== undefined) subIds = update.subIds;
-      next[index] = { ...next[index], full, subIds };
+      next[index] = { ...item, full, subIds };
       return next;
     });
   };
@@ -50,6 +52,7 @@ export function OperatorPermissionsForm({
   const handleFullToggle = (index: number) => {
     const opt = ADMIN_TAB_SUB_OPTIONS[index];
     const current = tabState[index];
+    if (opt == null || current == null) return;
     const newFull = !current.full;
     setTab(index, {
       full: newFull,
@@ -59,10 +62,11 @@ export function OperatorPermissionsForm({
 
   const handleSubToggle = (tabIndex: number, subId: string) => {
     const current = tabState[tabIndex];
+    const opt = ADMIN_TAB_SUB_OPTIONS[tabIndex];
+    if (current == null || opt == null) return;
     const nextSubs = new Set(current.subIds);
     if (nextSubs.has(subId)) nextSubs.delete(subId);
     else nextSubs.add(subId);
-    const opt = ADMIN_TAB_SUB_OPTIONS[tabIndex];
     const full = opt.subTabs.length > 0 && nextSubs.size === opt.subTabs.length;
     setTab(tabIndex, { full, subIds: nextSubs });
   };
@@ -71,7 +75,9 @@ export function OperatorPermissionsForm({
     const out: string[] = [];
     for (let i = 0; i < ADMIN_TAB_SUB_OPTIONS.length; i++) {
       const opt = ADMIN_TAB_SUB_OPTIONS[i];
-      const { full, subIds } = tabState[i];
+      const item = tabState[i];
+      if (opt == null || item == null) continue;
+      const { full, subIds } = item;
       if (opt.subTabs.length === 0) {
         if (full) out.push(opt.tabId);
       } else if (full) {
@@ -104,7 +110,9 @@ export function OperatorPermissionsForm({
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="flex flex-col gap-4 rounded-xl border border-border bg-card p-4">
         {ADMIN_TAB_SUB_OPTIONS.map((opt, index) => {
-          const { full, subIds } = tabState[index];
+          const item = tabState[index];
+          if (item == null) return null;
+          const { full, subIds } = item;
           return (
             <div key={opt.tabId} className="flex flex-col gap-2">
               <label className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-lg px-3 hover:bg-muted/50">

@@ -46,7 +46,7 @@ export function PostBodyMarkdown({ body }: { body: string }) {
               <span {...props}>{children}</span>
             ),
           img: ({ src, alt, ...props }) =>
-            isAllowedUrl(src) ? (
+            typeof src === "string" && isAllowedUrl(src) ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={src}
