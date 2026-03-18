@@ -57,12 +57,11 @@ function createClient() {
     max,
     idle_timeout: 20,
     connect_timeout: 10,
+    prepare: false,
   });
 }
 
 const client = globalForDb.__postgresClient ?? createClient();
-if (process.env.NODE_ENV !== "production") {
-  globalForDb.__postgresClient = client;
-}
+globalForDb.__postgresClient = client;
 
 export const db = drizzle(client, { schema });

@@ -1,6 +1,7 @@
 import { auth } from "@workspace/auth";
 import { getApprovedRiggerProfiles, getSuspendedUserIds } from "@workspace/db";
 import { headers } from "next/headers";
+import { unstable_cache } from "next/cache";
 import { redirect } from "next/navigation";
 import {
   applyCurrentUserToRigger,
@@ -18,6 +19,22 @@ function getAdminExcludeForRiggerList() {
   };
 }
 
+const getCachedApprovedRiggers = unstable_cache(
+  (excludeEmails: string[], excludeUsernames: string[]) =>
+    getApprovedRiggerProfiles({ excludeEmails, excludeUsernames }),
+  ["approved-rigger-profiles"],
+  { revalidate: 30 },
+);
+
+const getCachedSuspendedUserIds = unstable_cache(
+  async () => {
+    const set = await getSuspendedUserIds();
+    return Array.from(set);
+  },
+  ["suspended-user-ids"],
+  { revalidate: 30 },
+);
+
 export default async function RiggerPage() {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -25,10 +42,14 @@ export default async function RiggerPage() {
   if (!session) redirect("/login");
 
   const adminExclude = getAdminExcludeForRiggerList();
-  const [approved, suspendedUserIds] = await Promise.all([
-    getApprovedRiggerProfiles(adminExclude),
-    getSuspendedUserIds(),
+  const [approved, suspendedArr] = await Promise.all([
+    getCachedApprovedRiggers(
+      adminExclude.excludeEmails,
+      adminExclude.excludeUsernames,
+    ),
+    getCachedSuspendedUserIds(),
   ]);
+  const suspendedUserIds = new Set(suspendedArr);
   // DB에서 markImageUrl, profileVisibility 등이 이미 포함되어 있으므로 별도 override 조회 불필요
   const list = approved.map(mapRiggerProfileToRigger);
   const riggersByTier = TIER_ORDER.map((tier) =>
