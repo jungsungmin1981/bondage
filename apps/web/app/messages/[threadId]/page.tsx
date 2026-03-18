@@ -1,8 +1,7 @@
 import { headers } from "next/headers";
 import { auth } from "@workspace/auth";
 import { redirect } from "next/navigation";
-import { getThreadMessages, listThreadsForUser, markThreadRead } from "@workspace/db";
-import { getRiggerOverride } from "@/lib/rigger-overrides";
+import { getThreadMessages, listThreadsForUser, markThreadRead, getRiggerProfileById } from "@workspace/db";
 import { ThreadView } from "../thread-view";
 
 export default async function ThreadPage({
@@ -31,8 +30,8 @@ export default async function ThreadPage({
   let otherMarkImageUrl: string | null = null;
   if (meta?.otherProfileId && meta.otherMemberType === "rigger") {
     try {
-      const override = await getRiggerOverride(meta.otherProfileId);
-      otherMarkImageUrl = override?.markImageUrl?.trim() || null;
+      const profile = await getRiggerProfileById(meta.otherProfileId);
+      otherMarkImageUrl = profile?.markImageUrl?.trim() || null;
     } catch {
       otherMarkImageUrl = null;
     }

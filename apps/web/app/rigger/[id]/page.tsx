@@ -5,7 +5,7 @@ import {
   getActiveSuspensionForUser,
   getApprovedClassChallengeCountsByUserId,
   getPublicClassPostCountsByLevel,
-  getRiggerPhotoPosts,
+  getRiggerPhotoPostCount,
   getRiggerProfileById,
   getUserCreatedAt,
 } from "@workspace/db";
@@ -21,7 +21,6 @@ import { RiggerTierCard } from "@/components/rigger-tier-card";
 import { OwnProfileTierColumn } from "./own-profile-tier-column";
 import { isAdmin } from "@/lib/admin";
 import { getInviteKeyMinAgeHours } from "@/lib/invite-key-config";
-import { getRiggerOverride } from "@/lib/rigger-overrides";
 import { RiggerPostsFeed } from "./rigger-posts-feed";
 import { BioPreview } from "./bio-preview";
 import { ClassSummaryBadges } from "./class-summary-badges";
@@ -45,17 +44,9 @@ export default async function RiggerDetailPage({
   if (!dbProfile) notFound();
 
   const riggerRaw = mapRiggerProfileToRigger(dbProfile);
-  const override = await getRiggerOverride(id);
-  const mergedRaw = override
-    ? {
-        ...riggerRaw,
-        ...Object.fromEntries(
-          Object.entries(override).filter(([, v]) => v != null && v !== ""),
-        ),
-      }
-    : riggerRaw;
+  // DB에서 markImageUrl, profileVisibility 등이 이미 포함되어 있으므로 별도 override 조회 불필요
   const rigger = applyCurrentUserToRigger(
-    mergedRaw,
+    riggerRaw,
     session.user.id,
     session.user,
   );
@@ -68,12 +59,19 @@ export default async function RiggerDetailPage({
       : PENDING_TIER_LABEL;
   const isOwnProfile =
     rigger.userId === session.user.id || isAdmin(session);
-  /** 비공개 프로필일 때는 작성자·관리자만 작성글(사진) 노출 */
   const canSeePosts =
     isOwnProfile || (rigger.profileVisibility ?? "public") !== "private";
 
-  const posts = await getRiggerPhotoPosts(id);
-  const hasAnyPost = posts.length > 0;
+  // 병렬로 실행 가능한 쿼리들을 한 번에 처리
+  const [postCount, classCounts, totalByLevel, suspension, createdAt] = await Promise.all([
+    getRiggerPhotoPostCount(id),
+    getApprovedClassChallengeCountsByUserId(rigger.userId),
+    getPublicClassPostCountsByLevel(),
+    rigger.userId ? getActiveSuspensionForUser(rigger.userId) : Promise.resolve(null),
+    isOwnProfile ? getUserCreatedAt(session.user.id) : Promise.resolve(null),
+  ]);
+
+  const hasAnyPost = postCount > 0;
   const initialSlice =
     hasAnyPost && canSeePosts
       ? await fetchRiggerPostsSlice(
@@ -85,11 +83,6 @@ export default async function RiggerDetailPage({
         )
       : null;
 
-  const [classCounts, totalByLevel, suspension] = await Promise.all([
-    getApprovedClassChallengeCountsByUserId(rigger.userId),
-    getPublicClassPostCountsByLevel(),
-    rigger.userId ? getActiveSuspensionForUser(rigger.userId) : Promise.resolve(null),
-  ]);
   const isSuspended = !!suspension;
   const jailOverlayUrl = isSuspended ? "/jail-card.png" : undefined;
   const suspendedUntil =
@@ -100,7 +93,6 @@ export default async function RiggerDetailPage({
   let canCreateInviteKey = false;
   let inviteKeyAllowedAt: string | null = null;
   if (isOwnProfile && !isSuspended) {
-    const createdAt = await getUserCreatedAt(session.user.id);
     const hours = getInviteKeyMinAgeHours();
     if (createdAt) {
       const allowedAt = new Date(

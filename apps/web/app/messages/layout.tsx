@@ -2,8 +2,7 @@ import type { ReactNode } from "react";
 import { headers } from "next/headers";
 import { auth } from "@workspace/auth";
 import { redirect } from "next/navigation";
-import { listThreadsForUser } from "@workspace/db";
-import { getRiggerOverride } from "@/lib/rigger-overrides";
+import { listThreadsForUser, getRiggerProfileById } from "@workspace/db";
 import { ThreadList } from "./thread-list";
 
 export default async function MessagesLayout({
@@ -17,24 +16,21 @@ export default async function MessagesLayout({
   const baseThreads = await listThreadsForUser(session.user.id);
   const threads = await Promise.all(
     baseThreads.map(async (t) => {
-      // 상대가 리거면: 리거 마크(override.markImageUrl)
       if (t.otherProfileId && t.otherMemberType === "rigger") {
         try {
-          const override = await getRiggerOverride(t.otherProfileId);
-          const mark = override?.markImageUrl?.trim() || "/default-rigger-mark.png";
+          const profile = await getRiggerProfileById(t.otherProfileId);
+          const mark = profile?.markImageUrl?.trim() || "/default-rigger-mark.png";
           return { ...t, otherMarkImageUrl: mark };
         } catch {
           return { ...t, otherMarkImageUrl: null as string | null };
         }
       }
 
-      // 상대가 버니면: 버니 카드 이미지(cardImageUrl) 또는 기본 이미지
       if (t.otherMemberType === "bunny") {
         const mark = t.otherCardImageUrl?.trim() || "/default-bunny-card.png";
         return { ...t, otherMarkImageUrl: mark };
       }
 
-      // 그 외: 마크 없음
       return { ...t, otherMarkImageUrl: null as string | null };
     }),
   );

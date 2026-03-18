@@ -5,8 +5,7 @@ import { headers } from "next/headers";
 import {
   getBunnyBoardPostById,
   getBunnyBoards,
-  getTopLevelCommentsByPostId,
-  getRepliesByCommentId,
+  getAllCommentsWithRepliesByPostId,
   getRecommendCount,
   hasUserRecommended,
 } from "@workspace/db";
@@ -60,15 +59,7 @@ export default async function BunnyBoardPostDetailPage({
   let hasRecommended = false;
   if (isFreeBoard) {
     const [topLevel, count, recommended] = await Promise.all([
-      (async () => {
-        const top = await getTopLevelCommentsByPostId(postId);
-        return Promise.all(
-          top.map(async (c) => {
-            const replies = await getRepliesByCommentId(c.id);
-            return { ...c, replies };
-          }),
-        );
-      })(),
+      getAllCommentsWithRepliesByPostId(postId),
       getRecommendCount(postId),
       hasUserRecommended(postId, session?.user.id ?? ""),
     ]);

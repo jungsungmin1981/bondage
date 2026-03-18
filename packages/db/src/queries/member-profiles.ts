@@ -20,6 +20,8 @@ export type MemberProfileRow = {
   bondageRating: string | null;
   activityRegion: string | null;
   style: string | null;
+  markImageUrl: string | null;
+  profileVisibility: string | null;
   status: string;
   rejectionNote?: string | null;
   createdAt: Date | null;
@@ -37,6 +39,8 @@ export type MemberProfileUpdate = {
   bondageRating?: string | null;
   activityRegion?: string | null;
   style?: string | null;
+  markImageUrl?: string | null;
+  profileVisibility?: string | null;
 };
 
 export type MemberProfileCreate = {
@@ -78,6 +82,8 @@ export async function getMemberProfileByUserId(
     bondageRating: row.bondageRating ?? null,
     activityRegion: row.activityRegion ?? null,
     style: row.style ?? null,
+    markImageUrl: row.markImageUrl ?? null,
+    profileVisibility: row.profileVisibility ?? null,
     status: row.status,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -172,6 +178,8 @@ export async function updateMemberProfile(
   if (data.activityRegion !== undefined)
     set.activityRegion = data.activityRegion?.trim().slice(0, 50) ?? null;
   if (data.style !== undefined) set.style = data.style?.trim() ?? null;
+  if (data.markImageUrl !== undefined) set.markImageUrl = data.markImageUrl?.trim() ?? null;
+  if (data.profileVisibility !== undefined) set.profileVisibility = data.profileVisibility ?? null;
 
   await db
     .update(schema.memberProfiles)
@@ -314,6 +322,8 @@ export async function getPendingRiggerProfiles(): Promise<
       bondageRating: schema.memberProfiles.bondageRating,
       activityRegion: schema.memberProfiles.activityRegion,
       style: schema.memberProfiles.style,
+      markImageUrl: schema.memberProfiles.markImageUrl,
+      profileVisibility: schema.memberProfiles.profileVisibility,
       status: schema.memberProfiles.status,
       createdAt: schema.memberProfiles.createdAt,
       updatedAt: schema.memberProfiles.updatedAt,
@@ -344,6 +354,8 @@ export async function getPendingRiggerProfiles(): Promise<
     bondageRating: r.bondageRating ?? null,
     activityRegion: r.activityRegion ?? null,
     style: r.style ?? null,
+    markImageUrl: r.markImageUrl ?? null,
+    profileVisibility: r.profileVisibility ?? null,
     status: r.status,
     createdAt: r.createdAt,
     updatedAt: r.updatedAt,
@@ -377,6 +389,8 @@ export async function getReRequestedRiggerProfiles(): Promise<
       bondageRating: schema.memberProfiles.bondageRating,
       activityRegion: schema.memberProfiles.activityRegion,
       style: schema.memberProfiles.style,
+      markImageUrl: schema.memberProfiles.markImageUrl,
+      profileVisibility: schema.memberProfiles.profileVisibility,
       status: schema.memberProfiles.status,
       reRequestedAt: schema.memberProfiles.reRequestedAt,
       createdAt: schema.memberProfiles.createdAt,
@@ -409,6 +423,8 @@ export async function getReRequestedRiggerProfiles(): Promise<
     bondageRating: r.bondageRating ?? null,
     activityRegion: r.activityRegion ?? null,
     style: r.style ?? null,
+    markImageUrl: r.markImageUrl ?? null,
+    profileVisibility: r.profileVisibility ?? null,
     status: r.status,
     reRequestedAt: r.reRequestedAt ?? null,
     createdAt: r.createdAt,
@@ -439,6 +455,8 @@ export async function getRejectedRiggerProfiles(): Promise<
       bondageRating: schema.memberProfiles.bondageRating,
       activityRegion: schema.memberProfiles.activityRegion,
       style: schema.memberProfiles.style,
+      markImageUrl: schema.memberProfiles.markImageUrl,
+      profileVisibility: schema.memberProfiles.profileVisibility,
       status: schema.memberProfiles.status,
       rejectionNote: schema.memberProfiles.rejectionNote,
       createdAt: schema.memberProfiles.createdAt,
@@ -469,6 +487,8 @@ export async function getRejectedRiggerProfiles(): Promise<
     bondageRating: r.bondageRating ?? null,
     activityRegion: r.activityRegion ?? null,
     style: r.style ?? null,
+    markImageUrl: r.markImageUrl ?? null,
+    profileVisibility: r.profileVisibility ?? null,
     status: r.status,
     rejectionNote: r.rejectionNote ?? null,
     createdAt: r.createdAt,
@@ -693,6 +713,8 @@ export async function getRiggerProfileById(
       bondageRating: schema.memberProfiles.bondageRating,
       activityRegion: schema.memberProfiles.activityRegion,
       style: schema.memberProfiles.style,
+      markImageUrl: schema.memberProfiles.markImageUrl,
+      profileVisibility: schema.memberProfiles.profileVisibility,
       status: schema.memberProfiles.status,
       createdAt: schema.memberProfiles.createdAt,
       updatedAt: schema.memberProfiles.updatedAt,
@@ -724,6 +746,8 @@ export async function getRiggerProfileById(
     bondageRating: r.bondageRating ?? null,
     activityRegion: r.activityRegion ?? null,
     style: r.style ?? null,
+    markImageUrl: r.markImageUrl ?? null,
+    profileVisibility: r.profileVisibility ?? null,
     status: r.status,
     createdAt: r.createdAt,
     updatedAt: r.updatedAt,
@@ -753,6 +777,8 @@ export async function getRiggerProfileByUserId(
       bondageRating: schema.memberProfiles.bondageRating,
       activityRegion: schema.memberProfiles.activityRegion,
       style: schema.memberProfiles.style,
+      markImageUrl: schema.memberProfiles.markImageUrl,
+      profileVisibility: schema.memberProfiles.profileVisibility,
       status: schema.memberProfiles.status,
       createdAt: schema.memberProfiles.createdAt,
       updatedAt: schema.memberProfiles.updatedAt,
@@ -784,6 +810,8 @@ export async function getRiggerProfileByUserId(
     bondageRating: r.bondageRating ?? null,
     activityRegion: r.activityRegion ?? null,
     style: r.style ?? null,
+    markImageUrl: r.markImageUrl ?? null,
+    profileVisibility: r.profileVisibility ?? null,
     status: r.status,
     createdAt: r.createdAt,
     updatedAt: r.updatedAt,
@@ -847,6 +875,8 @@ export async function getApprovedRiggerProfiles(
       bondageRating: schema.memberProfiles.bondageRating,
       activityRegion: schema.memberProfiles.activityRegion,
       style: schema.memberProfiles.style,
+      markImageUrl: schema.memberProfiles.markImageUrl,
+      profileVisibility: schema.memberProfiles.profileVisibility,
       status: schema.memberProfiles.status,
       createdAt: schema.memberProfiles.createdAt,
       updatedAt: schema.memberProfiles.updatedAt,
@@ -870,6 +900,8 @@ export async function getApprovedRiggerProfiles(
     bondageRating: r.bondageRating ?? null,
     activityRegion: r.activityRegion ?? null,
     style: r.style ?? null,
+    markImageUrl: r.markImageUrl ?? null,
+    profileVisibility: r.profileVisibility ?? null,
     status: r.status,
     createdAt: r.createdAt,
     updatedAt: r.updatedAt,
@@ -899,6 +931,8 @@ export async function getBunnyProfileById(
       bondageRating: schema.memberProfiles.bondageRating,
       activityRegion: schema.memberProfiles.activityRegion,
       style: schema.memberProfiles.style,
+      markImageUrl: schema.memberProfiles.markImageUrl,
+      profileVisibility: schema.memberProfiles.profileVisibility,
       status: schema.memberProfiles.status,
       createdAt: schema.memberProfiles.createdAt,
       updatedAt: schema.memberProfiles.updatedAt,
@@ -930,6 +964,8 @@ export async function getBunnyProfileById(
     bondageRating: r.bondageRating ?? null,
     activityRegion: r.activityRegion ?? null,
     style: r.style ?? null,
+    markImageUrl: r.markImageUrl ?? null,
+    profileVisibility: r.profileVisibility ?? null,
     status: r.status,
     createdAt: r.createdAt,
     updatedAt: r.updatedAt,
@@ -959,6 +995,8 @@ export async function getApprovedBunnyProfiles(): Promise<
       bondageRating: schema.memberProfiles.bondageRating,
       activityRegion: schema.memberProfiles.activityRegion,
       style: schema.memberProfiles.style,
+      markImageUrl: schema.memberProfiles.markImageUrl,
+      profileVisibility: schema.memberProfiles.profileVisibility,
       status: schema.memberProfiles.status,
       createdAt: schema.memberProfiles.createdAt,
       updatedAt: schema.memberProfiles.updatedAt,
@@ -987,6 +1025,8 @@ export async function getApprovedBunnyProfiles(): Promise<
     bondageRating: r.bondageRating ?? null,
     activityRegion: r.activityRegion ?? null,
     style: r.style ?? null,
+    markImageUrl: r.markImageUrl ?? null,
+    profileVisibility: r.profileVisibility ?? null,
     status: r.status,
     createdAt: r.createdAt,
     updatedAt: r.updatedAt,

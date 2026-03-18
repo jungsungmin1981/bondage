@@ -14,6 +14,61 @@ export type SharedBoardCommentRow = {
   updatedAt: Date | null;
 };
 
+export type SharedBoardCommentWithReplies = SharedBoardCommentRow & { replies: SharedBoardCommentRow[] };
+
+/**
+ * 해당 글의 모든 댓글(top-level + 답글)을 한 번의 쿼리로 가져와 트리로 조합.
+ * N+1 문제 해소: getSharedBoardRepliesByCommentId를 댓글마다 호출하는 대신 사용.
+ */
+export async function getAllSharedBoardCommentsWithRepliesByPostId(
+  postId: string,
+): Promise<SharedBoardCommentWithReplies[]> {
+  const rows = await db
+    .select({
+      id: schema.sharedBoardPostComments.id,
+      postId: schema.sharedBoardPostComments.postId,
+      parentId: schema.sharedBoardPostComments.parentId,
+      authorUserId: schema.sharedBoardPostComments.authorUserId,
+      body: schema.sharedBoardPostComments.body,
+      deletedAt: schema.sharedBoardPostComments.deletedAt,
+      createdAt: schema.sharedBoardPostComments.createdAt,
+      updatedAt: schema.sharedBoardPostComments.updatedAt,
+      nickname: schema.memberProfiles.nickname,
+    })
+    .from(schema.sharedBoardPostComments)
+    .leftJoin(
+      schema.memberProfiles,
+      eq(schema.sharedBoardPostComments.authorUserId, schema.memberProfiles.userId),
+    )
+    .where(eq(schema.sharedBoardPostComments.postId, postId))
+    .orderBy(asc(schema.sharedBoardPostComments.createdAt));
+
+  const all: SharedBoardCommentRow[] = rows.map((r) => ({
+    id: r.id,
+    postId: r.postId,
+    parentId: r.parentId ?? null,
+    authorUserId: r.authorUserId,
+    authorNickname: r.nickname ?? null,
+    body: r.body,
+    deletedAt: r.deletedAt ?? null,
+    createdAt: r.createdAt,
+    updatedAt: r.updatedAt ?? null,
+  }));
+
+  const replyMap = new Map<string, SharedBoardCommentRow[]>();
+  for (const c of all) {
+    if (c.parentId) {
+      const arr = replyMap.get(c.parentId) ?? [];
+      arr.push(c);
+      replyMap.set(c.parentId, arr);
+    }
+  }
+
+  return all
+    .filter((c) => c.parentId === null)
+    .map((c) => ({ ...c, replies: replyMap.get(c.id) ?? [] }));
+}
+
 export async function getSharedBoardTopLevelCommentsByPostId(
   postId: string,
 ): Promise<SharedBoardCommentRow[]> {

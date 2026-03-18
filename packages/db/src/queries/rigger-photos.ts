@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, ne, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, ne, or } from "drizzle-orm";
 import { db } from "../client/node";
 import * as schema from "../schema";
 
@@ -47,6 +47,15 @@ export function groupPhotosByPost(photos: RiggerPhotoRow[]): RiggerPhotoPost[] {
 export async function getRiggerPhotoPosts(riggerId: string): Promise<RiggerPhotoPost[]> {
   const photos = await getRiggerPhotos(riggerId);
   return groupPhotosByPost(photos);
+}
+
+/** 리거의 게시물 수만 빠르게 확인 (존재 여부 체크용) */
+export async function getRiggerPhotoPostCount(riggerId: string): Promise<number> {
+  const rows = await db
+    .selectDistinct({ postId: schema.riggerPhotos.postId })
+    .from(schema.riggerPhotos)
+    .where(eq(schema.riggerPhotos.riggerId, riggerId));
+  return rows.length;
 }
 
 /** postId 기준 해당 게시물의 사진 목록 (모달 상세용). created_at 오름차순. */

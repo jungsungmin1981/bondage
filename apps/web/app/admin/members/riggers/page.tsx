@@ -9,7 +9,6 @@ import {
 } from "@workspace/db";
 import { isAdmin } from "@/lib/admin";
 import { isOperatorAllowedPath } from "@/lib/admin-operator-permissions";
-import { getRiggerOverride } from "@/lib/rigger-overrides";
 import { RiggerApprovalsList } from "../../riggers/rigger-approvals-list";
 
 const PATH = "/admin/members/riggers";
@@ -59,26 +58,19 @@ export default async function AdminMembersRiggersPage() {
     getRejectedRiggerProfiles(),
   ]);
 
-  const items = await Promise.all(
-    pendingRows.map(async (row) => {
-      const override = await getRiggerOverride(row.id);
-      return { ...row, markImageUrl: override?.markImageUrl ?? null };
-    }),
-  );
-
-  const reRequestedItems = await Promise.all(
-    reRequestedRows.map(async (row) => {
-      const override = await getRiggerOverride(row.id);
-      return { ...row, markImageUrl: override?.markImageUrl ?? null };
-    }),
-  );
-
-  const rejectedItems = await Promise.all(
-    rejectedRows.map(async (row) => {
-      const override = await getRiggerOverride(row.id);
-      return { ...row, markImageUrl: override?.markImageUrl ?? null };
-    }),
-  );
+  // DB에서 markImageUrl이 이미 포함되어 있으므로 별도 override 조회 불필요
+  const items = pendingRows.map((row) => ({
+    ...row,
+    markImageUrl: row.markImageUrl ?? null,
+  }));
+  const reRequestedItems = reRequestedRows.map((row) => ({
+    ...row,
+    markImageUrl: row.markImageUrl ?? null,
+  }));
+  const rejectedItems = rejectedRows.map((row) => ({
+    ...row,
+    markImageUrl: row.markImageUrl ?? null,
+  }));
 
   return (
     <div className="max-w-3xl px-4 py-10">

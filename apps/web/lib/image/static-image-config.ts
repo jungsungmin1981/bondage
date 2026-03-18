@@ -22,7 +22,6 @@ export const STATIC_IMAGE_WHITELIST: string[] = [
   "approve-request-icon.png",
   "lock-private.png",
   "class-beginner-placeholder.png",
-  "star-gold.png",
   "watermark-preview-sample.jpg",
   "icons/challenge-arrow.png",
   "marks/dragon-mark.png",
@@ -58,7 +57,6 @@ export const STATIC_IMAGE_DISPLAY_WIDTH: Record<string, number> = {
   "marks/mark-whip.png": 400,
   "icons/challenge-arrow.png": 128,
   "class-beginner-placeholder.png": 400,
-  "star-gold.png": 400,
   "watermark-preview-sample.jpg": 800,
 };
 

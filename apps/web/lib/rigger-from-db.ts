@@ -27,5 +27,7 @@ export function mapRiggerProfileToRigger(p: RiggerProfileWithUser): Rigger {
     style: p.style ?? null,
     bio: p.bio ?? null,
     gender: p.gender ?? null,
+    markImageUrl: p.markImageUrl ?? null,
+    profileVisibility: (p.profileVisibility as "public" | "private" | null) ?? null,
   };
 }

@@ -6,7 +6,6 @@ import {
   applyCurrentUserToRigger,
   TIER_ORDER,
 } from "@/lib/rigger-sample";
-import { getRiggerOverride } from "@/lib/rigger-overrides";
 import { mapRiggerProfileToRigger } from "@/lib/rigger-from-db";
 import { RiggerTierSection } from "@/components/rigger-tier-section";
 
@@ -30,21 +29,10 @@ export default async function RiggerPage() {
     getApprovedRiggerProfiles(adminExclude),
     getSuspendedUserIds(),
   ]);
+  // DB에서 markImageUrl, profileVisibility 등이 이미 포함되어 있으므로 별도 override 조회 불필요
   const list = approved.map(mapRiggerProfileToRigger);
-  const listWithOverrides = await Promise.all(
-    list.map(async (r) => {
-      const override = await getRiggerOverride(r.id);
-      if (!override) return r;
-      return {
-        ...r,
-        ...Object.fromEntries(
-          Object.entries(override).filter(([, v]) => v != null && v !== ""),
-        ),
-      };
-    }),
-  );
   const riggersByTier = TIER_ORDER.map((tier) =>
-    listWithOverrides.filter((r) => r.tier === tier).map((r) =>
+    list.filter((r) => r.tier === tier).map((r) =>
       applyCurrentUserToRigger(r, session.user.id, session.user),
     ),
   );

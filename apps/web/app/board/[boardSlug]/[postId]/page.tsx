@@ -4,8 +4,7 @@ import { auth } from "@workspace/auth";
 import { headers } from "next/headers";
 import {
   getSharedBoardPostById,
-  getSharedBoardTopLevelCommentsByPostId,
-  getSharedBoardRepliesByCommentId,
+  getAllSharedBoardCommentsWithRepliesByPostId,
   getSharedBoardRecommendCount,
   hasUserRecommendedSharedBoard,
 } from "@workspace/db";
@@ -62,15 +61,7 @@ export default async function BoardPostDetailPage({
   let hasRecommended = false;
   if (hasCommentsAndRecommend) {
     const [topLevel, count, recommended] = await Promise.all([
-      (async () => {
-        const top = await getSharedBoardTopLevelCommentsByPostId(postId);
-        return Promise.all(
-          top.map(async (c) => {
-            const replies = await getSharedBoardRepliesByCommentId(c.id);
-            return { ...c, replies };
-          }),
-        );
-      })(),
+      getAllSharedBoardCommentsWithRepliesByPostId(postId),
       getSharedBoardRecommendCount(postId),
       hasUserRecommendedSharedBoard(postId, session?.user.id ?? ""),
     ]);

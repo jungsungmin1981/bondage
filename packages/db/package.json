@@ -11,6 +11,7 @@
     "db:ensure-users-member-type": "tsx scripts/ensure-users-member-type.ts",
     "db:ensure-member-profiles-detail-columns": "tsx scripts/ensure-member-profiles-detail-columns.ts",
     "db:ensure-member-profiles-gender": "tsx scripts/ensure-member-profiles-gender.ts",
+    "db:ensure-member-profiles-rigger-overrides": "tsx scripts/ensure-member-profiles-rigger-overrides.ts",
     "db:ensure-member-profiles-card-image-url": "tsx scripts/ensure-member-profiles-card-image-url.ts",
     "db:ensure-member-profiles-rejection-note": "tsx scripts/ensure-member-profiles-rejection-note.ts",
     "db:ensure-member-profiles-re-requested-at": "tsx scripts/ensure-member-profiles-re-requested-at.ts",

@@ -21,6 +21,8 @@ export const memberProfiles = pgTable(
     bondageRating: text("bondage_rating"), // 리거 전용: "Yes" | "No"
     activityRegion: text("activity_region"),
     style: text("style"), // 쉼표 구분 복수 스타일
+    markImageUrl: text("mark_image_url"), // 리거 전용: 등급카드 원형 마크 이미지 URL
+    profileVisibility: text("profile_visibility"), // 리거 전용: "public" | "private"
     status: text("status").notNull(), // "pending" | "approved" | "rejected"
     rejectionNote: text("rejection_note"), // 리거 반려 시 보낸 쪽지 내용
     reRequestedAt: timestamp("re_requested_at"), // 반려 후 재승인 요청한 시각 (null = 처음 승인 대기)
