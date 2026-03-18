@@ -10,14 +10,14 @@
   },
   "dependencies": {
     "@workspace/db": "workspace:*",
+    "@workspace/typescript-config": "workspace:*",
+    "typescript": "^5.9.3",
+    "@types/node": "^25.1.0",
     "better-auth": "^1.5.4",
     "resend": "^4.0.0"
   },
   "devDependencies": {
     "@workspace/eslint-config": "workspace:*",
-    "@workspace/typescript-config": "workspace:*",
-    "@types/node": "^25.1.0",
-    "eslint": "^9.39.2",
-    "typescript": "^5.9.3"
+    "eslint": "^9.39.2"
   }
 }
