@@ -26,7 +26,13 @@ export default async function AdminOperatorsPage() {
 
   const { adminEmails, adminUsernames } = getAdminIdentifiers();
   const adminNickname = process.env.ADMIN_NICKNAME?.trim();
-  const operators = await getOperatorUsersIncludingAdminIdentifiers(adminEmails, adminUsernames);
+  const operatorsRaw = await getOperatorUsersIncludingAdminIdentifiers(adminEmails, adminUsernames);
+
+  // 로그인한 본인을 맨 앞으로 정렬
+  const operators = [
+    ...operatorsRaw.filter((op) => op.id === session.user.id),
+    ...operatorsRaw.filter((op) => op.id !== session.user.id),
+  ];
 
   const isPrimaryAdminRow = (op: { email: string; username?: string | null }) =>
     (adminEmails.length > 0 && op.email && adminEmails.includes(op.email)) ||

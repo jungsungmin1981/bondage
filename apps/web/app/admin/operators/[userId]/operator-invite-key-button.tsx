@@ -340,31 +340,7 @@ export function OperatorInviteKeyButton() {
               )}
             </div>
           </div>
-          <details className="mt-4 border-t border-border pt-3">
-            <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
-              state 정보
-            </summary>
-            <pre className="mt-2 max-h-40 overflow-auto rounded bg-muted/50 p-2 text-[10px] font-mono text-muted-foreground">
-              {JSON.stringify(
-                {
-                  keysLoaded,
-                  keyRigger: keyRigger ? `${keyRigger.slice(0, 6)}…` : null,
-                  expiresAtRigger: expiresAtRigger
-                    ? new Date(expiresAtRigger).toISOString()
-                    : null,
-                  keyBunny: keyBunny ? `${keyBunny.slice(0, 6)}…` : null,
-                  expiresAtBunny: expiresAtBunny
-                    ? new Date(expiresAtBunny).toISOString()
-                    : null,
-                  selectedForm,
-                  generateError: generateError ?? null,
-                  now: new Date(now).toISOString(),
-                },
-                null,
-                2,
-              )}
-            </pre>
-          </details>
+
         </DialogContent>
       </Dialog>
     </>
