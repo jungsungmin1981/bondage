@@ -1,9 +1,9 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { auth } from "@workspace/auth";
-import { db, schema, eq } from "@workspace/db";
+import { db, schema, eq, getMemberProfileByUserId } from "@workspace/db";
 import { verify } from "otplib";
-import { isAdmin } from "@/lib/admin";
+import { isPrimaryAdmin } from "@/lib/admin";
 import {
   createOtpVerifiedCookieValue,
   OTP_VERIFIED_COOKIE_NAME,
@@ -19,7 +19,14 @@ export async function POST(request: Request) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!isAdmin(session)) {
+
+  // session.user.memberType은 cookieCache에서 누락될 수 있으므로 DB에서 직접 확인
+  const profile = await getMemberProfileByUserId(session.user.id);
+  const isOperatorOrAdmin =
+    isPrimaryAdmin(session) ||
+    profile?.memberType === "operator";
+
+  if (!isOperatorOrAdmin) {
     return NextResponse.json(
       { error: "운영진만 2단계 인증(OTP)을 설정할 수 있습니다." },
       { status: 403 },

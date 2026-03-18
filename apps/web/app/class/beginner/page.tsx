@@ -16,6 +16,14 @@ const getCachedBeginnerPosts = unstable_cache(
   { revalidate: 60 },
 );
 
+function getCachedChallengeCounts(postIds: string[]) {
+  return unstable_cache(
+    () => getChallengeCountsByPostIds(postIds),
+    ["class-beginner-challenge-counts"],
+    { revalidate: 30 },
+  )();
+}
+
 export default async function ClassBeginnerPage() {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -28,7 +36,7 @@ export default async function ClassBeginnerPage() {
     postIds.length > 0
       ? await Promise.all([
           getMyChallengeStatusByPostIds(session.user.id, postIds),
-          getChallengeCountsByPostIds(postIds),
+          getCachedChallengeCounts(postIds),
         ])
       : [
           new Map<string, "pending" | "approved" | "rejected">(),

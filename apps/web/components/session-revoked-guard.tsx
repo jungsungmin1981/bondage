@@ -7,9 +7,8 @@ import { authClient } from "@/lib/auth-client";
 const POLL_INTERVAL_MS = 60 * 1000;
 
 /** 로그인 상태에서 주기적으로 세션을 조회해, 다른 기기에서 로그인되어 무효화된 경우 로그인 페이지로 보냄 */
-export function SessionRevokedGuard() {
+export function SessionRevokedGuard({ isLoggedIn }: { isLoggedIn: boolean }) {
   const router = useRouter();
-  const { data: session } = authClient.useSession();
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const checkSession = useCallback(async () => {
@@ -29,7 +28,7 @@ export function SessionRevokedGuard() {
   }, [router]);
 
   useEffect(() => {
-    if (!session?.user) {
+    if (!isLoggedIn) {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
@@ -45,7 +44,7 @@ export function SessionRevokedGuard() {
         intervalRef.current = null;
       }
     };
-  }, [session?.user?.id, router, checkSession]);
+  }, [isLoggedIn, checkSession]);
 
   return null;
 }

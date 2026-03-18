@@ -11,7 +11,7 @@ import { UserMenu } from "./user-menu";
 import { MainNav } from "@/components/main-nav";
 import { headers } from "next/headers";
 import { auth } from "@workspace/auth";
-import { isAdmin, isPrimaryAdmin } from "@/lib/admin";
+import { isPrimaryAdmin } from "@/lib/admin";
 import {
   getAllPendingApprovalsCount,
   getPendingApprovalsCountForBunny,
@@ -124,18 +124,27 @@ export default async function RootLayout({
 }>) {
   const headersList = await headers();
   const session = await auth.api.getSession({ headers: headersList });
-  const isAdminUser = session ? isAdmin(session) : false;
+  // isPrimaryAdmin만 session으로 확인 (cookieCache로 memberType이 누락될 수 있으므로)
+  const isPrimaryAdminUser = session ? isPrimaryAdmin(session) : false;
 
   const pathname = headersList.get("x-pathname") ?? "";
 
-  const [memberProfile, pendingBunnyApprovalsCount, unreadCounts] =
+  const [memberProfile, unreadCounts] =
     await Promise.all([
       session ? getCachedMemberProfile(session.user.id) : Promise.resolve(null),
-      session ? getCachedPendingApprovalsCount(session.user.id, isAdminUser) : Promise.resolve(0),
       session ? getCachedUnreadCounts(session.user.id) : Promise.resolve({ messages: 0, notes: 0 }),
     ]);
   const unreadMessagesCount = unreadCounts.messages;
   const unreadNotesCount = unreadCounts.notes;
+
+  // memberProfile에서 실제 타입 판별 (session.user.memberType 대신)
+  const isAdminUser =
+    isPrimaryAdminUser ||
+    (memberProfile?.memberType === "operator" && memberProfile?.status === "approved");
+
+  const pendingBunnyApprovalsCount = session
+    ? await getCachedPendingApprovalsCount(session.user.id, isAdminUser)
+    : 0;
 
   const riggerPending =
     memberProfile?.memberType === "rigger" && memberProfile?.status !== "approved";
@@ -206,7 +215,7 @@ export default async function RootLayout({
         }}
       >
         <ThemeProvider>
-          <SessionRevokedGuard />
+          <SessionRevokedGuard isLoggedIn={!!session} />
           <div className="flex min-h-[100dvh] flex-col">
             <HeaderGuard operatorPending={operatorPending}>
               <header
