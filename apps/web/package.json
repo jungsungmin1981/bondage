@@ -8,7 +8,7 @@
     "ws:dev": "pnpm exec tsx ws-server.ts",
     "postinstall": "node scripts/ensure-postcss-link.mjs",
     "prebuild": "next telemetry disable || true",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "ws:start": "pnpm exec tsx ws-server.ts",
     "lint": "eslint",
