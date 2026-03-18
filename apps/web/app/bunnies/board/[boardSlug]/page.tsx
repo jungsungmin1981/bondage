@@ -1,7 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { auth } from "@workspace/auth";
-import { headers } from "next/headers";
 import { unstable_cache } from "next/cache";
 import {
   getBunnyBoardBySlug,
@@ -13,8 +11,7 @@ import {
 } from "@workspace/db";
 import { BunnyBoardTabs } from "./board-tabs";
 import { BunnyQnaAccordionList } from "./qna-accordion-list";
-import { Button } from "@workspace/ui/components/button";
-import { Pencil } from "lucide-react";
+import { BunnyBoardWriteButton } from "./board-write-button";
 
 const POSTS_PER_PAGE = 20;
 
@@ -54,8 +51,6 @@ export default async function BunnyBoardListPage({
 }) {
   const { boardSlug } = await params;
   const revalidate = getBoardRevalidate(boardSlug);
-
-  const session = await auth.api.getSession({ headers: await headers() });
 
   const [board, boards] = await Promise.all([
     unstable_cache(
@@ -142,14 +137,7 @@ export default async function BunnyBoardListPage({
       </div>
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
-        {boardSlug === "free" && session && (
-          <Button asChild className="min-h-[44px] shrink-0">
-            <Link href="/bunnies/board/free/new">
-              <Pencil className="mr-2 size-4" />
-              글쓰기
-            </Link>
-          </Button>
-        )}
+        <BunnyBoardWriteButton boardSlug={boardSlug} />
       </div>
 
       <p className="mb-4 text-sm text-muted-foreground">

@@ -1,7 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { auth } from "@workspace/auth";
-import { headers } from "next/headers";
 import { unstable_cache } from "next/cache";
 import {
   getSharedBoardBySlug,
@@ -12,6 +10,7 @@ import {
 } from "@workspace/db";
 import { BoardTabs } from "./board-tabs";
 import { QnaAccordionList } from "./qna-accordion-list";
+import { BoardWriteButton } from "./board-write-button";
 import {
   Pagination,
   PaginationContent,
@@ -20,8 +19,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@workspace/ui/components/pagination";
-import { Button } from "@workspace/ui/components/button";
-import { Pencil, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 
 const POSTS_PER_PAGE = 30;
 
@@ -75,8 +73,6 @@ export default async function BoardListPage({
   );
   const offset = (page - 1) * POSTS_PER_PAGE;
   const revalidate = getBoardRevalidate(boardSlug);
-
-  const session = await auth.api.getSession({ headers: await headers() });
 
   const getCachedBoard = unstable_cache(
     () => getSharedBoardBySlug(boardSlug),
@@ -157,9 +153,6 @@ export default async function BoardListPage({
   }
 
   const totalPages = Math.ceil(postCount / POSTS_PER_PAGE);
-  const canWrite =
-    !!session &&
-    (boardSlug === "free" || boardSlug === "suggestion");
 
   return (
     <div className="mx-auto min-h-[calc(100svh-3.5rem)] w-full max-w-2xl p-4 sm:p-6">
@@ -168,14 +161,7 @@ export default async function BoardListPage({
       </div>
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
-        {canWrite && (
-          <Button asChild className="min-h-[44px] shrink-0">
-            <Link href={`/board/${encodeURIComponent(boardSlug)}/new`}>
-              <Pencil className="mr-2 size-4" />
-              글쓰기
-            </Link>
-          </Button>
-        )}
+        <BoardWriteButton boardSlug={boardSlug} />
       </div>
 
       <p className="mb-4 text-sm text-muted-foreground">{postCount}개의 글</p>

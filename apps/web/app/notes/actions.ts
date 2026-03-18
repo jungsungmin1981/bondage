@@ -1,7 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { auth } from "@workspace/auth";
 import {
   deleteDirectMessage,
@@ -17,6 +17,7 @@ export async function deleteNoteAction(
   const deleted = await deleteDirectMessage(messageId, session.user.id);
   if (!deleted) return { ok: false, error: "쪽지를 찾을 수 없거나 삭제할 수 없습니다." };
 
+  revalidateTag(`unread-${session.user.id}`);
   revalidatePath("/notes");
   return { ok: true };
 }
@@ -28,5 +29,6 @@ export async function markNoteAsReadAction(
   if (!session) return;
 
   await markDirectMessageAsRead(messageId, session.user.id);
+  revalidateTag(`unread-${session.user.id}`);
   revalidatePath("/notes");
 }

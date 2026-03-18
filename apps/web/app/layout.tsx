@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import type { Metadata, Viewport } from "next";
 import { redirect } from "next/navigation";
+import { unstable_cache } from "next/cache";
 
 import "@workspace/ui/globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -21,6 +22,36 @@ import {
 import { MessageIcon } from "@/components/message-icon";
 import { SessionRevokedGuard } from "@/components/session-revoked-guard";
 import { HeaderGuard } from "./header-guard";
+
+function getCachedMemberProfile(userId: string) {
+  return unstable_cache(
+    () => getMemberProfileByUserId(userId),
+    [`member-profile-${userId}`],
+    { revalidate: 30 },
+  )();
+}
+
+function getCachedPendingApprovalsCount(userId: string, isAdminUser: boolean) {
+  return unstable_cache(
+    () => isAdminUser ? getAllPendingApprovalsCount() : getPendingApprovalsCountForBunny(userId),
+    [`pending-approvals-${isAdminUser ? "admin" : userId}`],
+    { revalidate: 15 },
+  )();
+}
+
+function getCachedUnreadCounts(userId: string) {
+  return unstable_cache(
+    async () => {
+      const [messages, notes] = await Promise.all([
+        getUnreadCountForUser(userId).catch(() => 0),
+        getUnreadDirectMessagesCountForUser(userId).catch(() => 0),
+      ]);
+      return { messages, notes };
+    },
+    [`unread-counts-${userId}`],
+    { revalidate: 10, tags: [`unread-${userId}`] },
+  )();
+}
 
 const APP_NAME = "Bondage";
 const APP_DESCRIPTION = "리거·클래스·버니 승인";
@@ -96,17 +127,14 @@ export default async function RootLayout({
 
   const pathname = headersList.get("x-pathname") ?? "";
 
-  const [memberProfile, pendingBunnyApprovalsCount, unreadMessagesCount, unreadNotesCount] =
+  const [memberProfile, pendingBunnyApprovalsCount, unreadCounts] =
     await Promise.all([
-      session ? getMemberProfileByUserId(session.user.id) : Promise.resolve(null),
-      !session
-        ? Promise.resolve(0)
-        : isAdminUser
-          ? getAllPendingApprovalsCount()
-          : getPendingApprovalsCountForBunny(session.user.id),
-      session ? getUnreadCountForUser(session.user.id).catch(() => 0) : Promise.resolve(0),
-      session ? getUnreadDirectMessagesCountForUser(session.user.id).catch(() => 0) : Promise.resolve(0),
+      session ? getCachedMemberProfile(session.user.id) : Promise.resolve(null),
+      session ? getCachedPendingApprovalsCount(session.user.id, isAdminUser) : Promise.resolve(0),
+      session ? getCachedUnreadCounts(session.user.id) : Promise.resolve({ messages: 0, notes: 0 }),
     ]);
+  const unreadMessagesCount = unreadCounts.messages;
+  const unreadNotesCount = unreadCounts.notes;
 
   const riggerPending =
     memberProfile?.memberType === "rigger" && memberProfile?.status !== "approved";
