@@ -19,6 +19,7 @@
     "clear-all": "pnpm db:clear-all-posts-and-comments && pnpm clear-s3"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.18",
     "@workspace/eslint-config": "workspace:*",
     "@workspace/typescript-config": "workspace:*",
     "prettier": "^3.8.1",
