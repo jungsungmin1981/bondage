@@ -19,15 +19,15 @@
     "clear-all": "pnpm db:clear-all-posts-and-comments && pnpm clear-s3"
   },
   "dependencies": {
-    "@tailwindcss/postcss": "^4.1.18"
+    "@tailwindcss/postcss": "^4.1.18",
+    "typescript": "5.9.3"
   },
   "devDependencies": {
     "@workspace/eslint-config": "workspace:*",
     "@workspace/typescript-config": "workspace:*",
     "prettier": "^3.8.1",
     "prettier-plugin-tailwindcss": "^0.7.2",
-    "turbo": "^2.8.8",
-    "typescript": "5.9.3"
+    "turbo": "^2.8.8"
   },
   "packageManager": "pnpm@9.0.6",
   "engines": {
