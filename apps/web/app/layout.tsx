@@ -49,7 +49,7 @@ function getCachedUnreadCounts(userId: string) {
       return { messages, notes };
     },
     [`unread-counts-${userId}`],
-    { revalidate: 10, tags: [`unread-${userId}`] },
+    { revalidate: 10 },
   )();
 }
 
@@ -105,6 +105,7 @@ function isAllowedForRiggerPending(pathname: string, profileId: string): boolean
 /** 운영진 미승인 시 허용 경로 (승인 대기 전용 페이지) */
 function isAllowedForOperatorPending(pathname: string): boolean {
   if (pathname === "/admin/pending" || pathname === "/operator/pending") return true;
+  if (pathname.startsWith("/operator/")) return true;
   if (
     pathname === "/login" ||
     pathname === "/register" ||
