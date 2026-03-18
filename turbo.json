@@ -1,6 +1,26 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "ui": "stream",
+  "globalEnv": [
+    "DATABASE_URL",
+    "BETTER_AUTH_SECRET",
+    "BETTER_AUTH_URL",
+    "BETTER_AUTH_TRUSTED_ORIGINS",
+    "ADMIN_NICKNAME",
+    "ADMIN_INVITE_KEY",
+    "ADMIN_USERNAME",
+    "ADMIN_OTP_RESET_CODE",
+    "ADMIN_EMAIL",
+    "INVITE_KEY_MIN_AGE_HOURS",
+    "S3_REGION",
+    "S3_BUCKET",
+    "S3_ACCESS_KEY_ID",
+    "S3_SECRET_ACCESS_KEY",
+    "S3_PUBLIC_BASE_URL",
+    "RESEND_FROM",
+    "RESEND_API_KEY",
+    "NODE_ENV"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
