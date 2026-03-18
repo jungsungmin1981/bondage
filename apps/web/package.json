@@ -7,7 +7,7 @@
     "dev": "next dev --turbopack",
     "ws:dev": "pnpm exec tsx ws-server.ts",
     "prebuild": "node ./node_modules/next/dist/bin/next telemetry disable",
-    "build": "node --max-old-space-size=4096 ./node_modules/next/dist/bin/next build --webpack",
+    "build": "node scripts/build-with-node-path.mjs",
     "start": "next start",
     "ws:start": "pnpm exec tsx ws-server.ts",
     "lint": "eslint",
