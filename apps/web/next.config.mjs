@@ -27,6 +27,7 @@ const nextConfig = {
   webpack: (config) => {
     config.resolve.alias = {
       ...config.resolve.alias,
+      "@": path.resolve(__dirname),
       "better-auth/react$": betterAuthReactPath,
     };
     return config;
