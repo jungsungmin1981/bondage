@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@workspace/auth";
 import { getMemberProfileByUserId } from "@workspace/db";
+import { isAdmin } from "@/lib/admin";
 
 export default async function OnboardingLayout({
   children,
@@ -13,7 +14,7 @@ export default async function OnboardingLayout({
     redirect("/login");
   }
   const profile = await getMemberProfileByUserId(session.user.id);
-  if (profile) {
+  if (profile && !isAdmin(session)) {
     redirect("/");
   }
   return (

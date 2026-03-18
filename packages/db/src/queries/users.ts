@@ -1,4 +1,4 @@
-import { eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNull, or, sql } from "drizzle-orm";
 import { db } from "../client/node";
 import * as schema from "../schema";
 
@@ -18,12 +18,12 @@ export async function getUserCreatedAt(
 }
 
 /**
- * 가입 시 사용한 인증키의 member_type(rigger|bunny) 조회.
+ * 가입 시 사용한 인증키의 member_type(rigger|bunny|operator) 조회.
  * 유저에게 invite_key_id가 없거나, 해당 키에 member_type이 없으면 null.
  */
 export async function getInviteKeyMemberTypeByUserId(
   userId: string,
-): Promise<"rigger" | "bunny" | null> {
+): Promise<"rigger" | "bunny" | "operator" | null> {
   const rows = await db
     .select({ memberType: schema.inviteKeys.memberType })
     .from(schema.users)
@@ -34,7 +34,7 @@ export async function getInviteKeyMemberTypeByUserId(
     .where(eq(schema.users.id, userId))
     .limit(1);
   const v = rows[0]?.memberType;
-  if (v === "rigger" || v === "bunny") return v;
+  if (v === "rigger" || v === "bunny" || v === "operator") return v;
   return null;
 }
 
@@ -63,7 +63,7 @@ export async function getUserByEmail(email: string): Promise<{
  */
 export async function setUserMemberType(
   userId: string,
-  memberType: "rigger" | "bunny",
+  memberType: "rigger" | "bunny" | "operator",
 ): Promise<void> {
   await db
     .update(schema.users)
@@ -81,4 +81,154 @@ export async function getUserIdListByEmails(emails: string[]): Promise<string[]>
     .from(schema.users)
     .where(inArray(schema.users.email, emails));
   return rows.map((r) => r.id).filter((id): id is string => Boolean(id));
+}
+
+export type OperatorUserRow = {
+  id: string;
+  email: string;
+  name: string | null;
+  username: string | null;
+  createdAt: Date;
+  /** member_profiles.status (pending | approved | rejected). 프로필 없으면 null */
+  status: string | null;
+  /** member_profiles.nickname */
+  nickname: string | null;
+  /** member_profiles.card_image_url */
+  cardImageUrl: string | null;
+};
+
+/**
+ * member_type이 'operator'인 사용자 목록. 가입일 최신순. 프로필 승인 상태 포함.
+ */
+export async function getOperatorUsers(): Promise<OperatorUserRow[]> {
+  const rows = await db
+    .select({
+      id: schema.users.id,
+      email: schema.users.email,
+      name: schema.users.name,
+      username: schema.users.username,
+      createdAt: schema.users.createdAt,
+      status: schema.memberProfiles.status,
+      nickname: schema.memberProfiles.nickname,
+      cardImageUrl: schema.memberProfiles.cardImageUrl,
+    })
+    .from(schema.users)
+    .leftJoin(
+      schema.memberProfiles,
+      and(
+        eq(schema.memberProfiles.userId, schema.users.id),
+        eq(schema.memberProfiles.memberType, "operator"),
+      ),
+    )
+    .where(eq(schema.users.memberType, "operator"))
+    .orderBy(desc(schema.users.createdAt));
+  return rows.map((r) => ({
+    id: r.id,
+    email: r.email,
+    name: r.name ?? null,
+    username: r.username ?? null,
+    createdAt: r.createdAt,
+    status: r.status ?? null,
+    nickname: r.nickname ?? null,
+    cardImageUrl: r.cardImageUrl ?? null,
+  }));
+}
+
+/**
+ * member_type이 'operator'인 사용자 한 명 조회. 없으면 null.
+ */
+export async function getOperatorUserById(
+  userId: string,
+): Promise<OperatorUserRow | null> {
+  const rows = await db
+    .select({
+      id: schema.users.id,
+      email: schema.users.email,
+      name: schema.users.name,
+      username: schema.users.username,
+      createdAt: schema.users.createdAt,
+      status: schema.memberProfiles.status,
+      nickname: schema.memberProfiles.nickname,
+      cardImageUrl: schema.memberProfiles.cardImageUrl,
+    })
+    .from(schema.users)
+    .leftJoin(
+      schema.memberProfiles,
+      and(
+        eq(schema.memberProfiles.userId, schema.users.id),
+        eq(schema.memberProfiles.memberType, "operator"),
+      ),
+    )
+    .where(
+      and(eq(schema.users.id, userId), eq(schema.users.memberType, "operator")),
+    )
+    .limit(1);
+  const r = rows[0];
+  if (!r) return null;
+  return {
+    id: r.id,
+    email: r.email,
+    name: r.name ?? null,
+    username: r.username ?? null,
+    createdAt: r.createdAt,
+    status: r.status ?? null,
+    nickname: r.nickname ?? null,
+    cardImageUrl: r.cardImageUrl ?? null,
+  };
+}
+
+/** 발급자가 만료·미사용인 인증키 조회. memberType별 최신 1건. */
+export async function getNonExpiredInviteKeysByCreatedBy(createdByUserId: string): Promise<{
+  rigger: { key: string; expiresAt: Date } | null;
+  bunny: { key: string; expiresAt: Date } | null;
+  operator: { key: string; expiresAt: Date } | null;
+}> {
+  const now = new Date();
+  const rows = await db
+    .select({ key: schema.inviteKeys.key, memberType: schema.inviteKeys.memberType, expiresAt: schema.inviteKeys.expiresAt })
+    .from(schema.inviteKeys)
+    .where(
+      and(
+        eq(schema.inviteKeys.createdByUserId, createdByUserId),
+        isNull(schema.inviteKeys.usedAt),
+        gt(schema.inviteKeys.expiresAt, now),
+      ),
+    )
+    .orderBy(desc(schema.inviteKeys.createdAt));
+  const rigger = rows.find((r) => r.memberType === "rigger");
+  const bunny = rows.find((r) => r.memberType === "bunny");
+  const operator = rows.find((r) => r.memberType === "operator");
+  return {
+    rigger: rigger ? { key: rigger.key, expiresAt: rigger.expiresAt } : null,
+    bunny: bunny ? { key: bunny.key, expiresAt: bunny.expiresAt } : null,
+    operator: operator ? { key: operator.key, expiresAt: operator.expiresAt } : null,
+  };
+}
+
+/** 리거/버니 상세용: created_by_user_id 또는 rigger_id로 만든 만료·미사용 인증키 (memberType별 최신 1건). */
+export async function getNonExpiredInviteKeysForRiggerBunny(userId: string): Promise<{
+  rigger: { key: string; expiresAt: Date } | null;
+  bunny: { key: string; expiresAt: Date } | null;
+}> {
+  const now = new Date();
+  const rows = await db
+    .select({ key: schema.inviteKeys.key, memberType: schema.inviteKeys.memberType, expiresAt: schema.inviteKeys.expiresAt })
+    .from(schema.inviteKeys)
+    .where(
+      and(
+        or(
+          eq(schema.inviteKeys.createdByUserId, userId),
+          eq(schema.inviteKeys.riggerId, userId),
+        ),
+        isNull(schema.inviteKeys.usedAt),
+        gt(schema.inviteKeys.expiresAt, now),
+      ),
+    )
+    .orderBy(desc(schema.inviteKeys.createdAt));
+  const rigger = rows.find((r) => r.memberType === "rigger");
+  const bunny = rows.find((r) => r.memberType === "bunny");
+  return {
+    rigger: rigger ? { key: rigger.key, expiresAt: rigger.expiresAt } : null,
+    bunny: bunny ? { key: bunny.key, expiresAt: bunny.expiresAt } : null,
+  };
 }

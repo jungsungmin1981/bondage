@@ -122,6 +122,8 @@ export function RiggerProfileInline({
   const [copiedKey, setCopiedKey] = useState<"rigger" | "bunny" | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const [requestApprovalLoading, setRequestApprovalLoading] = useState(false);
+  const [keysLoaded, setKeysLoaded] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
 
   const inviteKeyAllowedAtMs =
     inviteKeyAllowedAtProp != null
@@ -184,31 +186,73 @@ export function RiggerProfileInline({
     return Array.from(bytes, (b) => chars[b % 16]).join("");
   }
 
+  async function fetchNonExpiredKeys() {
+    setKeysLoaded(false);
+    try {
+      const res = await fetch("/api/invite-keys");
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.rigger) {
+        setGeneratedKeyRigger(data.rigger.key);
+        setExpiresAtRigger(new Date(data.rigger.expiresAt).getTime());
+      } else {
+        setGeneratedKeyRigger(null);
+        setExpiresAtRigger(null);
+      }
+      if (data.bunny) {
+        setGeneratedKeyBunny(data.bunny.key);
+        setExpiresAtBunny(new Date(data.bunny.expiresAt).getTime());
+      } else {
+        setGeneratedKeyBunny(null);
+        setExpiresAtBunny(null);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setKeysLoaded(true);
+    }
+  }
+
   function handleAuthKeyModalOpenChange(open: boolean) {
     setAuthKeyModalOpen(open);
-    if (!open) {
+    if (open) {
+      void fetchNonExpiredKeys();
+    } else {
       setSelectedAuthKeyForm(null);
       setCopiedKey(null);
-      // 인증키·만료시각은 유지해 두어서, 다시 열었을 때 남은 시간이 있으면 키 화면으로 바로 표시
+      setGenerateError(null);
+      setKeysLoaded(false);
     }
   }
 
   async function handleGenerateAuthKey(type: "rigger" | "bunny") {
+    setGenerateError(null);
     const key = generateAuthKey();
-    const expiresAt = Date.now() + AUTH_KEY_VALID_MS;
     try {
       const res = await fetch("/api/invite-keys", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key, memberType: type }),
       });
+      if (res.status === 409) {
+        const j = await res.json().catch(() => ({}));
+        setGenerateError(
+          typeof j?.error === "string" ? j.error : "이미 유효한 인증키가 있습니다. 만료 후 다시 생성해 주세요.",
+        );
+        await fetchNonExpiredKeys();
+        setGenerateError(null);
+        return;
+      }
       if (!res.ok) {
         if (res.status === 401 || res.status === 403) return;
         console.warn("invite-keys register failed", res.status);
+        return;
       }
     } catch (e) {
       console.warn("invite-keys register error", e);
+      return;
     }
+    const expiresAt = Date.now() + AUTH_KEY_VALID_MS;
     if (type === "rigger") {
       setGeneratedKeyRigger(key);
       setExpiresAtRigger(expiresAt);
@@ -494,7 +538,7 @@ export function RiggerProfileInline({
                   size="sm"
                   variant="outline"
                   className="shrink-0 min-w-[4.5rem] border-amber-500/70 text-amber-800 hover:bg-amber-50 hover:border-amber-600 hover:text-amber-900 dark:border-amber-500/60 dark:text-amber-400 dark:hover:bg-amber-950/40 dark:hover:text-amber-300"
-                  onClick={() => setAuthKeyModalOpen(true)}
+                  onClick={() => handleAuthKeyModalOpenChange(true)}
                 >
                   인증키
                 </Button>
@@ -539,6 +583,11 @@ export function RiggerProfileInline({
               <p className="text-center text-xs text-muted-foreground">
                 복사한 링크를 전달하면 회원가입 페이지에서 인증키가 자동 입력됩니다.
               </p>
+              {generateError && (
+                <p className="text-center text-xs font-medium text-destructive" role="alert">
+                  {generateError}
+                </p>
+              )}
             </DialogHeader>
             <div className="flex flex-col items-center space-y-6 pt-2">
               <div
@@ -559,7 +608,7 @@ export function RiggerProfileInline({
                   <Label className="block text-center text-sm font-medium text-foreground">
                     리거
                   </Label>
-                ) : generatedKeyRigger && expiresAtRigger ? (
+                ) : generatedKeyRigger && expiresAtRigger && now < expiresAtRigger ? (
                   (() => {
                     const remainingSeconds = Math.max(
                       0,
@@ -597,6 +646,10 @@ export function RiggerProfileInline({
                       </div>
                     );
                   })()
+                ) : generatedKeyRigger && expiresAtRigger ? (
+                  <p className="text-center text-xs font-medium text-destructive">만료됨</p>
+                ) : !keysLoaded ? (
+                  <p className="text-center text-xs text-muted-foreground">불러오는 중…</p>
                 ) : (
                   <div className="w-full">
                     <Button
@@ -631,7 +684,7 @@ export function RiggerProfileInline({
                   <Label className="block text-center text-sm font-medium text-foreground">
                     버니
                   </Label>
-                ) : generatedKeyBunny && expiresAtBunny ? (
+                ) : generatedKeyBunny && expiresAtBunny && now < expiresAtBunny ? (
                   (() => {
                     const remainingSeconds = Math.max(
                       0,
@@ -669,6 +722,10 @@ export function RiggerProfileInline({
                       </div>
                     );
                   })()
+                ) : generatedKeyBunny && expiresAtBunny ? (
+                  <p className="text-center text-xs font-medium text-destructive">만료됨</p>
+                ) : !keysLoaded ? (
+                  <p className="text-center text-xs text-muted-foreground">불러오는 중…</p>
                 ) : (
                   <div className="w-full">
                     <Button

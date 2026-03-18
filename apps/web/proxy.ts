@@ -27,8 +27,59 @@ function isAllowedForRiggerPending(pathname: string, profileId: string): boolean
   return false;
 }
 
+/** 운영진 미승인 시 허용 경로: 승인 대기 전용 페이지, 로그아웃 등 */
+function isAllowedForOperatorPending(pathname: string): boolean {
+  if (pathname === "/admin/pending" || pathname === "/operator/pending") return true;
+  if (
+    pathname === "/login" ||
+    pathname === "/register" ||
+    pathname.startsWith("/onboarding") ||
+    pathname.startsWith("/reset-password") ||
+    pathname.startsWith("/change-password")
+  )
+    return true;
+  return false;
+}
+
+/** OTP 게이트에서 스킵할 경로 (여기 있으면 requires-otp-gate 체크 안 함) */
+const OTP_SKIP_PATHS = [
+  "/operator/otp-gate",
+  "/operator/setup-otp",
+  "/operator/pending",
+  "/admin/pending",
+  "/api",
+  "/login",
+  "/register",
+  "/_next",
+  "/favicon",
+];
+
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+  const cookie = request.headers.get("cookie") ?? "";
+
+  // OTP 게이트: 승인된 운영진+TOTP인데 미검증 시 /operator/otp-gate로
+  const otpSkip = OTP_SKIP_PATHS.some(
+    (p) => pathname === p || pathname.startsWith(p + "/"),
+  );
+  if (!otpSkip) {
+    try {
+      const otpRes = await fetch(
+        new URL("/api/me/requires-otp-gate", request.url),
+        { headers: { cookie }, cache: "no-store" },
+      );
+      if (otpRes.ok) {
+        const otpData = (await otpRes.json().catch(() => ({}))) as {
+          redirect?: string | null;
+        };
+        if (otpData?.redirect) {
+          return NextResponse.redirect(new URL(otpData.redirect, request.url));
+        }
+      }
+    } catch {
+      // 실패 시 통과
+    }
+  }
 
   if (pathname.startsWith("/dashboard")) {
     const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME);
@@ -42,7 +93,6 @@ export async function proxy(request: NextRequest) {
   );
   if (skip) return nextWithPathname(request, pathname);
 
-  const cookie = request.headers.get("cookie") ?? "";
   if (!cookie.includes(SESSION_COOKIE_NAME))
     return nextWithPathname(request, pathname);
 
@@ -63,7 +113,7 @@ export async function proxy(request: NextRequest) {
         if (profileRes.ok) {
           const data = (await profileRes.json()) as {
             hasProfile?: boolean;
-            inviteKeyType?: "rigger" | "bunny";
+            inviteKeyType?: "rigger" | "bunny" | "operator";
           };
           if (data.hasProfile) return nextWithPathname(request, pathname);
           // 세션에 memberType이 없어도 인증키 타입이 있으면 해당 온보딩으로 보냄
@@ -72,6 +122,9 @@ export async function proxy(request: NextRequest) {
           }
           if (data.inviteKeyType === "bunny") {
             return NextResponse.redirect(new URL("/onboarding/bunny", request.url));
+          }
+          if (data.inviteKeyType === "operator") {
+            return NextResponse.redirect(new URL("/onboarding/operator", request.url));
           }
         }
       } catch {
@@ -91,6 +144,7 @@ export async function proxy(request: NextRequest) {
           const data = (await statusRes.json()) as {
             riggerPending?: boolean;
             profileId?: string;
+            operatorPending?: boolean;
           };
           if (
             data.riggerPending &&
@@ -99,6 +153,31 @@ export async function proxy(request: NextRequest) {
           ) {
             return NextResponse.redirect(
               new URL(`/rigger/${data.profileId}`, request.url),
+            );
+          }
+        }
+      } catch {
+        // 실패 시 레이아웃에서 처리하도록 통과
+      }
+    }
+
+    // 운영진 미승인: /admin/pending 만 허용
+    if (memberType === "operator") {
+      try {
+        const statusRes = await fetch(
+          new URL("/api/me/suspension-status", request.url),
+          { headers: { cookie } },
+        );
+        if (statusRes.ok) {
+          const data = (await statusRes.json()) as {
+            operatorPending?: boolean;
+          };
+          if (
+            data.operatorPending &&
+            !isAllowedForOperatorPending(pathname)
+          ) {
+            return NextResponse.redirect(
+              new URL("/admin/pending", request.url),
             );
           }
         }

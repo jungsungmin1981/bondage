@@ -5,6 +5,7 @@ import { db, schema } from "@workspace/db";
 import {
   getActiveSuspensionForUser,
   getMemberProfileByUserId,
+  getNonExpiredInviteKeysForRiggerBunny,
   getUserCreatedAt,
 } from "@workspace/db";
 import { getInviteKeyMinAgeHours } from "@/lib/invite-key-config";
@@ -74,6 +75,19 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
+  const existing = await getNonExpiredInviteKeysForRiggerBunny(session.user.id);
+  if (memberType === "rigger" && existing.rigger) {
+    return NextResponse.json(
+      { error: "리거 인증키가 아직 유효합니다. 만료 후 다시 생성해 주세요." },
+      { status: 409 },
+    );
+  }
+  if (memberType === "bunny" && existing.bunny) {
+    return NextResponse.json(
+      { error: "버니 인증키가 아직 유효합니다. 만료 후 다시 생성해 주세요." },
+      { status: 409 },
+    );
+  }
   const id = crypto.randomUUID();
   const expiresAt = new Date(Date.now() + INVITE_KEY_VALID_MS);
   try {
@@ -81,6 +95,7 @@ export async function POST(request: Request) {
       id,
       key,
       riggerId: session.user.id,
+      createdByUserId: session.user.id,
       memberType,
       expiresAt,
     });
@@ -91,4 +106,40 @@ export async function POST(request: Request) {
     throw e;
   }
   return NextResponse.json({ ok: true, key }, { status: 201 });
+}
+
+/**
+ * GET /api/invite-keys - 리거/버니 본인이 발급한 만료·미사용 인증키 조회 (리거/버니 각 최신 1건).
+ */
+export async function GET() {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const [suspension, profile] = await Promise.all([
+    getActiveSuspensionForUser(session.user.id),
+    getMemberProfileByUserId(session.user.id),
+  ]);
+  if (suspension) {
+    return NextResponse.json(
+      { error: "계정 사용 제한 중에는 이용할 수 없습니다." },
+      { status: 403 },
+    );
+  }
+  const allowedMemberTypes = ["rigger", "bunny"] as const;
+  if (
+    !profile?.memberType ||
+    !allowedMemberTypes.includes(profile.memberType as (typeof allowedMemberTypes)[number])
+  ) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  const data = await getNonExpiredInviteKeysForRiggerBunny(session.user.id);
+  return NextResponse.json({
+    rigger: data.rigger
+      ? { key: data.rigger.key, expiresAt: data.rigger.expiresAt.toISOString() }
+      : null,
+    bunny: data.bunny
+      ? { key: data.bunny.key, expiresAt: data.bunny.expiresAt.toISOString() }
+      : null,
+  });
 }

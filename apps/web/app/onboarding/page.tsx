@@ -13,6 +13,7 @@ export default async function OnboardingPage() {
     inviteKeyType = await getInviteKeyMemberTypeByUserId(session.user.id);
     if (inviteKeyType === "rigger") redirect("/onboarding/rigger");
     if (inviteKeyType === "bunny") redirect("/onboarding/bunny");
+    if (inviteKeyType === "operator") redirect("/onboarding/operator");
     // 인증키에 종류가 없으면(레거시) 회원 종류 선택 화면 표시
   }
 

@@ -51,6 +51,7 @@ export function MainNav({
   showBoardLink = false,
   riggerPendingRestriction = false,
   riggerProfileId,
+  operatorPendingRestriction = false,
 }: {
   pendingBunnyApprovalsCount?: number;
   unreadMessagesCount?: number;
@@ -64,6 +65,8 @@ export function MainNav({
   /** 리거 미승인 시 true. 메뉴 클릭 시 다른 페이지 진입 없이 본인 리거 페이지만 이동 */
   riggerPendingRestriction?: boolean;
   riggerProfileId?: string;
+  /** 운영진 미승인 시 true. 메뉴 클릭 시 /operator/pending 만 이동 */
+  operatorPendingRestriction?: boolean;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -74,6 +77,8 @@ export function MainNav({
     riggerPendingRestriction && riggerProfileId
       ? `/rigger/${riggerProfileId}`
       : null;
+  const onlyOperatorHref = operatorPendingRestriction ? "/operator/pending" : null;
+  const onlyHref = onlyRiggerHref ?? onlyOperatorHref;
 
   const itemsToShow = navItems.filter((item) => {
     if ("href" in item && item.href === "/bunny-approvals")
@@ -112,12 +117,12 @@ export function MainNav({
                     {item.sub.map((sub) => (
                       <Link
                         key={sub.href}
-                        href={onlyRiggerHref ?? sub.href}
+                        href={onlyHref ?? sub.href}
                         onClick={() => setOpen(false)}
                         className={cn(
                           navLinkClass,
                           "pl-8",
-                          pathname === (onlyRiggerHref ?? sub.href) &&
+                          pathname === (onlyHref ?? sub.href) &&
                             "bg-muted font-semibold",
                         )}
                       >
@@ -128,16 +133,16 @@ export function MainNav({
                 ) : (
                   <Link
                     key={item.href}
-                    href={onlyRiggerHref ?? item.href}
+                    href={onlyHref ?? item.href}
                     onClick={() => setOpen(false)}
                     aria-label={item.href === "/notes" ? "쪽지" : undefined}
                     className={cn(
                       navLinkClass,
-                      (pathname === (onlyRiggerHref ?? item.href) ||
-                        (!onlyRiggerHref &&
+                      (pathname === (onlyHref ?? item.href) ||
+                        (!onlyHref &&
                           item.href === "/notes" &&
                           pathname.startsWith("/notes")) ||
-                        (!onlyRiggerHref &&
+                        (!onlyHref &&
                           item.href === "/board" &&
                           pathname.startsWith("/board"))) &&
                         "bg-muted font-semibold",
@@ -193,9 +198,9 @@ export function MainNav({
                 {item.sub.map((sub) => (
                   <DropdownMenuItem key={sub.href} asChild>
                     <Link
-                      href={onlyRiggerHref ?? sub.href}
+                      href={onlyHref ?? sub.href}
                       className={cn(
-                        pathname === (onlyRiggerHref ?? sub.href) &&
+                        pathname === (onlyHref ?? sub.href) &&
                           "bg-muted font-medium",
                       )}
                     >
@@ -212,11 +217,11 @@ export function MainNav({
               size="sm"
               className={cn(
                 "min-h-9 font-medium",
-                (pathname === (onlyRiggerHref ?? item.href) ||
-                  (!onlyRiggerHref &&
+                (pathname === (onlyHref ?? item.href) ||
+                  (!onlyHref &&
                     item.href === "/notes" &&
                     pathname.startsWith("/notes")) ||
-                  (!onlyRiggerHref &&
+                  (!onlyHref &&
                     item.href === "/board" &&
                     pathname.startsWith("/board"))) &&
                   "bg-muted",
@@ -224,7 +229,7 @@ export function MainNav({
               asChild
             >
               <Link
-                href={onlyRiggerHref ?? item.href}
+                href={onlyHref ?? item.href}
                 aria-label={item.href === "/notes" ? "쪽지" : undefined}
               >
                 <span className="inline-flex items-center gap-2">

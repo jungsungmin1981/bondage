@@ -52,6 +52,8 @@ export function LoginForm({
   const [forgotUsernameOpen, setForgotUsernameOpen] = useState(false);
   const [emailVerificationSent, setEmailVerificationSent] = useState(false);
 
+  const sessionRevokedReason = searchParams.get("reason") ?? null;
+
   useEffect(() => {
     if (searchParams.get("emailVerificationSent") === "1") {
       setEmailVerificationSent(true);
@@ -68,7 +70,7 @@ export function LoginForm({
       {
         username: username.trim().toLowerCase(),
         password,
-        callbackURL: "/",
+        callbackURL: "/operator/otp-gate",
         rememberMe: true,
       },
       {
@@ -86,7 +88,7 @@ export function LoginForm({
           : (signInError as { message?: string }).message ?? "Login failed";
       setError((prev) => prev ?? getLoginErrorMessage(msg));
     } else {
-      window.location.href = "/";
+      window.location.href = "/operator/otp-gate";
     }
   };
 
@@ -109,6 +111,11 @@ export function LoginForm({
         {emailVerificationSent && (
           <p className="mb-4 rounded-lg border border-blue-400/40 bg-blue-500/20 px-4 py-3 text-sm text-blue-100">
             가입이 완료되었습니다. 입력하신 이메일로 인증 메일을 보냈습니다. 메일의 링크를 클릭한 뒤 로그인해 주세요.
+          </p>
+        )}
+        {sessionRevokedReason && (
+          <p className="mb-4 rounded-lg border border-amber-400/40 bg-amber-500/20 px-4 py-3 text-sm text-amber-100">
+            {sessionRevokedReason}
           </p>
         )}
         <form onSubmit={onSubmit} className="flex flex-col gap-6">

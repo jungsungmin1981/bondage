@@ -9,13 +9,17 @@ const memberTabs = [
   { label: "이용제한", href: "/admin/members/restrictions" },
 ] as const;
 
-export function AdminMemberTabs() {
+export function AdminMemberTabs({ allowedHrefs }: { allowedHrefs?: string[] }) {
   const pathname = usePathname();
+  const tabs =
+    allowedHrefs === undefined
+      ? [...memberTabs]
+      : memberTabs.filter((tab) => allowedHrefs.includes(tab.href));
 
   return (
     <div className="mb-4 border-b border-border">
       <div className="flex flex-wrap gap-2 text-sm">
-        {memberTabs.map((tab) => {
+        {tabs.map((tab) => {
           const active =
             pathname === tab.href || pathname.startsWith(tab.href + "/");
           return (

@@ -1,6 +1,9 @@
 import { and, asc, desc, eq, ilike, isNotNull, isNull, ne, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { db } from "../client/node";
 import * as schema from "../schema";
+
+const referrerProfile = alias(schema.memberProfiles, "referrer_profile");
 
 export type MemberProfileRow = {
   id: string;
@@ -245,6 +248,45 @@ export async function createRiggerProfile(
   return { ok: true, profileId: id };
 }
 
+/**
+ * 운영진 프로필 생성. status = 'pending' 로 저장 (관리자 승인 대기).
+ * 닉네임·자기소개만 필수, 나머지는 null.
+ */
+export async function createOperatorProfile(
+  userId: string,
+  data: { nickname: string; bio?: string | null; iconUrl?: string | null },
+): Promise<{ ok: true; profileId: string } | { ok: false; error: string }> {
+  const existing = await getMemberProfileByUserId(userId);
+  if (existing) {
+    return { ok: false, error: "이미 프로필이 있습니다." };
+  }
+  const nickname = data.nickname?.trim();
+  if (!nickname) {
+    return { ok: false, error: "닉네임을 입력해 주세요." };
+  }
+  if (await isNicknameTaken(nickname)) {
+    return { ok: false, error: "이미 사용 중인 닉네임입니다." };
+  }
+  const id = crypto.randomUUID();
+  await db.insert(schema.memberProfiles).values({
+    id,
+    userId,
+    memberType: "operator",
+    nickname: nickname.slice(0, 200),
+    iconUrl: data.iconUrl?.trim() ?? null,
+    bio: data.bio?.trim() ?? null,
+    gender: null,
+    division: null,
+    bunnyRecruit: null,
+    bondageRating: null,
+    activityRegion: null,
+    style: null,
+    status: "pending",
+    updatedAt: new Date(),
+  });
+  return { ok: true, profileId: id };
+}
+
 export type PendingRiggerProfileRow = MemberProfileRow & {
   email: string | null;
   userName: string | null;
@@ -458,6 +500,102 @@ export async function approveRiggerProfile(
     .update(schema.memberProfiles)
     .set({ status: "approved", updatedAt: new Date() })
     .where(eq(schema.memberProfiles.id, profileId));
+  return { ok: true };
+}
+
+export type PendingOperatorProfileRow = {
+  id: string;
+  userId: string;
+  nickname: string;
+  iconUrl: string | null;
+  bio: string | null;
+  createdAt: Date | null;
+  email: string | null;
+  userName: string | null;
+  username: string | null;
+  /** 인증키 발급자(추천인) 닉네임. 관리자 발급 키면 null */
+  referrerNickname: string | null;
+};
+
+/** 관리자용 운영진 목록용. status 포함 (pending | approved | rejected). */
+export type OperatorProfileRowForAdmin = PendingOperatorProfileRow & {
+  status: string;
+};
+
+/**
+ * 관리자용: 운영진 프로필 전체 목록 (users join). 최신순. 승인 여부 관계없이 모두 표시.
+ * 추천인(인증키 발급자) 닉네임 포함. 관리자 발급 키(rigger_id null)면 null.
+ */
+export async function getOperatorProfilesForAdmin(): Promise<
+  OperatorProfileRowForAdmin[]
+> {
+  const rows = await db
+    .select({
+      id: schema.memberProfiles.id,
+      userId: schema.memberProfiles.userId,
+      nickname: schema.memberProfiles.nickname,
+      iconUrl: schema.memberProfiles.iconUrl,
+      bio: schema.memberProfiles.bio,
+      createdAt: schema.memberProfiles.createdAt,
+      status: schema.memberProfiles.status,
+      email: schema.users.email,
+      userName: schema.users.name,
+      username: schema.users.username,
+      referrerNickname: referrerProfile.nickname,
+    })
+    .from(schema.memberProfiles)
+    .innerJoin(schema.users, eq(schema.memberProfiles.userId, schema.users.id))
+    .leftJoin(schema.inviteKeys, eq(schema.users.inviteKeyId, schema.inviteKeys.id))
+    .leftJoin(
+      referrerProfile,
+      eq(referrerProfile.userId, schema.inviteKeys.riggerId),
+    )
+    .where(eq(schema.memberProfiles.memberType, "operator"))
+    .orderBy(desc(schema.memberProfiles.createdAt));
+  return rows.map((r) => ({
+    id: r.id,
+    userId: r.userId,
+    nickname: r.nickname,
+    iconUrl: r.iconUrl ?? null,
+    bio: r.bio ?? null,
+    createdAt: r.createdAt,
+    status: r.status,
+    email: r.email ?? null,
+    userName: r.userName ?? null,
+    username: r.username ?? null,
+    referrerNickname: r.referrerNickname ?? null,
+  }));
+}
+
+/**
+ * 운영진 프로필 승인 (관리자 전용). id는 member_profiles.id.
+ * 승인 시 해당 운영진의 모든 세션을 삭제하여 자동 로그아웃시킨다.
+ */
+export async function approveOperatorProfile(
+  profileId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const rows = await db
+    .select({
+      id: schema.memberProfiles.id,
+      userId: schema.memberProfiles.userId,
+    })
+    .from(schema.memberProfiles)
+    .where(
+      and(
+        eq(schema.memberProfiles.id, profileId),
+        eq(schema.memberProfiles.memberType, "operator"),
+      ),
+    )
+    .limit(1);
+  if (!rows[0]) {
+    return { ok: false, error: "해당 운영진 프로필을 찾을 수 없습니다." };
+  }
+  const { userId } = rows[0];
+  await db
+    .update(schema.memberProfiles)
+    .set({ status: "approved", updatedAt: new Date() })
+    .where(eq(schema.memberProfiles.id, profileId));
+  await db.delete(schema.sessions).where(eq(schema.sessions.userId, userId));
   return { ok: true };
 }
 

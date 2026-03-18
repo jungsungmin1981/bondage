@@ -24,4 +24,6 @@ export * from "./bunny-photo";
 export * from "./invite-key";
 export * from "./user-suspension";
 export * from "./monthly-hotpick";
+export * from "./user-totp";
+export * from "./operator-admin-tabs";
 

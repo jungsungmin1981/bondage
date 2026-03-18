@@ -43,6 +43,8 @@ export function UserMenu() {
             setProfileLink(`/rigger/${encodeURIComponent(data.profileId)}`);
           } else if (data.memberType === "bunny" && data.profileId) {
             setProfileLink(`/bunnies/${encodeURIComponent(data.profileId)}`);
+          } else if (data.memberType === "operator" && session?.user?.id) {
+            setProfileLink(`/admin/operators/${encodeURIComponent(session.user.id)}`);
           } else if (data.hasProfile) {
             setProfileLink("/profile/edit");
           } else {

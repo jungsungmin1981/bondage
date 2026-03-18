@@ -1,4 +1,4 @@
-import { db, schema, eq, and, gt, isNull } from "@workspace/db";
+import { db, schema, eq, and, gt, isNull, ne } from "@workspace/db";
 import { betterAuth } from "better-auth";
 import { createAuthMiddleware, APIError } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -200,6 +200,21 @@ export const auth = betterAuth({
       };
     }),
     after: createAuthMiddleware(async (ctx) => {
+      // 다른 곳에서 로그인 시 기존 세션 무효화: 새 세션이 생성된 경우 해당 유저의 다른 세션만 삭제
+      const newSession = ctx.context?.newSession as
+        | { user?: { id?: string }; session?: { id?: string } }
+        | undefined;
+      if (newSession?.user?.id && newSession?.session?.id) {
+        await db
+          .delete(schema.sessions)
+          .where(
+            and(
+              eq(schema.sessions.userId, newSession.user.id),
+              ne(schema.sessions.id, newSession.session.id),
+            ),
+          );
+      }
+
       if (!ctx.path.includes("sign-up/email")) return;
       const c = ctx.context as Record<string, unknown> | undefined;
       const body = (ctx.body ?? c?.body) as Record<string, unknown> | undefined;
@@ -232,7 +247,9 @@ export const auth = betterAuth({
           .where(eq(schema.inviteKeys.id, inviteKeyId))
           .limit(1);
         const memberType =
-          keyRow?.memberType === "rigger" || keyRow?.memberType === "bunny"
+          keyRow?.memberType === "rigger" ||
+          keyRow?.memberType === "bunny" ||
+          keyRow?.memberType === "operator"
             ? keyRow.memberType
             : undefined;
         await db

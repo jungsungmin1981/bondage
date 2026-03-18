@@ -10,13 +10,17 @@ const classTabs = [
   { label: "고급", href: "/admin/class/advanced" },
 ] as const;
 
-export function AdminClassTabs() {
+export function AdminClassTabs({ allowedHrefs }: { allowedHrefs?: string[] }) {
   const pathname = usePathname();
+  const tabs =
+    allowedHrefs === undefined
+      ? [...classTabs]
+      : classTabs.filter((tab) => allowedHrefs.includes(tab.href));
 
   return (
     <div className="mb-4 border-b border-border">
       <div className="flex flex-wrap gap-2 text-sm">
-        {classTabs.map((tab) => {
+        {tabs.map((tab) => {
           const active =
             pathname === tab.href || pathname.startsWith(tab.href + "/");
           return (

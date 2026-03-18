@@ -23,6 +23,7 @@ export default async function MainPage() {
     const inviteKeyType = await getInviteKeyMemberTypeByUserId(session.user.id);
     if (inviteKeyType === "rigger") redirect("/onboarding/rigger");
     if (inviteKeyType === "bunny") redirect("/onboarding/bunny");
+    if (inviteKeyType === "operator") redirect("/onboarding/operator");
     redirect("/onboarding");
   }
 

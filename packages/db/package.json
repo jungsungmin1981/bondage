@@ -43,9 +43,13 @@
     "db:verify-admin-email": "tsx scripts/verify-admin-email.ts",
     "db:verify-all-users-email": "tsx scripts/verify-all-users-email.ts",
     "db:delete-user": "tsx scripts/delete-user-by-username.ts",
+    "db:set-operator-pending": "tsx scripts/set-operator-pending-by-username.ts",
     "db:delete-users-created-today": "tsx scripts/delete-users-created-today.ts",
     "db:normalize-usernames-lowercase": "tsx scripts/normalize-usernames-to-lowercase.ts",
     "db:cleanup-expired-invite-keys": "tsx scripts/cleanup-expired-invite-keys.ts",
+    "db:delete-unused-invite-keys": "tsx scripts/delete-unused-invite-keys.ts",
+    "db:ensure-user-totp": "tsx scripts/ensure-user-totp.ts",
+    "db:ensure-operator-admin-tabs": "tsx scripts/ensure-operator-admin-tabs.ts",
     "db:delete-admin-hotpick-votes": "tsx scripts/delete-admin-hotpick-votes.ts"
   },
   "dependencies": {

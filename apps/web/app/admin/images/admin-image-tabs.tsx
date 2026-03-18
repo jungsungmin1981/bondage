@@ -16,13 +16,17 @@ const imageTabs = [
   { label: "기부", href: "/admin/images/donation" },
 ] as const;
 
-export function AdminImageTabs() {
+export function AdminImageTabs({ allowedHrefs }: { allowedHrefs?: string[] }) {
   const pathname = usePathname();
+  const tabs =
+    allowedHrefs === undefined
+      ? [...imageTabs]
+      : imageTabs.filter((tab) => allowedHrefs.includes(tab.href));
 
   return (
     <div className="mb-4 border-b border-border">
       <div className="flex flex-wrap gap-2 text-sm">
-        {imageTabs.map((tab) => {
+        {tabs.map((tab) => {
           const active =
             pathname === tab.href || pathname.startsWith(tab.href + "/");
           return (

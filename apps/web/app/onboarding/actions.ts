@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@workspace/auth";
 import {
   createBunnyProfile,
+  createOperatorProfile,
   createRiggerProfile,
   setUserMemberType,
 } from "@workspace/db";
@@ -95,4 +96,30 @@ export async function submitRiggerProfile(
   await setUserMemberType(session.user.id, "rigger");
   revalidatePath("/", "layout");
   redirect(`/rigger/${result.profileId}`);
+}
+
+export type OperatorFormValues = { nickname: string; bio: string | null };
+
+export async function submitOperatorProfile(
+  _prev: unknown,
+  formData: FormData,
+): Promise<
+  | { ok: true }
+  | { ok: false; error: string; values?: OperatorFormValues }
+> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) {
+    return { ok: false, error: "로그인이 필요합니다." };
+  }
+  const nickname = (formData.get("nickname") as string | null)?.trim() ?? "";
+  const bio = (formData.get("bio") as string | null)?.trim() || null;
+  if (!nickname)
+    return { ok: false, error: "닉네임을 입력해 주세요.", values: { nickname, bio } };
+  if (!bio)
+    return { ok: false, error: "자기소개를 입력해 주세요.", values: { nickname, bio } };
+  const result = await createOperatorProfile(session.user.id, { nickname, bio });
+  if (!result.ok) return result;
+  await setUserMemberType(session.user.id, "operator");
+  revalidatePath("/", "layout");
+  redirect("/admin/pending");
 }

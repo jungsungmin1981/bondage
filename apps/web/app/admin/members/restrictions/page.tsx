@@ -1,14 +1,34 @@
 import { headers } from "next/headers";
 import { auth } from "@workspace/auth";
 import { redirect } from "next/navigation";
-import { getActiveSuspensionsWithProfile } from "@workspace/db";
+import { getActiveSuspensionsWithProfile, getMemberProfileByUserId, getOperatorAllowedTabIds } from "@workspace/db";
 import { isAdmin } from "@/lib/admin";
+import { isOperatorAllowedPath } from "@/lib/admin-operator-permissions";
 import { RestrictionsForm } from "./restrictions-form";
+
+const PATH = "/admin/members/restrictions";
 
 export default async function AdminMembersRestrictionsPage() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect("/login");
-  if (!isAdmin(session)) redirect("/");
+
+  if (isAdmin(session)) {
+    // 관리자: 통과
+  } else {
+    const profile = await getMemberProfileByUserId(session.user.id);
+    const isApprovedOperator =
+      profile?.memberType === "operator" && profile?.status === "approved";
+    const pathname = (await headers()).get("x-pathname") ?? PATH;
+    const allowedIds = isApprovedOperator
+      ? await getOperatorAllowedTabIds(session.user.id)
+      : [];
+    if (
+      !isApprovedOperator ||
+      !isOperatorAllowedPath(allowedIds, pathname)
+    ) {
+      redirect("/");
+    }
+  }
 
   const initialSuspensionList = await getActiveSuspensionsWithProfile(100);
 

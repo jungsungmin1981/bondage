@@ -12,10 +12,27 @@ import {
   getBunnyProfileById,
   insertDirectMessage,
   DIRECT_MESSAGE_SOURCE,
+  getMemberProfileByUserId,
+  getOperatorAllowedTabIds,
 } from "@workspace/db";
 import { isAdmin } from "@/lib/admin";
+import { isOperatorAllowedPath } from "@/lib/admin-operator-permissions";
 import { mapRiggerProfileToRigger } from "@/lib/rigger-from-db";
 import type { Rigger } from "@/lib/rigger-sample";
+
+const RESTRICTIONS_PATH = "/admin/members/restrictions";
+
+async function canAccessRestrictions(): Promise<boolean> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) return false;
+  if (isAdmin(session)) return true;
+  const profile = await getMemberProfileByUserId(session.user.id);
+  const isApprovedOperator =
+    profile?.memberType === "operator" && profile?.status === "approved";
+  if (!isApprovedOperator) return false;
+  const allowedIds = await getOperatorAllowedTabIds(session.user.id);
+  return isOperatorAllowedPath(allowedIds, RESTRICTIONS_PATH);
+}
 
 export type MemberSearchItem = {
   id: string;
@@ -30,8 +47,7 @@ export async function searchMembersByNicknameAction(
   | { ok: true; items: MemberSearchItem[] }
   | { ok: false; error: string }
 > {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!isAdmin(session)) {
+  if (!(await canAccessRestrictions())) {
     return { ok: false, error: "관리자만 검색할 수 있습니다." };
   }
   const items = await searchMemberProfilesByNickname(query);
@@ -44,7 +60,8 @@ export async function applySuspensionAction(
   reason?: string | null,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!isAdmin(session)) {
+  if (!session) return { ok: false, error: "로그인이 필요합니다." };
+  if (!(await canAccessRestrictions())) {
     return { ok: false, error: "관리자만 이용제한을 부여할 수 있습니다." };
   }
   const validDurations = [1, 3, 5, 10, 15, 30];
@@ -107,10 +124,11 @@ export async function applySuspensionAction(
 export async function liftSuspensionAction(
   userId: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!isAdmin(session)) {
+  if (!(await canAccessRestrictions())) {
     return { ok: false, error: "관리자만 정지 해제할 수 있습니다." };
   }
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) return { ok: false, error: "로그인이 필요합니다." };
   const result = await liftSuspension(userId);
   if (result.ok) {
     revalidatePath("/admin/members/restrictions");
@@ -129,10 +147,11 @@ export async function getMemberCardForRestrictionAction(
   | { ok: true; card: MemberCardForRestriction }
   | { ok: false; error: string }
 > {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!isAdmin(session)) {
+  if (!(await canAccessRestrictions())) {
     return { ok: false, error: "관리자만 조회할 수 있습니다." };
   }
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) return { ok: false, error: "로그인이 필요합니다." };
   if (memberType === "rigger") {
     const profile = await getRiggerProfileById(profileId);
     if (!profile) {

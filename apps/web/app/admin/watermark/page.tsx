@@ -1,9 +1,12 @@
 import { auth } from "@workspace/auth";
+import { getMemberProfileByUserId, getOperatorAllowedTabIds } from "@workspace/db";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { AdminImageTabs } from "@/app/admin/images/admin-image-tabs";
 import { getWatermarkConfig } from "@/lib/watermark-config";
 import { WatermarkForm } from "@/app/watermark/watermark-form";
+import { isAdmin } from "@/lib/admin";
+import { getAllowedSubHrefsForTab } from "@/lib/admin-operator-permissions";
 
 export default async function AdminWatermarkPage() {
   const session = await auth.api.getSession({
@@ -11,11 +14,25 @@ export default async function AdminWatermarkPage() {
   });
   if (!session) redirect("/login");
 
+  const isAdminUser = isAdmin(session);
+  const memberProfile = await getMemberProfileByUserId(session.user.id);
+  const isApprovedOperator =
+    memberProfile?.memberType === "operator" && memberProfile?.status === "approved";
+  const operatorOnly = !isAdminUser && isApprovedOperator;
+
+  const allowedHrefs =
+    operatorOnly
+      ? getAllowedSubHrefsForTab(
+          await getOperatorAllowedTabIds(session.user.id),
+          "images",
+        )
+      : undefined;
+
   const initialConfig = await getWatermarkConfig();
 
   return (
     <div className="space-y-4">
-      <AdminImageTabs />
+      <AdminImageTabs allowedHrefs={allowedHrefs} />
       <div className="min-h-[calc(100svh-3.5rem)] p-4 sm:p-0">
         <h2 className="text-lg font-semibold sm:text-xl">워터마크</h2>
       <p className="mt-1 text-sm text-muted-foreground">

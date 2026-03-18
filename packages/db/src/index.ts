@@ -1,4 +1,4 @@
-export { eq, and, gt, isNull } from "drizzle-orm";
+export { eq, and, gt, isNull, ne } from "drizzle-orm";
 export * from "./client/node";
 export * as schema from "./schema";
 export * from "./direct-message-source";
@@ -19,4 +19,5 @@ export * from "./queries/user-suspensions";
 export * from "./queries/monthly-hotpick";
 export * from "./queries/shared-board";
 export * from "./queries/shared-board-post-comment";
+export * from "./queries/operator-admin-tabs";
 

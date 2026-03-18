@@ -20,6 +20,8 @@ import {
 } from "@workspace/db";
 import { MessageIcon } from "@/components/message-icon";
 import { SuspensionGuard } from "@/components/suspension-guard";
+import { SessionRevokedGuard } from "@/components/session-revoked-guard";
+import { HeaderGuard } from "./header-guard";
 
 const APP_NAME = "Bondage";
 const APP_DESCRIPTION = "리거·클래스·버니 승인";
@@ -70,6 +72,20 @@ function isAllowedForRiggerPending(pathname: string, profileId: string): boolean
   return false;
 }
 
+/** 운영진 미승인 시 허용 경로 (승인 대기 전용 페이지) */
+function isAllowedForOperatorPending(pathname: string): boolean {
+  if (pathname === "/admin/pending" || pathname === "/operator/pending") return true;
+  if (
+    pathname === "/login" ||
+    pathname === "/register" ||
+    pathname.startsWith("/onboarding") ||
+    pathname.startsWith("/reset-password") ||
+    pathname.startsWith("/change-password")
+  )
+    return true;
+  return false;
+}
+
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -85,9 +101,14 @@ export default async function RootLayout({
   const pathname = headersList.get("x-pathname") ?? "";
   const riggerPending =
     memberProfile?.memberType === "rigger" && memberProfile?.status !== "approved";
+  const operatorPending =
+    memberProfile?.memberType === "operator" && memberProfile?.status !== "approved";
   const riggerRedirectTarget =
     riggerPending && memberProfile?.id ? `/rigger/${memberProfile.id}` : null;
-  // x-pathname이 없거나 이미 허용/목적지일 때는 리다이렉트 안 함 → /rigger, /rigger/:id 등 무한루프 방지
+  const operatorRedirectTarget = operatorPending ? "/admin/pending" : null;
+  const isApprovedOperator =
+    memberProfile?.memberType === "operator" && memberProfile?.status === "approved";
+  // x-pathname이 없거나 이미 허용/목적지일 때는 리다이렉트 안 함
   if (
     riggerRedirectTarget &&
     pathname !== "" &&
@@ -95,6 +116,14 @@ export default async function RootLayout({
     !isAllowedForRiggerPending(pathname, memberProfile!.id)
   ) {
     redirect(riggerRedirectTarget);
+  }
+  if (
+    operatorRedirectTarget &&
+    pathname !== "" &&
+    pathname !== operatorRedirectTarget &&
+    !isAllowedForOperatorPending(pathname)
+  ) {
+    redirect(operatorRedirectTarget);
   }
 
   const showApprovalRequestLink =
@@ -129,57 +158,73 @@ export default async function RootLayout({
         }}
       >
         <ThemeProvider>
+          <SessionRevokedGuard />
           <SuspensionGuard>
           <div className="flex min-h-[100dvh] flex-col">
-            <header
-              className="flex items-center justify-between gap-2 border-b px-3 py-2 sm:gap-4 sm:px-6 sm:py-3"
-              style={{ paddingTop: "calc(0.5rem + env(safe-area-inset-top))" }}
-            >
-              <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-                <Link
-                  href={
-                    riggerPending && memberProfile?.id
-                      ? `/rigger/${memberProfile.id}`
-                      : "/"
-                  }
-                  className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center text-sm font-medium sm:min-h-0 sm:min-w-0"
-                >
-                  Bondage
-                </Link>
-                <MainNav
-                  pendingBunnyApprovalsCount={pendingBunnyApprovalsCount}
-                  unreadMessagesCount={unreadMessagesCount}
-                  unreadNotesCount={unreadNotesCount}
-                  showApprovalRequestLink={showApprovalRequestLink}
-                  showBunnyBoardLink={showBunnyBoardLink}
-                  showBoardLink={!!session}
-                  riggerPendingRestriction={riggerPending && !!memberProfile?.id}
-                  riggerProfileId={memberProfile?.id ?? undefined}
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                {session && isAdminUser && (
+            <HeaderGuard operatorPending={operatorPending}>
+              <header
+                className="flex items-center justify-between gap-2 border-b px-3 py-2 sm:gap-4 sm:px-6 sm:py-3"
+                style={{ paddingTop: "calc(0.5rem + env(safe-area-inset-top))" }}
+              >
+                <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
                   <Link
-                    href="/admin"
-                    className="inline-flex min-h-[44px] items-center justify-center rounded-lg border bg-muted/30 px-3 text-xs font-semibold shadow-sm shadow-black/5 transition hover:bg-muted/60 sm:text-sm"
+                    href={
+                      operatorPending
+                        ? "/admin/pending"
+                        : riggerPending && memberProfile?.id
+                          ? `/rigger/${memberProfile.id}`
+                          : "/"
+                    }
+                    className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center text-sm font-medium sm:min-h-0 sm:min-w-0"
                   >
-                    관리자
+                    Bondage
                   </Link>
-                )}
-                <Link
-                  href={
-                    riggerPending && memberProfile?.id
-                      ? `/rigger/${memberProfile.id}`
-                      : "/messages"
-                  }
-                  className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border bg-muted/30 px-2 shadow-sm shadow-black/5 transition hover:bg-muted/60"
-                  aria-label="채팅"
-                >
-                  <MessageIcon hasUnread={unreadMessagesCount > 0} />
-                </Link>
-                <UserMenu />
-              </div>
-            </header>
+                  <MainNav
+                    pendingBunnyApprovalsCount={pendingBunnyApprovalsCount}
+                    unreadMessagesCount={unreadMessagesCount}
+                    unreadNotesCount={unreadNotesCount}
+                    showApprovalRequestLink={showApprovalRequestLink}
+                    showBunnyBoardLink={showBunnyBoardLink}
+                    showBoardLink={!!session}
+                    riggerPendingRestriction={riggerPending && !!memberProfile?.id}
+                    riggerProfileId={memberProfile?.id ?? undefined}
+                    operatorPendingRestriction={operatorPending}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  {session && isApprovedOperator && (
+                    <Link
+                      href="/admin"
+                      className="inline-flex min-h-[44px] items-center justify-center rounded-lg border bg-muted/30 px-3 text-xs font-semibold shadow-sm shadow-black/5 transition hover:bg-muted/60 sm:text-sm"
+                    >
+                      운영진
+                    </Link>
+                  )}
+                  {session && isAdminUser && (
+                    <Link
+                      href="/admin"
+                      className="inline-flex min-h-[44px] items-center justify-center rounded-lg border bg-muted/30 px-3 text-xs font-semibold shadow-sm shadow-black/5 transition hover:bg-muted/60 sm:text-sm"
+                    >
+                      관리자
+                    </Link>
+                  )}
+                  <Link
+                    href={
+                      operatorPending
+                        ? "/admin/pending"
+                        : riggerPending && memberProfile?.id
+                          ? `/rigger/${memberProfile.id}`
+                          : "/messages"
+                    }
+                    className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border bg-muted/30 px-2 shadow-sm shadow-black/5 transition hover:bg-muted/60"
+                    aria-label="채팅"
+                  >
+                    <MessageIcon hasUnread={unreadMessagesCount > 0} />
+                  </Link>
+                  <UserMenu />
+                </div>
+              </header>
+            </HeaderGuard>
             <main className="flex min-h-0 flex-1 flex-col overflow-x-hidden px-3 pb-[env(safe-area-inset-bottom)] sm:px-6">
               {children}
             </main>

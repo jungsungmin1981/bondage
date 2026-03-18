@@ -1,6 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
+import { revalidatePath } from "next/cache";
 import { auth } from "@workspace/auth";
 import fs from "fs/promises";
 import path from "path";
@@ -35,6 +36,8 @@ export async function uploadMainBackgroundImage(
     const buffer = Buffer.from(await file.arrayBuffer());
     const resized = await resizeCardToPng(buffer);
     await fs.writeFile(filePath, resized);
+    revalidatePath("/");
+    revalidatePath("/admin/images/main-background");
     return { ok: true, url: "/main-background.png" };
   } catch (e) {
     return {

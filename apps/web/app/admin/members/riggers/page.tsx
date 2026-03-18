@@ -4,10 +4,15 @@ import {
   getPendingRiggerProfiles,
   getReRequestedRiggerProfiles,
   getRejectedRiggerProfiles,
+  getMemberProfileByUserId,
+  getOperatorAllowedTabIds,
 } from "@workspace/db";
 import { isAdmin } from "@/lib/admin";
+import { isOperatorAllowedPath } from "@/lib/admin-operator-permissions";
 import { getRiggerOverride } from "@/lib/rigger-overrides";
 import { RiggerApprovalsList } from "../../riggers/rigger-approvals-list";
+
+const PATH = "/admin/members/riggers";
 
 export default async function AdminMembersRiggersPage() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -23,15 +28,29 @@ export default async function AdminMembersRiggersPage() {
     );
   }
 
-  if (!isAdmin(session)) {
-    return (
-      <div className="max-w-2xl px-4 py-10">
-        <h1 className="text-lg font-semibold">리거 승인</h1>
-        <p className="mt-4 text-sm text-muted-foreground">
-          관리자만 접근할 수 있습니다.
-        </p>
-      </div>
-    );
+  if (isAdmin(session)) {
+    // 관리자: 통과
+  } else {
+    const profile = await getMemberProfileByUserId(session.user.id);
+    const isApprovedOperator =
+      profile?.memberType === "operator" && profile?.status === "approved";
+    const pathname = (await headers()).get("x-pathname") ?? PATH;
+    const allowedIds = isApprovedOperator
+      ? await getOperatorAllowedTabIds(session.user.id)
+      : [];
+    if (
+      !isApprovedOperator ||
+      !isOperatorAllowedPath(allowedIds, pathname)
+    ) {
+      return (
+        <div className="max-w-2xl px-4 py-10">
+          <h1 className="text-lg font-semibold">리거 승인</h1>
+          <p className="mt-4 text-sm text-muted-foreground">
+            관리자만 접근할 수 있습니다.
+          </p>
+        </div>
+      );
+    }
   }
 
   const [pendingRows, reRequestedRows, rejectedRows] = await Promise.all([
