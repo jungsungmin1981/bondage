@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@workspace/auth";
 import { headers } from "next/headers";
+import { unstable_cache } from "next/cache";
 import {
   getSharedBoardBySlug,
   getSharedBoardPosts,
@@ -23,6 +24,12 @@ import { Button } from "@workspace/ui/components/button";
 import { Pencil, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 
 const POSTS_PER_PAGE = 30;
+
+// 게시판 슬러그별 캐시 TTL
+function getBoardRevalidate(slug: string): number {
+  if (slug === "notice" || slug === "qna" || slug === "review") return 120;
+  return 30;
+}
 
 function formatDate(d: Date | null): string {
   if (!d) return "-";
@@ -67,10 +74,16 @@ export default async function BoardListPage({
     parseInt(resolvedSearchParams?.page ?? "1", 10) || 1,
   );
   const offset = (page - 1) * POSTS_PER_PAGE;
+  const revalidate = getBoardRevalidate(boardSlug);
 
   const session = await auth.api.getSession({ headers: await headers() });
-  const board = await getSharedBoardBySlug(boardSlug);
 
+  const getCachedBoard = unstable_cache(
+    () => getSharedBoardBySlug(boardSlug),
+    [`shared-board-slug-${boardSlug}`],
+    { revalidate: 300 },
+  );
+  const board = await getCachedBoard();
   if (!board) notFound();
 
   let posts: Awaited<ReturnType<typeof getSharedBoardPosts>>;
@@ -82,25 +95,38 @@ export default async function BoardListPage({
 
   const hasCommentsAndRecommend =
     boardSlug === "free" || boardSlug === "suggestion" || boardSlug === "qna";
+
   if (boardSlug === "qna") {
+    const boardId = board.id;
     const [postsWithBodies, count] = await Promise.all([
-      getSharedBoardPostsWithBodies(board.id, POSTS_PER_PAGE, offset, {
-        onlyPublished: true,
-      }),
-      getSharedBoardPostCount(board.id, { onlyPublished: true }),
+      unstable_cache(
+        () => getSharedBoardPostsWithBodies(boardId, POSTS_PER_PAGE, offset, { onlyPublished: true }),
+        [`shared-board-qna-posts-${boardSlug}-p${page}`],
+        { revalidate },
+      )(),
+      unstable_cache(
+        () => getSharedBoardPostCount(boardId, { onlyPublished: true }),
+        [`shared-board-qna-count-${boardSlug}`],
+        { revalidate },
+      )(),
     ]);
     qnaPostsWithBodies = postsWithBodies;
     posts = postsWithBodies;
     postCount = count;
     recommendCounts = {};
   } else if (hasCommentsAndRecommend) {
+    const boardId = board.id;
     const [postsWithRec, count] = await Promise.all([
-      getSharedBoardPostsWithRecommendCounts(
-        board.id,
-        POSTS_PER_PAGE,
-        offset,
-      ),
-      getSharedBoardPostCount(board.id),
+      unstable_cache(
+        () => getSharedBoardPostsWithRecommendCounts(boardId, POSTS_PER_PAGE, offset),
+        [`shared-board-rec-posts-${boardSlug}-p${page}`],
+        { revalidate },
+      )(),
+      unstable_cache(
+        () => getSharedBoardPostCount(boardId),
+        [`shared-board-count-${boardSlug}`],
+        { revalidate },
+      )(),
     ]);
     posts = postsWithRec;
     postCount = count;
@@ -112,13 +138,18 @@ export default async function BoardListPage({
     );
   } else {
     const onlyPublished = boardSlug === "notice";
+    const boardId = board.id;
     const [postsList, count] = await Promise.all([
-      getSharedBoardPosts(board.id, POSTS_PER_PAGE, offset, {
-        ...(onlyPublished && { onlyPublished: true }),
-      }),
-      getSharedBoardPostCount(board.id, {
-        ...(onlyPublished && { onlyPublished: true }),
-      }),
+      unstable_cache(
+        () => getSharedBoardPosts(boardId, POSTS_PER_PAGE, offset, onlyPublished ? { onlyPublished: true } : undefined),
+        [`shared-board-posts-${boardSlug}-p${page}`],
+        { revalidate },
+      )(),
+      unstable_cache(
+        () => getSharedBoardPostCount(boardId, onlyPublished ? { onlyPublished: true } : undefined),
+        [`shared-board-count-${boardSlug}`],
+        { revalidate },
+      )(),
     ]);
     posts = postsList;
     postCount = count;
@@ -126,7 +157,6 @@ export default async function BoardListPage({
   }
 
   const totalPages = Math.ceil(postCount / POSTS_PER_PAGE);
-
   const canWrite =
     !!session &&
     (boardSlug === "free" || boardSlug === "suggestion");
@@ -265,7 +295,7 @@ export default async function BoardListPage({
                 return false;
               })
               .reduce<number[]>((acc, p, i, arr) => {
-                if (i > 0 && arr[i - 1]! < p - 1) acc.push(-1); // ellipsis
+                if (i > 0 && arr[i - 1]! < p - 1) acc.push(-1);
                 acc.push(p);
                 return acc;
               }, [])

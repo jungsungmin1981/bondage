@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@workspace/auth";
 import { headers } from "next/headers";
+import { unstable_cache } from "next/cache";
 import {
   getBunnyBoardBySlug,
   getBunnyBoards,
@@ -16,6 +17,11 @@ import { Button } from "@workspace/ui/components/button";
 import { Pencil } from "lucide-react";
 
 const POSTS_PER_PAGE = 20;
+
+function getBoardRevalidate(slug: string): number {
+  if (slug === "notice" || slug === "qna" || slug === "review") return 120;
+  return 30;
+}
 
 function formatDate(d: Date | null): string {
   if (!d) return "-";
@@ -47,10 +53,21 @@ export default async function BunnyBoardListPage({
   params: Promise<{ boardSlug: string }>;
 }) {
   const { boardSlug } = await params;
+  const revalidate = getBoardRevalidate(boardSlug);
+
   const session = await auth.api.getSession({ headers: await headers() });
+
   const [board, boards] = await Promise.all([
-    getBunnyBoardBySlug(boardSlug),
-    getBunnyBoards(),
+    unstable_cache(
+      () => getBunnyBoardBySlug(boardSlug),
+      [`bunny-board-slug-${boardSlug}`],
+      { revalidate: 300 },
+    )(),
+    unstable_cache(
+      () => getBunnyBoards(),
+      ["bunny-boards-list"],
+      { revalidate: 300 },
+    )(),
   ]);
 
   if (!board) notFound();
@@ -62,12 +79,20 @@ export default async function BunnyBoardListPage({
     ReturnType<typeof getBunnyBoardPostsWithBodies>
   > | null = null;
 
+  const boardId = board.id;
+
   if (boardSlug === "qna") {
     const [postsWithBodies, count] = await Promise.all([
-      getBunnyBoardPostsWithBodies(board.id, POSTS_PER_PAGE, 0, {
-        onlyPublished: true,
-      }),
-      getBunnyBoardPostCount(board.id, { onlyPublished: true }),
+      unstable_cache(
+        () => getBunnyBoardPostsWithBodies(boardId, POSTS_PER_PAGE, 0, { onlyPublished: true }),
+        [`bunny-board-qna-posts-${boardSlug}`],
+        { revalidate },
+      )(),
+      unstable_cache(
+        () => getBunnyBoardPostCount(boardId, { onlyPublished: true }),
+        [`bunny-board-qna-count-${boardSlug}`],
+        { revalidate },
+      )(),
     ]);
     qnaPostsWithBodies = postsWithBodies;
     posts = postsWithBodies;
@@ -75,8 +100,16 @@ export default async function BunnyBoardListPage({
     recommendCounts = {};
   } else if (boardSlug === "free") {
     const [postsWithRec, count] = await Promise.all([
-      getBunnyBoardPostsWithRecommendCounts(board.id, POSTS_PER_PAGE, 0),
-      getBunnyBoardPostCount(board.id),
+      unstable_cache(
+        () => getBunnyBoardPostsWithRecommendCounts(boardId, POSTS_PER_PAGE, 0),
+        [`bunny-board-rec-posts-${boardSlug}`],
+        { revalidate },
+      )(),
+      unstable_cache(
+        () => getBunnyBoardPostCount(boardId),
+        [`bunny-board-count-${boardSlug}`],
+        { revalidate },
+      )(),
     ]);
     posts = postsWithRec;
     postCount = count;
@@ -86,12 +119,16 @@ export default async function BunnyBoardListPage({
   } else {
     const onlyPublished = boardSlug === "notice";
     const [postsList, count] = await Promise.all([
-      getBunnyBoardPosts(board.id, POSTS_PER_PAGE, 0, {
-        ...(onlyPublished && { onlyPublished: true }),
-      }),
-      getBunnyBoardPostCount(board.id, {
-        ...(onlyPublished && { onlyPublished: true }),
-      }),
+      unstable_cache(
+        () => getBunnyBoardPosts(boardId, POSTS_PER_PAGE, 0, onlyPublished ? { onlyPublished: true } : undefined),
+        [`bunny-board-posts-${boardSlug}`],
+        { revalidate },
+      )(),
+      unstable_cache(
+        () => getBunnyBoardPostCount(boardId, onlyPublished ? { onlyPublished: true } : undefined),
+        [`bunny-board-count-${boardSlug}`],
+        { revalidate },
+      )(),
     ]);
     posts = postsList;
     postCount = count;
