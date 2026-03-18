@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "ws:dev": "pnpm exec tsx ws-server.ts",
+    "postinstall": "node scripts/ensure-postcss-link.mjs",
     "prebuild": "node ./node_modules/next/dist/bin/next telemetry disable",
-    "build": "node scripts/build-with-node-path.mjs",
+    "build": "node --max-old-space-size=4096 ./node_modules/next/dist/bin/next build --webpack",
     "start": "next start",
     "ws:start": "pnpm exec tsx ws-server.ts",
     "lint": "eslint",
