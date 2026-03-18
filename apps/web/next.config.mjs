@@ -9,6 +9,9 @@ const betterAuthReactPath = path.resolve(
   "node_modules/better-auth/dist/client/react/index.mjs"
 );
 
+const workspaceDbPath = path.resolve(__dirname, "../../packages/db/src/index.ts");
+const workspaceAuthPath = path.resolve(__dirname, "../../packages/auth/src/index.ts");
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
@@ -28,6 +31,8 @@ const nextConfig = {
     config.resolve.alias = {
       ...config.resolve.alias,
       "@": path.resolve(__dirname),
+      "@workspace/db": workspaceDbPath,
+      "@workspace/auth": workspaceAuthPath,
       "better-auth/react$": betterAuthReactPath,
     };
     return config;
