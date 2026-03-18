@@ -3,7 +3,7 @@
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { auth } from "@workspace/auth";
-import { approveOperatorProfile } from "@workspace/db";
+import { approveOperatorProfile, approveOperatorProfileByUserId } from "@workspace/db";
 import { isAdmin } from "@/lib/admin";
 
 export async function approveOperatorProfileAction(
@@ -13,7 +13,17 @@ export async function approveOperatorProfileAction(
   if (!isAdmin(session)) {
     return { ok: false, error: "관리자만 승인할 수 있습니다." };
   }
-  const result = await approveOperatorProfile(profileId);
+
+  let result: { ok: true } | { ok: false; error: string };
+
+  // 'no-profile-{userId}' 형태: member_profiles 없이 users.memberType='operator'인 케이스
+  if (profileId.startsWith("no-profile-")) {
+    const userId = profileId.replace("no-profile-", "");
+    result = await approveOperatorProfileByUserId(userId);
+  } else {
+    result = await approveOperatorProfile(profileId);
+  }
+
   if (result.ok) {
     // 승인된 운영진의 프로필 캐시를 즉시 무효화 (layout.tsx의 getCachedMemberProfile)
     revalidatePath("/", "layout");

@@ -546,11 +546,13 @@ export type OperatorProfileRowForAdmin = PendingOperatorProfileRow & {
 /**
  * 관리자용: 운영진 프로필 전체 목록 (users join). 최신순. 승인 여부 관계없이 모두 표시.
  * 추천인(인증키 발급자) 닉네임 포함. 관리자 발급 키(rigger_id null)면 null.
+ * member_profiles 없이 users.memberType='operator'인 경우도 포함.
  */
 export async function getOperatorProfilesForAdmin(): Promise<
   OperatorProfileRowForAdmin[]
 > {
-  const rows = await db
+  // member_profiles가 있는 operator
+  const withProfile = await db
     .select({
       id: schema.memberProfiles.id,
       userId: schema.memberProfiles.userId,
@@ -573,19 +575,58 @@ export async function getOperatorProfilesForAdmin(): Promise<
     )
     .where(eq(schema.memberProfiles.memberType, "operator"))
     .orderBy(desc(schema.memberProfiles.createdAt));
-  return rows.map((r) => ({
-    id: r.id,
-    userId: r.userId,
-    nickname: r.nickname,
-    iconUrl: r.iconUrl ?? null,
-    bio: r.bio ?? null,
-    createdAt: r.createdAt,
-    status: r.status,
-    email: r.email ?? null,
-    userName: r.userName ?? null,
-    username: r.username ?? null,
-    referrerNickname: r.referrerNickname ?? null,
-  }));
+
+  const profileUserIds = new Set(withProfile.map((r) => r.userId).filter(Boolean));
+
+  // member_profiles 없이 users.memberType='operator'인 경우 (이전 버그로 프로필 미생성된 케이스)
+  const withoutProfileRows = await db
+    .select({
+      id: schema.users.id,
+      userId: schema.users.id,
+      nickname: schema.users.username,
+      email: schema.users.email,
+      userName: schema.users.name,
+      username: schema.users.username,
+      createdAt: schema.users.createdAt,
+    })
+    .from(schema.users)
+    .where(eq(schema.users.memberType, "operator"));
+
+  const noProfileRows = withoutProfileRows
+    .filter((r) => !profileUserIds.has(r.userId))
+    .map((r) => ({
+      id: `no-profile-${r.userId}`,
+      userId: r.userId,
+      nickname: r.nickname ?? r.email ?? "운영진",
+      iconUrl: null as string | null,
+      bio: null as string | null,
+      createdAt: r.createdAt,
+      status: "pending",
+      email: r.email ?? null,
+      userName: r.userName ?? null,
+      username: r.username ?? null,
+      referrerNickname: null as string | null,
+    }));
+
+  const combined = [
+    ...withProfile.map((r) => ({
+      id: r.id,
+      userId: r.userId,
+      nickname: r.nickname,
+      iconUrl: r.iconUrl ?? null,
+      bio: r.bio ?? null,
+      createdAt: r.createdAt,
+      status: r.status,
+      email: r.email ?? null,
+      userName: r.userName ?? null,
+      username: r.username ?? null,
+      referrerNickname: r.referrerNickname ?? null,
+    })),
+    ...noProfileRows,
+  ];
+
+  combined.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  return combined;
 }
 
 /**
@@ -616,6 +657,48 @@ export async function approveOperatorProfile(
     .update(schema.memberProfiles)
     .set({ status: "approved", updatedAt: new Date() })
     .where(eq(schema.memberProfiles.id, profileId));
+  await db.delete(schema.sessions).where(eq(schema.sessions.userId, userId));
+  return { ok: true };
+}
+
+/**
+ * 운영진 프로필 승인 (userId 기준). member_profiles가 없으면 생성 후 바로 승인.
+ * getOperatorProfilesForAdmin에서 'no-profile-{userId}' 케이스용.
+ */
+export async function approveOperatorProfileByUserId(
+  userId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const [user] = await db
+    .select({ id: schema.users.id, memberType: schema.users.memberType, username: schema.users.username, email: schema.users.email })
+    .from(schema.users)
+    .where(and(eq(schema.users.id, userId), eq(schema.users.memberType, "operator")))
+    .limit(1);
+  if (!user) {
+    return { ok: false, error: "해당 운영진 사용자를 찾을 수 없습니다." };
+  }
+
+  const existingProfile = await getMemberProfileByUserId(userId);
+  if (existingProfile) {
+    if (existingProfile.memberType !== "operator") {
+      return { ok: false, error: "운영진 프로필이 아닙니다." };
+    }
+    await db
+      .update(schema.memberProfiles)
+      .set({ status: "approved", updatedAt: new Date() })
+      .where(eq(schema.memberProfiles.id, existingProfile.id));
+  } else {
+    const nickname = user.username ?? user.email ?? "운영진";
+    const profileId = crypto.randomUUID();
+    await db.insert(schema.memberProfiles).values({
+      id: profileId,
+      userId,
+      memberType: "operator",
+      nickname: nickname.slice(0, 200),
+      status: "approved",
+      updatedAt: new Date(),
+    });
+  }
+
   await db.delete(schema.sessions).where(eq(schema.sessions.userId, userId));
   return { ok: true };
 }

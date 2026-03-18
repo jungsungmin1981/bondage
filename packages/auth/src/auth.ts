@@ -281,7 +281,7 @@ export const auth = betterAuth({
         });
       } else if (inviteKeyId) {
         const [keyRow] = await db
-          .select({ memberType: schema.inviteKeys.memberType })
+          .select({ memberType: schema.inviteKeys.memberType, riggerId: schema.inviteKeys.riggerId })
           .from(schema.inviteKeys)
           .where(eq(schema.inviteKeys.id, inviteKeyId))
           .limit(1);
@@ -302,6 +302,24 @@ export const auth = betterAuth({
           .update(schema.inviteKeys)
           .set({ usedAt: new Date() })
           .where(eq(schema.inviteKeys.id, inviteKeyId));
+
+        // operator 인증키로 가입한 경우 member_profiles에 pending 프로필 자동 생성
+        if (memberType === "operator") {
+          const nickname =
+            (typeof body?.username === "string" && body.username.trim()) ||
+            (typeof body?.email === "string" && body.email.trim().slice(0, 50)) ||
+            "운영진";
+          const profileId = crypto.randomUUID();
+          const now = new Date();
+          await db.insert(schema.memberProfiles).values({
+            id: profileId,
+            userId,
+            memberType: "operator",
+            nickname: nickname.slice(0, 200),
+            status: "pending",
+            updatedAt: now,
+          });
+        }
       }
       // 메일 미연결 시 가입한 사용자는 자동 인증 처리. 나중에 메일 연결 후 requireEmailVerification 켜도 기존 사용자는 로그인 가능
       if (!resendApiKey) {
