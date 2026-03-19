@@ -19,11 +19,19 @@ import {
   addSharedBoardRecommend,
   removeSharedBoardRecommend,
   hasUserRecommendedSharedBoard,
+  getMemberProfileByUserId,
 } from "@workspace/db";
 import { revalidatePath } from "next/cache";
-import { isAdmin } from "@/lib/admin";
+import { isPrimaryAdmin } from "@/lib/admin";
 import { uploadBufferToS3 } from "@/lib/s3-upload";
 import { processBoardImage } from "@/lib/image/process-board-image";
+
+async function checkIsAdmin(session: Awaited<ReturnType<typeof auth.api.getSession>>): Promise<boolean> {
+  if (!session) return false;
+  if (isPrimaryAdmin(session)) return true;
+  const profile = await getMemberProfileByUserId(session.user.id);
+  return profile?.memberType === "operator" && profile?.status === "approved";
+}
 
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_BOARD_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -96,7 +104,7 @@ export async function createSharedBoardPostAction(
   }
 
   if (boardSlug === NOTICE_BOARD_SLUG) {
-    if (!isAdmin(session)) {
+    if (!(await checkIsAdmin(session))) {
       return { ok: false, error: "권한이 없습니다.", values: { title, body } };
     }
   } else if (
@@ -146,7 +154,7 @@ export async function createAdminSharedBoardQnaPostAction(
   if (!session) {
     return { ok: false, error: "로그인이 필요합니다." };
   }
-  if (!isAdmin(session)) {
+  if (!(await checkIsAdmin(session))) {
     return { ok: false, error: "권한이 없습니다." };
   }
 
@@ -225,7 +233,7 @@ export async function updateAdminSharedBoardQnaPostAction(
   if (!session) {
     return { ok: false, error: "로그인이 필요합니다." };
   }
-  if (!isAdmin(session)) {
+  if (!(await checkIsAdmin(session))) {
     return { ok: false, error: "권한이 없습니다." };
   }
 
@@ -296,7 +304,7 @@ export async function deleteAdminSharedBoardQnaPostAction(
   if (!session) {
     return { ok: false, error: "로그인이 필요합니다." };
   }
-  if (!isAdmin(session)) {
+  if (!(await checkIsAdmin(session))) {
     return { ok: false, error: "관리자만 삭제할 수 있습니다." };
   }
 
@@ -450,7 +458,7 @@ export async function updateSharedBoardPostAction(
   }
 
   const isAuthor = post.authorUserId === session.user.id;
-  const admin = isAdmin(session);
+  const admin = await checkIsAdmin(session);
 
   if (admin) {
     const result = await updateSharedBoardPostByAdmin(postId, {
@@ -488,7 +496,7 @@ export async function deleteSharedBoardPostAction(
   if (!post) return { ok: false, error: "글을 찾을 수 없습니다." };
 
   const isAuthor = post.authorUserId === session.user.id;
-  const admin = isAdmin(session);
+  const admin = await checkIsAdmin(session);
 
   if (admin) {
     const result = await deleteSharedBoardPostByAdmin(postId);
@@ -651,7 +659,7 @@ export async function createSharedBoardNoticePostAction(
   if (!session) {
     return { ok: false, error: "로그인이 필요합니다." };
   }
-  if (!isAdmin(session)) {
+  if (!(await checkIsAdmin(session))) {
     return { ok: false, error: "관리자만 공지를 작성할 수 있습니다." };
   }
 
@@ -772,7 +780,7 @@ export async function updateSharedBoardNoticePostAction(
   if (!session) {
     return { ok: false, error: "로그인이 필요합니다." };
   }
-  if (!isAdmin(session)) {
+  if (!(await checkIsAdmin(session))) {
     return { ok: false, error: "관리자만 공지를 수정할 수 있습니다." };
   }
 
@@ -887,7 +895,7 @@ export async function deleteSharedBoardNoticePostAction(
   if (!session) {
     return { ok: false, error: "로그인이 필요합니다." };
   }
-  if (!isAdmin(session)) {
+  if (!(await checkIsAdmin(session))) {
     return { ok: false, error: "관리자만 공지를 삭제할 수 있습니다." };
   }
 
