@@ -23,6 +23,7 @@ export async function approveRiggerProfileAction(profileId: string): Promise<
   const result = await dbApproveRiggerProfile(profileId);
   if (result.ok) {
     revalidatePath("/", "layout");
+    revalidatePath("/rigger");
     revalidatePath("/admin/riggers");
   }
   return result;

@@ -66,6 +66,7 @@ export async function submitBunnyProfile(
   if (!result.ok) return result;
   await setUserMemberType(session.user.id, "bunny");
   revalidatePath("/", "layout");
+  revalidatePath("/bunnies");
   redirect("/");
 }
 
@@ -95,6 +96,7 @@ export async function submitRiggerProfile(
   if (!result.ok) return result;
   await setUserMemberType(session.user.id, "rigger");
   revalidatePath("/", "layout");
+  revalidatePath("/rigger");
   redirect(`/rigger/${result.profileId}`);
 }
 
