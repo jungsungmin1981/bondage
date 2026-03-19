@@ -50,5 +50,28 @@ const nextConfig = {
 const withPWA = withPWAInit({
   dest: "public",
   disable: process.env.NODE_ENV === "development",
+  workboxOptions: {
+    // 네비게이션(페이지 이동) 요청은 네트워크 우선, 실패 시 캐시
+    runtimeCaching: [
+      {
+        urlPattern: ({ request }) => request.mode === "navigate",
+        handler: "NetworkFirst",
+        options: {
+          cacheName: "pages",
+          networkTimeoutSeconds: 10,
+        },
+      },
+      {
+        urlPattern: ({ url }) =>
+          url.pathname.startsWith("/api/") ||
+          url.pathname.startsWith("/_next/"),
+        handler: "NetworkFirst",
+        options: {
+          cacheName: "api-and-next",
+          networkTimeoutSeconds: 10,
+        },
+      },
+    ],
+  },
 });
 export default withPWA(nextConfig);
