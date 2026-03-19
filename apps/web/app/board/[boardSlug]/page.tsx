@@ -176,17 +176,17 @@ export default async function BoardListPage({
         <BoardTabs />
       </div>
 
-      {boardSlug === "suggestion" && (
+      {boardSlug === "suggestion" && tab !== "class-request" && (
         <div className="mb-4 flex gap-0 border-b border-border text-sm">
           <a
             href="/board/suggestion"
-            className={`min-h-[44px] flex-1 border-b-2 px-3 py-2.5 text-center font-medium transition sm:flex-initial sm:px-4 ${tab !== "class-request" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:border-muted-foreground/50 hover:text-foreground"}`}
+            className="min-h-[44px] flex-1 border-b-2 border-primary px-3 py-2.5 text-center font-medium text-foreground transition sm:flex-initial sm:px-4"
           >
             수정/기능 제안
           </a>
           <a
             href="/board/suggestion?tab=class-request"
-            className={`min-h-[44px] flex-1 border-b-2 px-3 py-2.5 text-center font-medium transition sm:flex-initial sm:px-4 ${tab === "class-request" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:border-muted-foreground/50 hover:text-foreground"}`}
+            className="min-h-[44px] flex-1 border-b-2 border-transparent px-3 py-2.5 text-center font-medium text-muted-foreground transition hover:border-muted-foreground/50 hover:text-foreground sm:flex-initial sm:px-4"
           >
             클래스 요청
           </a>
