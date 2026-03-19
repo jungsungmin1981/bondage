@@ -75,7 +75,7 @@ export function AdminClassRequestsContent() {
     setError(null);
     const result = await updateClassRequestStatusAction(id, statusMap[id]!, noteMap[id]);
     if (result?.ok === false) {
-      setError(result.error);
+      setError(result.error ?? "오류가 발생했습니다.");
       return;
     }
     await loadRequests();
@@ -86,7 +86,7 @@ export function AdminClassRequestsContent() {
     startTransition(async () => {
       const result = await deleteClassRequestAction(id);
       if (result?.ok === false) {
-        setError(result.error);
+        setError(result.error ?? "오류가 발생했습니다.");
         return;
       }
       await loadRequests();

@@ -61,7 +61,7 @@ export function ClassRequestDetailActions({
     startTransition(async () => {
       const result = await deleteClassRequestAction(requestId);
       if (result?.ok === false) {
-        setError(result.error);
+        setError(result.error ?? "오류가 발생했습니다.");
         return;
       }
       router.push("/board/suggestion?tab=class-request");
@@ -74,7 +74,7 @@ export function ClassRequestDetailActions({
     const result = await updateClassRequestStatusAction(requestId, status, adminNote);
     setSaving(false);
     if (result?.ok === false) {
-      setError(result.error);
+      setError(result.error ?? "오류가 발생했습니다.");
     }
   }
 

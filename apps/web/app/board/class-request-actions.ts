@@ -115,7 +115,7 @@ export async function updateClassRequestStatusAction(
   id: string,
   status: ClassRequestStatus,
   adminNote?: string,
-) {
+): Promise<{ ok: boolean; error?: string }> {
   const session = await getSession();
   if (!session || !(await checkIsAdmin(session))) {
     return { ok: false, error: "권한이 없습니다." };
@@ -126,7 +126,7 @@ export async function updateClassRequestStatusAction(
   return { ok: true };
 }
 
-export async function deleteClassRequestAction(id: string) {
+export async function deleteClassRequestAction(id: string): Promise<{ ok: boolean; error?: string }> {
   const session = await getSession();
   if (!session) return { ok: false, error: "로그인이 필요합니다." };
   const request = await getClassRequestById(id);
