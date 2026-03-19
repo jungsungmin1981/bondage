@@ -2,9 +2,10 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { auth } from "@workspace/auth";
+import { getMemberProfileByUserId } from "@workspace/db";
 import { getS3Config } from "@/lib/s3";
 import { resizeToJpeg } from "@/lib/image/resize";
-import { isAdmin } from "@/lib/admin";
+import { isPrimaryAdmin } from "@/lib/admin";
 
 export const runtime = "nodejs";
 
@@ -17,7 +18,14 @@ export async function POST(req: Request) {
   if (!session?.user?.id) {
     return NextResponse.json({ ok: false, error: "로그인이 필요합니다." }, { status: 401 });
   }
-  if (!isAdmin(session)) {
+
+  // cookieCache로 인해 memberType이 누락될 수 있으므로 DB에서 직접 확인
+  const isAdminUser = isPrimaryAdmin(session) || await (async () => {
+    const profile = await getMemberProfileByUserId(session.user.id);
+    return profile?.memberType === "operator" && profile?.status === "approved";
+  })();
+
+  if (!isAdminUser) {
     return NextResponse.json({ ok: false, error: "관리자만 업로드할 수 있습니다." }, { status: 403 });
   }
 
