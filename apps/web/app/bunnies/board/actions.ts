@@ -19,15 +19,23 @@ import {
   addRecommend,
   removeRecommend,
   hasUserRecommended,
+  getMemberProfileByUserId,
 } from "@workspace/db";
 import { revalidatePath } from "next/cache";
-import { isAdmin } from "@/lib/admin";
+import { isPrimaryAdmin } from "@/lib/admin";
 import { uploadBufferToS3 } from "@/lib/s3-upload";
 import { processBoardImage } from "@/lib/image/process-board-image";
 
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_BOARD_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_BOARD_IMAGES = 3;
+
+async function checkIsAdmin(session: Awaited<ReturnType<typeof auth.api.getSession>>): Promise<boolean> {
+  if (!session) return false;
+  if (isPrimaryAdmin(session)) return true;
+  const profile = await getMemberProfileByUserId(session.user.id);
+  return profile?.memberType === "operator" && profile?.status === "approved";
+}
 
 /** 본문 텍스트에 포함된 마크다운 이미지 개수 */
 function countMarkdownImages(body: string): number {
@@ -117,7 +125,7 @@ export async function createBunnyBoardNoticePostAction(
   if (!session) {
     return { ok: false, error: "로그인이 필요합니다." };
   }
-  if (!isAdmin(session)) {
+  if (!(await checkIsAdmin(session))) {
     return { ok: false, error: "관리자만 공지를 작성할 수 있습니다." };
   }
 
@@ -209,7 +217,7 @@ export async function createBunnyBoardQnaPostAction(
   if (!session) {
     return { ok: false, error: "로그인이 필요합니다." };
   }
-  if (!isAdmin(session)) {
+  if (!(await checkIsAdmin(session))) {
     return { ok: false, error: "관리자만 작성할 수 있습니다." };
   }
 
@@ -285,7 +293,7 @@ export async function updateBunnyBoardQnaPostAction(
   if (!session) {
     return { ok: false, error: "로그인이 필요합니다." };
   }
-  if (!isAdmin(session)) {
+  if (!(await checkIsAdmin(session))) {
     return { ok: false, error: "권한이 없습니다." };
   }
 
@@ -353,7 +361,7 @@ export async function deleteBunnyBoardQnaPostAction(
   if (!session) {
     return { ok: false, error: "로그인이 필요합니다." };
   }
-  if (!isAdmin(session)) {
+  if (!(await checkIsAdmin(session))) {
     return { ok: false, error: "관리자만 삭제할 수 있습니다." };
   }
 
@@ -398,7 +406,7 @@ export async function updateBunnyBoardNoticePostAction(
   if (!session) {
     return { ok: false, error: "로그인이 필요합니다." };
   }
-  if (!isAdmin(session)) {
+  if (!(await checkIsAdmin(session))) {
     return { ok: false, error: "관리자만 공지를 수정할 수 있습니다." };
   }
 
@@ -489,7 +497,7 @@ export async function deleteBunnyBoardNoticePostAction(
   if (!session) {
     return { ok: false, error: "로그인이 필요합니다." };
   }
-  if (!isAdmin(session)) {
+  if (!(await checkIsAdmin(session))) {
     return { ok: false, error: "관리자만 공지를 삭제할 수 있습니다." };
   }
 
