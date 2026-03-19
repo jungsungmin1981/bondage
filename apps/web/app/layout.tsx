@@ -247,6 +247,13 @@ export default async function RootLayout({
                     operatorPendingRestriction={operatorPending}
                     showAdminLink={!!session && isAdminUser}
                     showOperatorLink={!!session && isApprovedOperator && !isAdminUser}
+                    chatHref={
+                      operatorPending
+                        ? "/admin/pending"
+                        : riggerPending && memberProfile?.id
+                          ? `/rigger/${memberProfile.id}`
+                          : "/messages"
+                    }
                   />
                 </div>
                 <div className="flex items-center gap-2">
@@ -274,7 +281,7 @@ export default async function RootLayout({
                           ? `/rigger/${memberProfile.id}`
                           : "/messages"
                     }
-                    className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border bg-muted/30 px-2 shadow-sm shadow-black/5 transition hover:bg-muted/60"
+                    className="hidden min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border bg-muted/30 px-2 shadow-sm shadow-black/5 transition hover:bg-muted/60 sm:inline-flex"
                     aria-label="채팅"
                   >
                     <MessageIcon hasUnread={unreadMessagesCount > 0} />

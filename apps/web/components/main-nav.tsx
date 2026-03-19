@@ -52,6 +52,7 @@ export function MainNav({
   operatorPendingRestriction = false,
   showAdminLink = false,
   showOperatorLink = false,
+  chatHref,
 }: {
   pendingBunnyApprovalsCount?: number;
   unreadMessagesCount?: number;
@@ -71,6 +72,8 @@ export function MainNav({
   showAdminLink?: boolean;
   /** 모바일 메뉴 시트에 운영진 링크 표시 */
   showOperatorLink?: boolean;
+  /** 모바일 메뉴 시트에 표시할 채팅 링크 href */
+  chatHref?: string;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -196,6 +199,36 @@ export function MainNav({
                     </span>
                   </Link>
                 ),
+              )}
+              {/* 채팅 링크 - 모바일 메뉴 하단 */}
+              {chatHref && (
+                <>
+                  <hr className="my-1 border-border" />
+                  <Link
+                    href={chatHref}
+                    onClick={() => setOpen(false)}
+                    className={cn(
+                      navLinkClass,
+                      pathname.startsWith("/messages") && "bg-muted font-semibold",
+                    )}
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      <Mail
+                        className={cn(
+                          "size-5 shrink-0",
+                          unreadCount > 0 && "text-blue-600 animate-pulse dark:text-blue-400",
+                        )}
+                        aria-hidden
+                      />
+                      채팅
+                      {unreadCount > 0 && (
+                        <span className="rounded-full bg-blue-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                          {unreadCount}
+                        </span>
+                      )}
+                    </span>
+                  </Link>
+                </>
               )}
             </nav>
           </SheetContent>
