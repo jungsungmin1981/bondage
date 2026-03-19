@@ -75,7 +75,10 @@ export async function createClassRequestAction(
   }
 
   const profile = await getMemberProfileByUserId(session.user.id);
-  const authorNickname = profile?.nickname ?? session.user.name ?? session.user.email ?? "알 수 없음";
+  const authorNickname =
+    profile?.memberType === "operator"
+      ? "운영진"
+      : profile?.nickname ?? session.user.name ?? session.user.email ?? "알 수 없음";
 
   const id = randomUUID();
   await createClassRequest({
