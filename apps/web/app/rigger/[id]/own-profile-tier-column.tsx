@@ -11,6 +11,7 @@ import {
 } from "./profile-editing-events";
 import { saveRiggerProfile } from "./rigger-profile-actions";
 import { uploadRiggerMarkImage } from "./mark-upload-actions";
+import { resizeImageOnClient } from "@/lib/image/resize-client";
 
 type OwnProfileTierColumnProps = {
   rigger: Rigger;
@@ -61,8 +62,10 @@ export function OwnProfileTierColumn({ rigger, isSuspended, jailOverlayUrl, susp
     try {
       let url = pendingUrl;
       if (pendingFile) {
+        const MAX = 4 * 1024 * 1024;
+        const finalFile = pendingFile.size > MAX ? await resizeImageOnClient(pendingFile) : pendingFile;
         const fd = new FormData();
-        fd.append("image", pendingFile);
+        fd.append("image", finalFile);
         const up = await uploadRiggerMarkImage(rigger.id, fd);
         if (!up.ok) {
           alert(up.error);

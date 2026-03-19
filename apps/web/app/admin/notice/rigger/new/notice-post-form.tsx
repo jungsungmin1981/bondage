@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState, useCallback, useEffect } from "react";
+import { useActionState, useState, useCallback, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
@@ -13,9 +13,11 @@ import {
   type AdminNoticeFormValues,
 } from "@/app/board/actions";
 import { ScheduledDateTimePicker } from "@/components/scheduled-datetime-picker";
+import { resizeImageOnClient } from "@/lib/image/resize-client";
 
 const TITLE_MAX = 200;
 const BODY_MAX = 10_000;
+const MAX_FILE_SIZE_BEFORE_RESIZE = 4 * 1024 * 1024; // 4MB: 리사이즈 없이 바로 쓸 수 있는 최대 크기
 
 function SubmitButton({ isEdit }: { isEdit: boolean }) {
   const { pending } = useFormStatus();
@@ -90,6 +92,35 @@ export function AdminNoticeRiggerPostForm({
   const [coverPreview, setCoverPreview] = useState<string | null>(
     initialValues?.coverImageUrl ?? null,
   );
+  const coverInputRef = useRef<HTMLInputElement>(null);
+  const [coverResizeError, setCoverResizeError] = useState<string | null>(null);
+
+  async function handleCoverChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCoverResizeError(null);
+
+    try {
+      let finalFile = file;
+      // Vercel 4.5MB 제한 대비: 파일이 크면 클라이언트에서 미리 리사이즈
+      if (file.size > MAX_FILE_SIZE_BEFORE_RESIZE) {
+        finalFile = await resizeImageOnClient(file);
+      }
+
+      // input의 파일을 리사이즈된 파일로 교체
+      if (coverInputRef.current) {
+        const dt = new DataTransfer();
+        dt.items.add(finalFile);
+        coverInputRef.current.files = dt.files;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => setCoverPreview(String(reader.result));
+      reader.readAsDataURL(finalFile);
+    } catch {
+      setCoverResizeError("이미지 처리에 실패했습니다. 다른 이미지를 선택해 주세요.");
+    }
+  }
 
   const baseValues = initialValues ?? { title: "", body: "" };
   const values =
@@ -133,18 +164,13 @@ export function AdminNoticeRiggerPostForm({
             <h3 className="font-medium">대표 이미지</h3>
             <input
               id="admin-notice-rigger-cover"
+              ref={coverInputRef}
               type="file"
               name="coverImage"
               accept="image/jpeg,image/png,image/webp"
               className="sr-only"
               aria-label="대표 이미지 선택"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = () => setCoverPreview(String(reader.result));
-                reader.readAsDataURL(file);
-              }}
+              onChange={handleCoverChange}
             />
             <label
               htmlFor="admin-notice-rigger-cover"
@@ -165,6 +191,9 @@ export function AdminNoticeRiggerPostForm({
                 </div>
               )}
             </label>
+            {coverResizeError && (
+              <p className="text-xs text-destructive">{coverResizeError}</p>
+            )}
           </div>
 
           <div className="flex flex-col gap-3">

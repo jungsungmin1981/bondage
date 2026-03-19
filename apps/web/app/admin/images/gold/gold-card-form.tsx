@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { resizeImageOnClient } from "@/lib/image/resize-client";
 import { Button } from "@workspace/ui/components/button";
 import { uploadGoldCardImage } from "./actions";
 
@@ -31,8 +32,10 @@ export function GoldCardForm({ onPreviewChange }: Props) {
       return;
     }
 
+    const MAX = 4 * 1024 * 1024;
+    const finalFile = file.size > MAX ? await resizeImageOnClient(file) : file;
     const fd = new FormData();
-    fd.set("image", file);
+    fd.set("image", finalFile);
 
     setUploading(true);
     try {

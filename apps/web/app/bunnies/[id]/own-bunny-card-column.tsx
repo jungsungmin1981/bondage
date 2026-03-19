@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { BunnyCard } from "@/components/bunny-card";
 import { Button } from "@workspace/ui/components/button";
 import { uploadBunnyCardImage } from "@/app/profile/edit/bunny-card-upload-actions";
+import { resizeImageOnClient } from "@/lib/image/resize-client";
 
 type OwnBunnyCardColumnProps = {
   profileId: string;
@@ -51,8 +52,10 @@ export function OwnBunnyCardColumn({
     if (!pendingFile) return;
     setSaving(true);
     try {
+      const MAX = 4 * 1024 * 1024;
+      const finalFile = pendingFile.size > MAX ? await resizeImageOnClient(pendingFile) : pendingFile;
       const fd = new FormData();
-      fd.append("image", pendingFile);
+      fd.append("image", finalFile);
       const result = await uploadBunnyCardImage(profileId, fd);
       if (result.ok) {
         setPendingFile(null);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { resizeImageOnClient } from "@/lib/image/resize-client";
 import { Button } from "@workspace/ui/components/button";
 import { uploadMainBackgroundImage } from "./actions";
 
@@ -31,8 +32,10 @@ export function MainBackgroundForm({ initialUrl }: Props) {
       return;
     }
 
+    const MAX = 4 * 1024 * 1024;
+    const finalFile = file.size > MAX ? await resizeImageOnClient(file) : file;
     const fd = new FormData();
-    fd.set("image", file);
+    fd.set("image", finalFile);
 
     setUploading(true);
     try {

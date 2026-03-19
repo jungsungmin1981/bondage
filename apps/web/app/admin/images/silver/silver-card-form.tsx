@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { resizeImageOnClient } from "@/lib/image/resize-client";
 import { Button } from "@workspace/ui/components/button";
 import { uploadSilverCardImage } from "./actions";
 
@@ -27,12 +28,14 @@ export function SilverCardForm({ onPreviewChange }: Props) {
 
   const handleSave = async () => {
     if (!file) {
-      alert("업로드할 이미지를 먼저 선택해 주세요.");
+      alert("???? ???? ?? ??? ???.");
       return;
     }
 
+    const MAX = 4 * 1024 * 1024;
+    const finalFile = file.size > MAX ? await resizeImageOnClient(file) : file;
     const fd = new FormData();
-    fd.set("image", file);
+    fd.set("image", finalFile);
 
     setUploading(true);
     try {
@@ -60,7 +63,7 @@ export function SilverCardForm({ onPreviewChange }: Props) {
       <div className="flex flex-wrap items-center gap-3">
         <label className="inline-flex cursor-pointer items-center gap-2 text-sm font-medium">
           <span className="rounded border bg-background px-3 py-1.5 shadow-sm">
-            파일 선택
+            ?? ??
           </span>
           <input
             type="file"
@@ -76,7 +79,7 @@ export function SilverCardForm({ onPreviewChange }: Props) {
           disabled={uploading || !file || locked}
           className="bg-blue-700 text-white hover:bg-blue-800 disabled:opacity-40"
         >
-          {uploading ? "저장 중…" : "저장하기"}
+          {uploading ? "?? ??" : "????"}
         </Button>
         <Button
           type="button"
@@ -85,15 +88,15 @@ export function SilverCardForm({ onPreviewChange }: Props) {
           onClick={handleCancel}
           disabled={uploading || !file || locked}
         >
-          취소
+          ??
         </Button>
         {file && !uploading && (
           <span className="text-xs text-muted-foreground">
-            선택된 파일: {file.name}
+            ??? ??: {file.name}
           </span>
         )}
         {uploading && (
-          <span className="text-xs text-muted-foreground">업로드 중…</span>
+          <span className="text-xs text-muted-foreground">??? ??</span>
         )}
       </div>
     </div>

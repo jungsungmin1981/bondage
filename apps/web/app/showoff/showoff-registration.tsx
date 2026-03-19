@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@workspace/ui/components/button";
+import { resizeImageOnClient } from "@/lib/image/resize-client";
 import {
   submitMonthlyHotpickAction,
   replaceMonthlyHotpickAction,
@@ -56,6 +57,11 @@ export function ShowoffRegistration({
     }
     setSubmitting(true);
     try {
+      const MAX = 4 * 1024 * 1024;
+      if (file.size > MAX) {
+        const resized = await resizeImageOnClient(file);
+        formData.set("image", resized);
+      }
       const result = await submitMonthlyHotpickAction(monthKey, formData);
       if (result.ok) {
         form.reset();

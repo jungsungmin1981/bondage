@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
+import { resizeImageOnClient } from "@/lib/image/resize-client";
 import { Label } from "@workspace/ui/components/label";
 import { RadioGroup, RadioGroupItem } from "@workspace/ui/components/radio-group";
 import { Slider } from "@workspace/ui/components/slider";
@@ -96,8 +97,10 @@ export function WatermarkForm({ initialConfig }: Props) {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const MAX = 4 * 1024 * 1024;
+    const finalFile = file.size > MAX ? await resizeImageOnClient(file) : file;
     const fd = new FormData();
-    fd.set("image", file);
+    fd.set("image", finalFile);
     const result = await uploadWatermarkImage(fd);
     if (result.ok) {
       setImagePreviewUrl(`${result.url}?t=${Date.now()}`);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState, useRef, useEffect } from "react";
+import { resizeImageOnClient } from "@/lib/image/resize-client";
 import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
@@ -82,8 +83,10 @@ export function BunnyBoardPostForm({
     if (!editableRef.current) return;
     setUploading(true);
     try {
+      const MAX = 4 * 1024 * 1024;
+      const finalFile = file.size > MAX ? await resizeImageOnClient(file) : file;
       const fd = new FormData();
-      fd.set("file", file);
+      fd.set("file", finalFile);
       fd.set("body", serializeEditableToBody(editableRef.current));
       const result = await uploadBoardImageAction(fd);
       if (!result.ok) {

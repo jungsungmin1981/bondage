@@ -3,6 +3,7 @@
 import { useActionState, useState, useRef, useEffect } from "react";
 import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
+import { resizeImageOnClient } from "@/lib/image/resize-client";
 import { Label } from "@workspace/ui/components/label";
 import {
   updateSharedBoardPostAction,
@@ -97,8 +98,10 @@ export function BoardPostEditForm({
     if (!editableRef.current) return;
     setUploading(true);
     try {
+      const MAX = 4 * 1024 * 1024;
+      const finalFile = file.size > MAX ? await resizeImageOnClient(file) : file;
       const fd = new FormData();
-      fd.set("file", file);
+      fd.set("file", finalFile);
       fd.set("body", serializeEditableToBody(editableRef.current));
       const result = await uploadSharedBoardImageAction(fd);
       if (!result.ok) {

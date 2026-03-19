@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { resizeImageOnClient } from "@/lib/image/resize-client";
 import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
@@ -51,8 +52,10 @@ function readFileAsDataUrl(file: File): Promise<string> {
 }
 
 async function uploadImageToS3(file: File, postId: string) {
+  const MAX = 4 * 1024 * 1024;
+  const finalFile = file.size > MAX ? await resizeImageOnClient(file) : file;
   const fd = new FormData();
-  fd.set("file", file);
+  fd.set("file", finalFile);
   fd.set("level", LEVEL);
   fd.set("postId", postId);
   const res = await fetch("/api/uploads/images", { method: "POST", body: fd });

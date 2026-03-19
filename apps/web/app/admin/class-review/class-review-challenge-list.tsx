@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { resizeImageOnClient } from "@/lib/image/resize-client";
 import { ImageIcon, Upload } from "lucide-react";
 import { Button } from "@workspace/ui/components/button";
 import { Label } from "@workspace/ui/components/label";
@@ -20,8 +21,10 @@ import { updateChallengeStatusAction } from "./actions";
 import type { ChallengeForReviewRow } from "@workspace/db";
 
 async function uploadRejectionImage(file: File, challengeId: string): Promise<string> {
+  const MAX = 4 * 1024 * 1024;
+  const finalFile = file.size > MAX ? await resizeImageOnClient(file) : file;
   const fd = new FormData();
-  fd.set("file", file);
+  fd.set("file", finalFile);
   fd.set("challengeId", challengeId);
   const res = await fetch("/api/uploads/challenge-rejection", { method: "POST", body: fd });
   const json = (await res.json()) as { ok: boolean; url?: string; error?: string };

@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { UserCircle } from "lucide-react";
 import { Button } from "@workspace/ui/components/button";
 import { uploadOperatorCardImage } from "./operator-card-upload-actions";
+import { resizeImageOnClient } from "@/lib/image/resize-client";
 
 type OperatorCardColumnProps = {
   userId: string;
@@ -51,8 +52,10 @@ export function OperatorCardColumn({
     if (!pendingFile) return;
     setSaving(true);
     try {
+      const MAX = 4 * 1024 * 1024;
+      const finalFile = pendingFile.size > MAX ? await resizeImageOnClient(pendingFile) : pendingFile;
       const fd = new FormData();
-      fd.append("image", pendingFile);
+      fd.append("image", finalFile);
       const result = await uploadOperatorCardImage(userId, fd);
       if (result.ok) {
         setPendingFile(null);

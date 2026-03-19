@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { CheckCircle, ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
+import { resizeImageOnClient } from "@/lib/image/resize-client";
 import { Label } from "@workspace/ui/components/label";
 import { Textarea } from "@workspace/ui/components/textarea";
 import {
@@ -382,8 +383,10 @@ function isAllowedImageType(type: string): boolean {
 }
 
 async function uploadChallengeImage(file: File, classPostId: string): Promise<string> {
+  const MAX = 4 * 1024 * 1024;
+  const finalFile = file.size > MAX ? await resizeImageOnClient(file) : file;
   const fd = new FormData();
-  fd.set("file", file);
+  fd.set("file", finalFile);
   fd.set("classPostId", classPostId);
   const res = await fetch("/api/uploads/challenge", { method: "POST", body: fd });
   const json = (await res.json()) as { ok: boolean; url?: string; error?: string };
