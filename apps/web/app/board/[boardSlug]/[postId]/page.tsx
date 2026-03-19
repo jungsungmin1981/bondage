@@ -13,6 +13,7 @@ import type { SharedBoardCommentRow } from "@workspace/db";
 import { Button } from "@workspace/ui/components/button";
 import { Pencil } from "lucide-react";
 import { PostBodyMarkdown } from "@/app/bunnies/board/[boardSlug]/[postId]/post-body-markdown";
+import { PostViewTracker } from "@/components/post-view-tracker";
 import { BoardTabs } from "../board-tabs";
 import { BoardPostDetailActions } from "./post-detail-actions";
 import { BoardRecommendButton } from "./recommend-button";
@@ -78,6 +79,7 @@ export default async function BoardPostDetailPage({
 
   return (
     <div className="mx-auto min-h-[calc(100svh-3.5rem)] w-full max-w-2xl p-4 sm:p-6">
+      <PostViewTracker postId={postId} boardType="shared" />
       <div className="mb-4">
         <BoardTabs />
       </div>
@@ -115,6 +117,9 @@ export default async function BoardPostDetailPage({
                 · 수정됨 ({formatDateTime(post.updatedAt)})
               </span>
             )}
+            <span className="ml-2 text-xs text-muted-foreground/70">
+              조회 {post.viewCount.toLocaleString()}
+            </span>
           </p>
         </header>
         <div className="px-4 py-5">

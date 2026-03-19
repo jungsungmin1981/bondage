@@ -10,8 +10,8 @@ import {
 } from "@workspace/db";
 import { getInviteKeyMinAgeHours } from "@/lib/invite-key-config";
 
-/** 인증키 유효 시간 (밀리초). 24시간 */
-const INVITE_KEY_VALID_MS = 24 * 60 * 60 * 1000;
+/** 인증키 유효 시간 (밀리초). 30분 */
+const INVITE_KEY_VALID_MS = 30 * 60 * 1000;
 
 /**
  * POST /api/invite-keys - 리거/버니가 인증키 생성 시 서버에 등록.

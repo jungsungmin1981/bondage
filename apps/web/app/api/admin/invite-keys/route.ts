@@ -4,8 +4,8 @@ import { auth } from "@workspace/auth";
 import { db, getMemberProfileByUserId, getNonExpiredInviteKeysByCreatedBy, schema } from "@workspace/db";
 import { isAdmin, isPrimaryAdmin } from "@/lib/admin";
 
-/** 인증키 유효 시간 (밀리초). 리거/버니: 24시간, 운영자: 1시간 */
-const INVITE_KEY_VALID_MS_RIGGER_BUNNY = 24 * 60 * 60 * 1000;
+/** 인증키 유효 시간 (밀리초). 리거/버니: 30분, 운영자: 1시간 */
+const INVITE_KEY_VALID_MS_RIGGER_BUNNY = 30 * 60 * 1000;
 const INVITE_KEY_VALID_MS_OPERATOR = 60 * 60 * 1000;
 
 const ALLOWED_MEMBER_TYPES = ["rigger", "bunny", "operator"] as const;

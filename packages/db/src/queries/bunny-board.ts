@@ -5,6 +5,15 @@ import * as schema from "../schema";
 
 const updaterProfile = alias(schema.memberProfiles, "updater_profile");
 
+/** memberType이 operator이면 "운영진", 아니면 nickname 반환 */
+function resolveAuthorNickname(
+  memberType: string | null | undefined,
+  nickname: string | null | undefined,
+): string | null {
+  if (memberType === "operator") return "운영진";
+  return nickname ?? null;
+}
+
 export type BunnyBoardRow = {
   id: string;
   slug: string;
@@ -27,6 +36,7 @@ export type BunnyBoardPostListItem = {
   scheduledPublishAt: Date | null;
   updatedByUserId: string | null;
   updatedByNickname: string | null;
+  viewCount: number;
   createdAt: Date | null;
   updatedAt: Date | null;
 };
@@ -118,7 +128,9 @@ export async function getBunnyBoardPosts(
       updatedByUserId: schema.bunnyBoardPosts.updatedByUserId,
       createdAt: schema.bunnyBoardPosts.createdAt,
       updatedAt: schema.bunnyBoardPosts.updatedAt,
+      viewCount: schema.bunnyBoardPosts.viewCount,
       nickname: schema.memberProfiles.nickname,
+      memberType: schema.memberProfiles.memberType,
       updaterNickname: updaterProfile.nickname,
     })
     .from(schema.bunnyBoardPosts)
@@ -144,12 +156,13 @@ export async function getBunnyBoardPosts(
     postNumber: r.postNumber,
     title: r.title,
     authorUserId: r.authorUserId,
-    authorNickname: r.nickname ?? null,
+    authorNickname: resolveAuthorNickname(r.memberType, r.nickname),
     coverImageUrl: r.coverImageUrl ?? null,
     isPublished: r.isPublished ?? true,
     scheduledPublishAt: r.scheduledPublishAt ?? null,
     updatedByUserId: r.updatedByUserId ?? null,
     updatedByNickname: r.updaterNickname ?? null,
+    viewCount: r.viewCount ?? 0,
     createdAt: r.createdAt,
     updatedAt: r.updatedAt ?? null,
   }));
@@ -196,7 +209,9 @@ export async function getBunnyBoardPostsWithRecommendCounts(
       updatedByUserId: schema.bunnyBoardPosts.updatedByUserId,
       createdAt: schema.bunnyBoardPosts.createdAt,
       updatedAt: schema.bunnyBoardPosts.updatedAt,
+      viewCount: schema.bunnyBoardPosts.viewCount,
       nickname: schema.memberProfiles.nickname,
+      memberType: schema.memberProfiles.memberType,
       updaterNickname: updaterProfile.nickname,
       recommendCount: recCountSubq.recommendCount,
     })
@@ -227,12 +242,13 @@ export async function getBunnyBoardPostsWithRecommendCounts(
     postNumber: r.postNumber,
     title: r.title,
     authorUserId: r.authorUserId,
-    authorNickname: r.nickname ?? null,
+    authorNickname: resolveAuthorNickname(r.memberType, r.nickname),
     coverImageUrl: r.coverImageUrl ?? null,
     isPublished: r.isPublished ?? true,
     scheduledPublishAt: r.scheduledPublishAt ?? null,
     updatedByUserId: r.updatedByUserId ?? null,
     updatedByNickname: r.updaterNickname ?? null,
+    viewCount: r.viewCount ?? 0,
     createdAt: r.createdAt,
     updatedAt: r.updatedAt ?? null,
     recommendCount: r.recommendCount ?? 0,
@@ -281,7 +297,9 @@ export async function getBunnyBoardPostsWithBodies(
       updatedByUserId: schema.bunnyBoardPosts.updatedByUserId,
       createdAt: schema.bunnyBoardPosts.createdAt,
       updatedAt: schema.bunnyBoardPosts.updatedAt,
+      viewCount: schema.bunnyBoardPosts.viewCount,
       nickname: schema.memberProfiles.nickname,
+      memberType: schema.memberProfiles.memberType,
       updaterNickname: updaterProfile.nickname,
       recommendCount: recCountSubq.recommendCount,
     })
@@ -313,12 +331,13 @@ export async function getBunnyBoardPostsWithBodies(
     title: r.title,
     body: r.body,
     authorUserId: r.authorUserId,
-    authorNickname: r.nickname ?? null,
+    authorNickname: resolveAuthorNickname(r.memberType, r.nickname),
     coverImageUrl: r.coverImageUrl ?? null,
     isPublished: r.isPublished ?? true,
     scheduledPublishAt: r.scheduledPublishAt ?? null,
     updatedByUserId: r.updatedByUserId ?? null,
     updatedByNickname: r.updaterNickname ?? null,
+    viewCount: r.viewCount ?? 0,
     createdAt: r.createdAt,
     updatedAt: r.updatedAt ?? null,
     recommendCount: r.recommendCount ?? 0,
@@ -369,7 +388,9 @@ export async function getBunnyBoardPostById(
       updatedAt: schema.bunnyBoardPosts.updatedAt,
       boardSlug: schema.bunnyBoards.slug,
       boardName: schema.bunnyBoards.name,
+      viewCount: schema.bunnyBoardPosts.viewCount,
       nickname: schema.memberProfiles.nickname,
+      memberType: schema.memberProfiles.memberType,
       updaterNickname: updaterProfile.nickname,
     })
     .from(schema.bunnyBoardPosts)
@@ -398,11 +419,12 @@ export async function getBunnyBoardPostById(
     body: r.body,
     authorUserId: r.authorUserId,
     isPublished: r.isPublished ?? true,
-    authorNickname: r.nickname ?? null,
+    authorNickname: resolveAuthorNickname(r.memberType, r.nickname),
     coverImageUrl: r.coverImageUrl ?? null,
     scheduledPublishAt: r.scheduledPublishAt ?? null,
     updatedByUserId: r.updatedByUserId ?? null,
     updatedByNickname: r.updaterNickname ?? null,
+    viewCount: r.viewCount ?? 0,
     createdAt: r.createdAt,
     updatedAt: r.updatedAt ?? null,
     boardSlug: r.boardSlug,
@@ -625,4 +647,13 @@ export async function removeRecommend(
     )
     .returning({ postId: schema.bunnyBoardPostRecommends.postId });
   return { ok: true };
+}
+
+export async function incrementBunnyBoardPostViewCount(
+  postId: string,
+): Promise<void> {
+  await db
+    .update(schema.bunnyBoardPosts)
+    .set({ viewCount: sql`${schema.bunnyBoardPosts.viewCount} + 1` })
+    .where(eq(schema.bunnyBoardPosts.id, postId));
 }

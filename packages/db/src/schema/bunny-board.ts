@@ -33,6 +33,8 @@ export const bunnyBoardPosts = pgTable(
     scheduledPublishAt: timestamp("scheduled_publish_at"),
     /** 목록 정렬 순서 (작을수록 위). 관리자 Q&A 등에서 사용 */
     sortOrder: integer("sort_order").default(0).notNull(),
+    /** 조회수 */
+    viewCount: integer("view_count").default(0).notNull(),
     /** 마지막 수정자 (관리자 수정 시 저장) */
     updatedByUserId: text("updated_by_user_id").references(() => users.id, {
       onDelete: "set null",

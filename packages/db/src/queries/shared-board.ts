@@ -5,6 +5,15 @@ import * as schema from "../schema";
 
 const updaterProfile = alias(schema.memberProfiles, "updater_profile");
 
+/** memberType이 operator이면 "운영진", 아니면 nickname 반환 */
+function resolveAuthorNickname(
+  memberType: string | null | undefined,
+  nickname: string | null | undefined,
+): string | null {
+  if (memberType === "operator") return "운영진";
+  return nickname ?? null;
+}
+
 export type SharedBoardRow = {
   id: string;
   slug: string;
@@ -27,6 +36,7 @@ export type SharedBoardPostListItem = {
   scheduledPublishAt: Date | null;
   updatedByUserId: string | null;
   updatedByNickname: string | null;
+  viewCount: number;
   createdAt: Date | null;
   updatedAt: Date | null;
 };
@@ -114,7 +124,9 @@ export async function getSharedBoardPosts(
       updatedByUserId: schema.sharedBoardPosts.updatedByUserId,
       createdAt: schema.sharedBoardPosts.createdAt,
       updatedAt: schema.sharedBoardPosts.updatedAt,
+      viewCount: schema.sharedBoardPosts.viewCount,
       nickname: schema.memberProfiles.nickname,
+      memberType: schema.memberProfiles.memberType,
       updaterNickname: updaterProfile.nickname,
     })
     .from(schema.sharedBoardPosts)
@@ -140,12 +152,13 @@ export async function getSharedBoardPosts(
     postNumber: r.postNumber,
     title: r.title,
     authorUserId: r.authorUserId,
-    authorNickname: r.nickname ?? null,
+    authorNickname: resolveAuthorNickname(r.memberType, r.nickname),
     coverImageUrl: r.coverImageUrl ?? null,
     isPublished: r.isPublished ?? true,
     scheduledPublishAt: r.scheduledPublishAt ?? null,
     updatedByUserId: r.updatedByUserId ?? null,
     updatedByNickname: r.updaterNickname ?? null,
+    viewCount: r.viewCount ?? 0,
     createdAt: r.createdAt,
     updatedAt: r.updatedAt ?? null,
   }));
@@ -191,7 +204,9 @@ export async function getSharedBoardPostsWithRecommendCounts(
       updatedByUserId: schema.sharedBoardPosts.updatedByUserId,
       createdAt: schema.sharedBoardPosts.createdAt,
       updatedAt: schema.sharedBoardPosts.updatedAt,
+      viewCount: schema.sharedBoardPosts.viewCount,
       nickname: schema.memberProfiles.nickname,
+      memberType: schema.memberProfiles.memberType,
       updaterNickname: updaterProfile.nickname,
       recommendCount: recCountSubq.recommendCount,
     })
@@ -222,12 +237,13 @@ export async function getSharedBoardPostsWithRecommendCounts(
     postNumber: r.postNumber,
     title: r.title,
     authorUserId: r.authorUserId,
-    authorNickname: r.nickname ?? null,
+    authorNickname: resolveAuthorNickname(r.memberType, r.nickname),
     coverImageUrl: r.coverImageUrl ?? null,
     isPublished: r.isPublished ?? true,
     scheduledPublishAt: r.scheduledPublishAt ?? null,
     updatedByUserId: r.updatedByUserId ?? null,
     updatedByNickname: r.updaterNickname ?? null,
+    viewCount: r.viewCount ?? 0,
     createdAt: r.createdAt,
     updatedAt: r.updatedAt ?? null,
     recommendCount: r.recommendCount ?? 0,
@@ -276,7 +292,9 @@ export async function getSharedBoardPostsWithBodies(
       updatedByUserId: schema.sharedBoardPosts.updatedByUserId,
       createdAt: schema.sharedBoardPosts.createdAt,
       updatedAt: schema.sharedBoardPosts.updatedAt,
+      viewCount: schema.sharedBoardPosts.viewCount,
       nickname: schema.memberProfiles.nickname,
+      memberType: schema.memberProfiles.memberType,
       updaterNickname: updaterProfile.nickname,
       recommendCount: recCountSubq.recommendCount,
     })
@@ -308,12 +326,13 @@ export async function getSharedBoardPostsWithBodies(
     title: r.title,
     body: r.body,
     authorUserId: r.authorUserId,
-    authorNickname: r.nickname ?? null,
+    authorNickname: resolveAuthorNickname(r.memberType, r.nickname),
     coverImageUrl: r.coverImageUrl ?? null,
     isPublished: r.isPublished ?? true,
     scheduledPublishAt: r.scheduledPublishAt ?? null,
     updatedByUserId: r.updatedByUserId ?? null,
     updatedByNickname: r.updaterNickname ?? null,
+    viewCount: r.viewCount ?? 0,
     createdAt: r.createdAt,
     updatedAt: r.updatedAt ?? null,
     recommendCount: r.recommendCount ?? 0,
@@ -362,7 +381,9 @@ export async function getSharedBoardPostById(
       updatedAt: schema.sharedBoardPosts.updatedAt,
       boardSlug: schema.sharedBoards.slug,
       boardName: schema.sharedBoards.name,
+      viewCount: schema.sharedBoardPosts.viewCount,
       nickname: schema.memberProfiles.nickname,
+      memberType: schema.memberProfiles.memberType,
       updaterNickname: updaterProfile.nickname,
     })
     .from(schema.sharedBoardPosts)
@@ -391,11 +412,12 @@ export async function getSharedBoardPostById(
     body: r.body,
     authorUserId: r.authorUserId,
     isPublished: r.isPublished ?? true,
-    authorNickname: r.nickname ?? null,
+    authorNickname: resolveAuthorNickname(r.memberType, r.nickname),
     coverImageUrl: r.coverImageUrl ?? null,
     scheduledPublishAt: r.scheduledPublishAt ?? null,
     updatedByUserId: r.updatedByUserId ?? null,
     updatedByNickname: r.updaterNickname ?? null,
+    viewCount: r.viewCount ?? 0,
     createdAt: r.createdAt,
     updatedAt: r.updatedAt ?? null,
     boardSlug: r.boardSlug,
@@ -609,4 +631,13 @@ export async function removeSharedBoardRecommend(
     )
     .returning({ postId: schema.sharedBoardPostRecommends.postId });
   return { ok: true };
+}
+
+export async function incrementSharedBoardPostViewCount(
+  postId: string,
+): Promise<void> {
+  await db
+    .update(schema.sharedBoardPosts)
+    .set({ viewCount: sql`${schema.sharedBoardPosts.viewCount} + 1` })
+    .where(eq(schema.sharedBoardPosts.id, postId));
 }

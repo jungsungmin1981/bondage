@@ -113,6 +113,13 @@
       "when": 1773750000000,
       "tag": "0021_invite_keys_rigger_id_nullable",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1773892260606,
+      "tag": "0016_cooing_toro",
+      "breakpoints": true
     }
   ]
 }

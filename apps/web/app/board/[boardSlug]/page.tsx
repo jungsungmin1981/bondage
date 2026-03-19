@@ -249,6 +249,9 @@ export default async function BoardListPage({
                           · 수정됨
                         </span>
                       )}
+                    <span className="ml-1.5 text-muted-foreground/60">
+                      · 조회 {post.viewCount.toLocaleString()}
+                    </span>
                   </span>
                 </Link>
               </li>

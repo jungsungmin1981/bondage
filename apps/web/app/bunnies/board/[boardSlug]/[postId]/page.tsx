@@ -18,6 +18,7 @@ import { PostDetailActions } from "./post-detail-actions";
 import { CommentSection } from "./comment-section";
 import { PostBodyMarkdown } from "./post-body-markdown";
 import { RecommendButton } from "./recommend-button";
+import { PostViewTracker } from "@/components/post-view-tracker";
 
 function formatDateTime(d: Date | null): string {
   if (!d) return "-";
@@ -76,6 +77,7 @@ export default async function BunnyBoardPostDetailPage({
 
   return (
     <div className="mx-auto min-h-[calc(100svh-3.5rem)] w-full max-w-2xl p-4 sm:p-6">
+      <PostViewTracker postId={postId} boardType="bunny" />
       <div className="mb-4">
         <BunnyBoardTabs boards={boards.map((b) => ({ slug: b.slug, name: b.name }))} />
       </div>
@@ -113,6 +115,9 @@ export default async function BunnyBoardPostDetailPage({
                 · 수정됨 ({formatDateTime(post.updatedAt)})
               </span>
             )}
+            <span className="ml-2 text-xs text-muted-foreground/70">
+              조회 {post.viewCount.toLocaleString()}
+            </span>
           </p>
         </header>
         <div className="px-4 py-5">
