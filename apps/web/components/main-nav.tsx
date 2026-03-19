@@ -177,7 +177,10 @@ export function MainNav({
                           pathname.startsWith("/notes")) ||
                         (!onlyHref &&
                           item.href === "/board" &&
-                          pathname.startsWith("/board"))) &&
+                          pathname.startsWith("/board")) ||
+                        (!onlyHref &&
+                          item.href === "/bunnies/board" &&
+                          pathname.startsWith("/bunnies/board"))) &&
                         "bg-muted font-semibold",
                     )}
                   >
@@ -289,7 +292,10 @@ export function MainNav({
                     pathname.startsWith("/notes")) ||
                   (!onlyHref &&
                     item.href === "/board" &&
-                    pathname.startsWith("/board"))) &&
+                    pathname.startsWith("/board")) ||
+                  (!onlyHref &&
+                    item.href === "/bunnies/board" &&
+                    pathname.startsWith("/bunnies/board"))) &&
                   "bg-muted",
               )}
               asChild
