@@ -111,7 +111,7 @@ export function AdminClassRequestsContent() {
         <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>
       )}
       {requests.map((req) => {
-        const statusInfo = STATUS_LABELS[req.status] ?? STATUS_LABELS.pending;
+        const statusInfo = STATUS_LABELS[req.status] ?? { label: "검토 대기", className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400" };
         const isExpanded = expandedId === req.id;
         return (
           <div key={req.id} className="rounded-xl border border-border bg-card overflow-hidden">

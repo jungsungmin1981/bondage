@@ -64,7 +64,7 @@ export async function ClassRequestListSection() {
       ) : (
         <ul className="flex flex-col gap-0 border-t border-border">
           {requests.map((req) => {
-            const statusInfo = STATUS_LABELS[req.status] ?? STATUS_LABELS.pending;
+            const statusInfo = STATUS_LABELS[req.status] ?? { label: "검토 대기", className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400" };
             return (
               <li key={req.id} className="border-b border-border">
                 <Link

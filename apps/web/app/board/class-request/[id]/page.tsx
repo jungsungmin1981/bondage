@@ -47,7 +47,7 @@ export default async function ClassRequestDetailPage({
       (await getMemberProfileByUserId(session.user.id))?.status === "approved")
   );
 
-  const statusInfo = STATUS_LABELS[request.status] ?? STATUS_LABELS.pending;
+  const statusInfo = STATUS_LABELS[request.status] ?? { label: "검토 대기", className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400" };
 
   return (
     <div className="mx-auto min-h-[calc(100svh-3.5rem)] w-full max-w-2xl p-4 sm:p-6">
