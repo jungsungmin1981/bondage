@@ -226,7 +226,7 @@ export default async function BunnyBoardListPage({
                         </span>
                       )}
                     <span className="ml-1.5 text-muted-foreground/60">
-                      · 조회 {post.viewCount.toLocaleString()}
+                      · 조회 {(post.viewCount ?? 0).toLocaleString()}
                     </span>
                   </span>
                 </Link>
