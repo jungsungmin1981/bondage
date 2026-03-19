@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Menu, X } from "lucide-react";
 import { cn } from "@workspace/ui/lib/utils";
 import { ADMIN_ONLY_TAB, ADMIN_TABS } from "@/lib/admin-tabs";
 import { hasTabAccess, getFirstAllowedPathForTab, isOperatorAllowedPath, pathnameToTabSub, type OperatorTabId } from "@/lib/admin-operator-permissions";
@@ -37,50 +39,69 @@ export function AdminTabs({
 }: {
   showInviteKeysTab?: boolean;
   operatorOnly?: boolean;
-  /** 운영진용: 허용된 탭/하위 ID 목록 (tabId 또는 tabId:subId) */
   allowedTabIds?: string[];
 }) {
   const pathname = usePathname();
+  const [open, setOpen] = useState(false);
 
-  if (operatorOnly && allowedTabIds) {
-    const tabs = ADMIN_TABS.filter((t) => hasTabAccess(allowedTabIds, t.tabId as OperatorTabId));
-    const tabSub = pathname ? pathnameToTabSub(pathname) : null;
-    return (
-      <nav className="flex flex-col gap-0.5" aria-label="관리자 메뉴">
-        {tabs.map((tab) => {
+  const links = operatorOnly && allowedTabIds
+    ? ADMIN_TABS
+        .filter((t) => hasTabAccess(allowedTabIds, t.tabId as OperatorTabId))
+        .map((tab) => {
           const href = getFirstAllowedPathForTab(allowedTabIds, tab.tabId as OperatorTabId);
+          const tabSub = pathname ? pathnameToTabSub(pathname) : null;
           const active = tabSub?.tabId === tab.tabId && isOperatorAllowedPath(allowedTabIds, pathname ?? "");
-          return (
-            <Link
-              key={tab.tabId}
-              href={href}
-              className={cn(tabClass, active && "bg-muted text-foreground")}
-            >
-              {tab.label}
-            </Link>
-          );
-        })}
-      </nav>
-    );
-  }
+          return { label: tab.label, href, active };
+        })
+    : [
+        { label: ADMIN_ONLY_TAB.label, href: ADMIN_ONLY_TAB.href, active: isActive(pathname, ADMIN_ONLY_TAB) },
+        ...ADMIN_TABS.map((tab) => ({ label: tab.label, href: tab.href, active: isActive(pathname, tab) })),
+      ];
+
+  const activeLabel = links.find((l) => l.active)?.label ?? "관리자";
 
   return (
-    <nav className="flex flex-col gap-0.5" aria-label="관리자 메뉴">
-      <Link
-        href={ADMIN_ONLY_TAB.href}
-        className={cn(tabClass, isActive(pathname, ADMIN_ONLY_TAB) && "bg-muted text-foreground")}
-      >
-        {ADMIN_ONLY_TAB.label}
-      </Link>
-      {ADMIN_TABS.map((tab) => (
-        <Link
-          key={tab.href}
-          href={tab.href}
-          className={cn(tabClass, isActive(pathname, tab) && "bg-muted text-foreground")}
+    <>
+      {/* 모바일: 상단 드롭다운 토글 버튼 */}
+      <div className="sm:hidden">
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="flex w-full items-center justify-between rounded-lg border border-border bg-muted px-3 py-2.5 text-sm font-medium"
+          aria-expanded={open}
+          aria-label="관리자 메뉴 열기"
         >
-          {tab.label}
-        </Link>
-      ))}
-    </nav>
+          <span>{activeLabel}</span>
+          {open ? <X className="size-4 shrink-0" /> : <Menu className="size-4 shrink-0" />}
+        </button>
+        {open && (
+          <nav className="mt-1 flex flex-col gap-0.5 rounded-lg border border-border bg-background p-1 shadow-lg" aria-label="관리자 메뉴">
+            {links.map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                onClick={() => setOpen(false)}
+                className={cn(tabClass, l.active && "bg-muted text-foreground")}
+              >
+                {l.label}
+              </Link>
+            ))}
+          </nav>
+        )}
+      </div>
+
+      {/* 데스크탑: 기존 세로 메뉴 */}
+      <nav className="hidden flex-col gap-0.5 sm:flex" aria-label="관리자 메뉴">
+        {links.map((l) => (
+          <Link
+            key={l.href}
+            href={l.href}
+            className={cn(tabClass, l.active && "bg-muted text-foreground")}
+          >
+            {l.label}
+          </Link>
+        ))}
+      </nav>
+    </>
   );
 }

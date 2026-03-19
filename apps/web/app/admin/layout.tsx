@@ -39,7 +39,9 @@ export default async function AdminLayout({
   const sidebarAndMain = (
     <>
       <AdminOperatorRedirect operatorOnly={operatorOnly} allowedTabIds={allowedTabIds} allowedTabIdsKey={allowedTabIdsKey} />
-      <div className="-ml-3 sm:-ml-6">
+
+      {/* 데스크탑: 좌측 사이드바 레이아웃 */}
+      <div className="-ml-3 hidden sm:block sm:-ml-6">
         <aside
           className="fixed bottom-0 left-0 top-14 z-20 flex w-52 flex-col gap-4 border-r border-border bg-background py-6"
           style={{ paddingLeft: "max(1rem, env(safe-area-inset-left))", paddingRight: "1rem" }}
@@ -53,6 +55,21 @@ export default async function AdminLayout({
         </aside>
         <main className="min-h-0 min-w-0 py-6 sm:py-8" style={{ paddingLeft: "calc(13rem + env(safe-area-inset-left))" }}>
           <div className="px-4">{children}</div>
+        </main>
+      </div>
+
+      {/* 모바일: 상단 드롭다운 메뉴 + 전체 너비 컨텐츠 */}
+      <div className="block sm:hidden">
+        <div className="px-4 pb-4 pt-4">
+          <h1 className="mb-3 text-xl font-semibold">관리자</h1>
+          <AdminTabs
+            showInviteKeysTab={isPrimaryAdmin(session)}
+            operatorOnly={operatorOnly}
+            allowedTabIds={allowedTabIds}
+          />
+        </div>
+        <main className="min-h-0 min-w-0 px-4 pb-8">
+          {children}
         </main>
       </div>
     </>
