@@ -772,7 +772,7 @@ export function ClassAdvancedAdmin() {
             </div>
 
             {form.extraImageUrls.length > 0 && (
-              <div className="rounded-xl border border-border bg-white p-4">
+              <div className="rounded-xl border border-border bg-card p-4">
                 <p className="text-sm font-medium">추가 이미지</p>
                 <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
                   {form.extraImageUrls.map((url, idx) => (
@@ -791,7 +791,7 @@ export function ClassAdvancedAdmin() {
             )}
 
             {form.description?.trim() && (
-              <div className="rounded-xl border border-border bg-white p-4">
+              <div className="rounded-xl border border-border bg-card p-4">
                 <p className="text-sm font-medium">설명</p>
                 <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">
                   {form.description}
