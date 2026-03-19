@@ -6,7 +6,7 @@ import {
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { LayoutDashboard, Users, Settings } from "lucide-react";
+import { LayoutDashboard, Settings } from "lucide-react";
 import { getMainBackgroundUrl } from "@/lib/main-background-config";
 
 export default async function MainPage() {
@@ -68,23 +68,6 @@ export default async function MainPage() {
               </h2>
               <p className="text-sm text-white/70">
                 요약 정보를 확인하세요
-              </p>
-            </div>
-          </Link>
-
-          <Link
-            href="/users"
-            className="group flex items-center gap-4 rounded-xl border border-white/20 bg-black/40 p-5 shadow-lg backdrop-blur-sm transition hover:border-white/40 hover:bg-black/50 hover:shadow-xl"
-          >
-            <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-white/15 text-white">
-              <Users className="size-6" />
-            </div>
-            <div>
-              <h2 className="font-medium text-white group-hover:text-white">
-                사용자
-              </h2>
-              <p className="text-sm text-white/70">
-                사용자 목록 보기
               </p>
             </div>
           </Link>
