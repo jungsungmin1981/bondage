@@ -23,7 +23,7 @@ function isActive(pathname: string, tab: { tabId: string; href: string }): boole
   if (tab.tabId === "operators") return pathname.startsWith("/admin/operators");
   if (tab.tabId === "notice") return pathname.startsWith("/admin/notice");
   if (tab.tabId === "members") return pathname.startsWith("/admin/members");
-  if (tab.tabId === "class") return pathname.startsWith("/admin/class");
+  if (tab.tabId === "class") return pathname.startsWith("/admin/class") || pathname.startsWith("/admin/class-requests");
   if (tab.tabId === "images") return pathname.startsWith("/admin/images") || pathname.startsWith("/admin/watermark");
   return pathname === tab.href || pathname.startsWith(`${tab.href}/`);
 }

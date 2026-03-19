@@ -7,6 +7,7 @@ import { cn } from "@workspace/ui/lib/utils";
 const sectionTabs = [
   { label: "클래스 심사", href: "/admin/class-review" },
   { label: "클래스 등록", href: "/admin/class" },
+  { label: "클래스 요청", href: "/admin/class-requests" },
 ] as const;
 
 export function AdminClassSectionTabs() {

@@ -63,10 +63,26 @@ export default async function BoardListPage({
   searchParams,
 }: {
   params: Promise<{ boardSlug: string }>;
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; tab?: string }>;
 }) {
   const { boardSlug } = await params;
   const resolvedSearchParams = await searchParams;
+  const tab = resolvedSearchParams?.tab ?? "";
+
+  // suggestion 게시판에서 클래스 요청 탭이면 별도 처리
+  if (boardSlug === "suggestion" && tab === "class-request") {
+    const { ClassRequestListSection } = await import("@/app/board/class-request/class-request-list-section");
+    const { BoardTabs } = await import("./board-tabs");
+    return (
+      <div className="mx-auto min-h-[calc(100svh-3.5rem)] w-full max-w-2xl p-4 sm:p-6">
+        <div className="mb-4">
+          <BoardTabs />
+        </div>
+        <ClassRequestListSection />
+      </div>
+    );
+  }
+
   const page = Math.max(
     1,
     parseInt(resolvedSearchParams?.page ?? "1", 10) || 1,
@@ -159,6 +175,23 @@ export default async function BoardListPage({
       <div className="mb-4">
         <BoardTabs />
       </div>
+
+      {boardSlug === "suggestion" && (
+        <div className="mb-4 flex gap-0 border-b border-border text-sm">
+          <a
+            href="/board/suggestion"
+            className={`min-h-[44px] flex-1 border-b-2 px-3 py-2.5 text-center font-medium transition sm:flex-initial sm:px-4 ${tab !== "class-request" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:border-muted-foreground/50 hover:text-foreground"}`}
+          >
+            수정/기능 제안
+          </a>
+          <a
+            href="/board/suggestion?tab=class-request"
+            className={`min-h-[44px] flex-1 border-b-2 px-3 py-2.5 text-center font-medium transition sm:flex-initial sm:px-4 ${tab === "class-request" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:border-muted-foreground/50 hover:text-foreground"}`}
+          >
+            클래스 요청
+          </a>
+        </div>
+      )}
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
         <BoardWriteButton boardSlug={boardSlug} />

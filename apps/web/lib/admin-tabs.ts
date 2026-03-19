@@ -30,6 +30,7 @@ export function pathnameToTabId(pathname: string): OperatorTabId | "invite-keys"
   if (pathname.startsWith("/admin/operators")) return "operators";
   if (pathname.startsWith("/admin/members")) return "members";
   if (pathname.startsWith("/admin/class")) return "class";
+  if (pathname.startsWith("/admin/class-requests")) return "class";
   if (pathname.startsWith("/admin/notice")) return "notice";
   if (pathname.startsWith("/admin/images") || pathname.startsWith("/admin/watermark")) return "images";
   return null;
