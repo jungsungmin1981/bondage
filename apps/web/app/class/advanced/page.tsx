@@ -16,14 +16,6 @@ const getCachedAdvancedPosts = unstable_cache(
   { revalidate: 60 },
 );
 
-function getCachedChallengeCounts(postIds: string[]) {
-  return unstable_cache(
-    () => getChallengeCountsByPostIds(postIds),
-    ["class-advanced-challenge-counts"],
-    { revalidate: 30 },
-  )();
-}
-
 export default async function ClassAdvancedPage() {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -36,7 +28,7 @@ export default async function ClassAdvancedPage() {
     postIds.length > 0
       ? await Promise.all([
           getMyChallengeStatusByPostIds(session.user.id, postIds),
-          getCachedChallengeCounts(postIds),
+          getChallengeCountsByPostIds(postIds),
         ])
       : [
           new Map<string, "pending" | "approved" | "rejected">(),
