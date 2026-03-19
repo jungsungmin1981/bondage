@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function BunnyBoardLandingPage() {
-  redirect("/bunnies/board/free");
+  redirect("/bunnies/board/notice");
 }
