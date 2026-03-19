@@ -245,13 +245,15 @@ export default async function RootLayout({
                     riggerPendingRestriction={riggerPending && !!memberProfile?.id}
                     riggerProfileId={memberProfile?.id ?? undefined}
                     operatorPendingRestriction={operatorPending}
+                    showAdminLink={!!session && isAdminUser}
+                    showOperatorLink={!!session && isApprovedOperator && !isAdminUser}
                   />
                 </div>
                 <div className="flex items-center gap-2">
                   {session && isApprovedOperator && (
                     <Link
                       href="/admin"
-                      className="inline-flex min-h-[44px] items-center justify-center rounded-lg border bg-muted/30 px-3 text-xs font-semibold shadow-sm shadow-black/5 transition hover:bg-muted/60 sm:text-sm"
+                      className="hidden min-h-[44px] items-center justify-center rounded-lg border bg-muted/30 px-3 text-xs font-semibold shadow-sm shadow-black/5 transition hover:bg-muted/60 sm:inline-flex sm:text-sm"
                     >
                       운영진
                     </Link>
@@ -259,7 +261,7 @@ export default async function RootLayout({
                   {session && isAdminUser && (
                     <Link
                       href="/admin"
-                      className="inline-flex min-h-[44px] items-center justify-center rounded-lg border bg-muted/30 px-3 text-xs font-semibold shadow-sm shadow-black/5 transition hover:bg-muted/60 sm:text-sm"
+                      className="hidden min-h-[44px] items-center justify-center rounded-lg border bg-muted/30 px-3 text-xs font-semibold shadow-sm shadow-black/5 transition hover:bg-muted/60 sm:inline-flex sm:text-sm"
                     >
                       관리자
                     </Link>

@@ -37,9 +37,7 @@ const navItems = [
   { label: "승인 요청", href: "/bunny-approvals" },
   { label: "기타", href: "/etc" },
   { label: "쪽지", href: "/notes" },
-] as const;
-
-const navLinkClass =
+] as const;const navLinkClass =
   "block min-h-[44px] w-full rounded-lg px-4 py-3 text-left text-sm font-medium text-foreground transition-colors hover:bg-muted focus:bg-muted focus-visible:ring-2 focus-visible:ring-ring";
 
 export function MainNav({
@@ -52,6 +50,8 @@ export function MainNav({
   riggerPendingRestriction = false,
   riggerProfileId,
   operatorPendingRestriction = false,
+  showAdminLink = false,
+  showOperatorLink = false,
 }: {
   pendingBunnyApprovalsCount?: number;
   unreadMessagesCount?: number;
@@ -67,6 +67,10 @@ export function MainNav({
   riggerProfileId?: string;
   /** 운영진 미승인 시 true. 메뉴 클릭 시 /operator/pending 만 이동 */
   operatorPendingRestriction?: boolean;
+  /** 모바일 메뉴 시트에 관리자 링크 표시 */
+  showAdminLink?: boolean;
+  /** 모바일 메뉴 시트에 운영진 링크 표시 */
+  showOperatorLink?: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -92,7 +96,7 @@ export function MainNav({
   return (
     <>
       {/* 모바일: 햄버거 + 시트 */}
-      <div className="flex md:hidden">
+      <div className="flex sm:hidden">
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
             <Button
@@ -109,6 +113,23 @@ export function MainNav({
               <SheetTitle className="sr-only">메뉴</SheetTitle>
             </SheetHeader>
             <nav className="mt-6 flex flex-col gap-1" aria-label="메인 메뉴">
+              {/* 운영진/관리자 링크 - 모바일 메뉴 최상단 */}
+              {(showOperatorLink || showAdminLink) && (
+                <Link
+                  href="/admin"
+                  onClick={() => setOpen(false)}
+                  className={cn(
+                    navLinkClass,
+                    "font-semibold text-primary",
+                    pathname.startsWith("/admin") && "bg-muted",
+                  )}
+                >
+                  {showAdminLink ? "관리자" : "운영진"}
+                </Link>
+              )}
+              {(showOperatorLink || showAdminLink) && (
+                <hr className="my-1 border-border" />
+              )}
               {itemsToShow.map((item) =>
                 "sub" in item ? (
                   <div key={item.label} className="flex flex-col gap-0.5">
@@ -183,7 +204,7 @@ export function MainNav({
 
       {/* PC: 가로 메뉴 + 클래스 드롭다운 */}
       <nav
-        className="hidden items-center gap-1 md:flex"
+        className="hidden items-center gap-1 sm:flex"
         aria-label="메인 메뉴"
       >
         {itemsToShow.map((item) =>
