@@ -434,7 +434,7 @@ export function ClassIntermediateAdmin() {
                       ropeThicknessMm: e.target.value === "" ? "" : Number(e.target.value),
                     }))
                   }
-                  className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="h-8 rounded-lg border border-input bg-background px-2.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   aria-label="로프 두께 선택"
                 >
                   <option value="">-</option>
@@ -456,7 +456,7 @@ export function ClassIntermediateAdmin() {
                       ropeLengthM: e.target.value === "" ? "" : Number(e.target.value),
                     }))
                   }
-                  className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="h-8 rounded-lg border border-input bg-background px-2.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   aria-label="길이 선택"
                 >
                   <option value="">-</option>
@@ -478,7 +478,7 @@ export function ClassIntermediateAdmin() {
                       quantity: e.target.value === "" ? "" : Number(e.target.value),
                     }))
                   }
-                  className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="h-8 rounded-lg border border-input bg-background px-2.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   aria-label="수량 선택"
                 >
                   <option value="">-</option>

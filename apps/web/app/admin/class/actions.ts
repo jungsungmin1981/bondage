@@ -8,10 +8,11 @@ import {
   deleteClassPost,
   listClassPostsByLevel,
   updateClassPost,
+  getMemberProfileByUserId,
   type ClassLevel,
   type ClassVisibility,
 } from "@workspace/db";
-import { isAdmin } from "@/lib/admin";
+import { isPrimaryAdmin } from "@/lib/admin";
 
 export type ClassPostForAdmin = Awaited<
   ReturnType<typeof listClassPostsByLevel>
@@ -19,7 +20,11 @@ export type ClassPostForAdmin = Awaited<
 
 async function requireAdmin() {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!isAdmin(session)) throw new Error("관리자만 사용할 수 있습니다.");
+  if (!session) throw new Error("로그인이 필요합니다.");
+  if (isPrimaryAdmin(session)) return session;
+  const profile = await getMemberProfileByUserId(session.user.id);
+  const isOperator = profile?.memberType === "operator" && profile?.status === "approved";
+  if (!isOperator) throw new Error("관리자만 사용할 수 있습니다.");
   return session;
 }
 

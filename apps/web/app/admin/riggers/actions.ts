@@ -8,16 +8,26 @@ import {
   rejectRiggerProfile as dbRejectRiggerProfile,
   getUserIdByMemberProfileId,
   insertDirectMessage,
+  getMemberProfileByUserId,
   DIRECT_MESSAGE_SOURCE,
 } from "@workspace/db";
-import { isAdmin } from "@/lib/admin";
+import { isPrimaryAdmin } from "@/lib/admin";
+
+async function checkIsAdmin() {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) return null;
+  if (isPrimaryAdmin(session)) return session;
+  const profile = await getMemberProfileByUserId(session.user.id);
+  if (profile?.memberType === "operator" && profile?.status === "approved") return session;
+  return null;
+}
 
 export async function approveRiggerProfileAction(profileId: string): Promise<
   | { ok: true }
   | { ok: false; error: string }
 > {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!isAdmin(session)) {
+  const session = await checkIsAdmin();
+  if (!session) {
     return { ok: false, error: "관리자만 승인할 수 있습니다." };
   }
   const result = await dbApproveRiggerProfile(profileId);
@@ -34,12 +44,9 @@ export async function rejectRiggerProfileWithNoteAction(
   title: string,
   content: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!isAdmin(session)) {
+  const session = await checkIsAdmin();
+  if (!session) {
     return { ok: false, error: "관리자만 반려할 수 있습니다." };
-  }
-  if (!session?.user?.id) {
-    return { ok: false, error: "로그인이 필요합니다." };
   }
   const toUserId = await getUserIdByMemberProfileId(profileId);
   if (!toUserId) {
