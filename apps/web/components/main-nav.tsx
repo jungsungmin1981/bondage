@@ -37,7 +37,9 @@ const navItems = [
   { label: "승인 요청", href: "/bunny-approvals" },
   { label: "기타", href: "/etc" },
   { label: "쪽지", href: "/notes" },
-] as const;const navLinkClass =
+] as const;
+
+const navLinkClass =
   "block min-h-[44px] w-full rounded-lg px-4 py-3 text-left text-sm font-medium text-foreground transition-colors hover:bg-muted focus:bg-muted focus-visible:ring-2 focus-visible:ring-ring";
 
 export function MainNav({
