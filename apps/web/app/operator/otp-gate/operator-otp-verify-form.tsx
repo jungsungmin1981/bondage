@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@workspace/ui/components/button";
 import {
   InputOTP,
@@ -11,7 +10,6 @@ import {
 import { Label } from "@workspace/ui/components/label";
 
 export function OperatorOtpVerifyForm() {
-  const router = useRouter();
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,9 +35,9 @@ export function OperatorOtpVerifyForm() {
         return;
       }
       if (data.reset === true) {
-        router.replace("/operator/setup-otp");
+        window.location.href = "/operator/setup-otp";
       } else {
-        router.replace("/");
+        window.location.href = "/";
       }
     } finally {
       setLoading(false);
