@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@workspace/auth";
 import { isAdmin, isPrimaryAdmin } from "@/lib/admin";
-import { getMemberProfileByUserId, getOperatorAllowedTabIds } from "@workspace/db";
+import { getMemberProfileByUserId, getOperatorAllowedTabIds, hasPendingRiggerProfiles, getPendingChallengeCountsByLevel } from "@workspace/db";
 import { AdminTabs } from "./admin-tabs";
 import { AdminOperatorRedirect } from "./admin-operator-redirect";
 import { AdminLayoutContent } from "./admin-layout-content";
@@ -33,6 +33,13 @@ export default async function AdminLayout({
     redirect("/?admin=no-permission");
   }
 
+  const pendingRigger = await hasPendingRiggerProfiles();
+  const pendingChallengeCounts = await getPendingChallengeCountsByLevel();
+  const hasPendingClass =
+    pendingChallengeCounts.beginner > 0 ||
+    pendingChallengeCounts.intermediate > 0 ||
+    pendingChallengeCounts.advanced > 0;
+
   /** 클라이언트에서 의존성 비교 시 참조 변경으로 인한 무한 실행 방지 */
   const allowedTabIdsKey = allowedTabIds ? allowedTabIds.slice().sort().join(",") : "";
 
@@ -51,6 +58,8 @@ export default async function AdminLayout({
             showInviteKeysTab={isPrimaryAdmin(session)}
             operatorOnly={operatorOnly}
             allowedTabIds={allowedTabIds}
+            hasPendingMembers={pendingRigger}
+            hasPendingClass={hasPendingClass}
           />
         </aside>
         <main className="min-h-0 min-w-0 py-6 sm:py-8" style={{ paddingLeft: "calc(13rem + env(safe-area-inset-left))" }}>
@@ -66,6 +75,8 @@ export default async function AdminLayout({
             showInviteKeysTab={isPrimaryAdmin(session)}
             operatorOnly={operatorOnly}
             allowedTabIds={allowedTabIds}
+            hasPendingMembers={pendingRigger}
+            hasPendingClass={hasPendingClass}
           />
         </div>
         <main className="min-h-0 min-w-0 px-4 pb-8">

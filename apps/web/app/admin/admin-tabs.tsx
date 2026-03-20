@@ -36,10 +36,14 @@ const tabClass = cn(
 export function AdminTabs({
   operatorOnly = false,
   allowedTabIds,
+  hasPendingMembers = false,
+  hasPendingClass = false,
 }: {
   showInviteKeysTab?: boolean;
   operatorOnly?: boolean;
   allowedTabIds?: string[];
+  hasPendingMembers?: boolean;
+  hasPendingClass?: boolean;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -51,11 +55,11 @@ export function AdminTabs({
           const href = getFirstAllowedPathForTab(allowedTabIds, tab.tabId as OperatorTabId);
           const tabSub = pathname ? pathnameToTabSub(pathname) : null;
           const active = tabSub?.tabId === tab.tabId && isOperatorAllowedPath(allowedTabIds, pathname ?? "");
-          return { label: tab.label, href, active };
+          return { label: tab.label, href, active, hasPending: (tab.tabId === "members" && hasPendingMembers) || (tab.tabId === "class" && hasPendingClass) };
         })
     : [
-        { label: ADMIN_ONLY_TAB.label, href: ADMIN_ONLY_TAB.href, active: isActive(pathname, ADMIN_ONLY_TAB) },
-        ...ADMIN_TABS.map((tab) => ({ label: tab.label, href: tab.href, active: isActive(pathname, tab) })),
+        { label: ADMIN_ONLY_TAB.label, href: ADMIN_ONLY_TAB.href, active: isActive(pathname, ADMIN_ONLY_TAB), hasPending: false },
+        ...ADMIN_TABS.map((tab) => ({ label: tab.label, href: tab.href, active: isActive(pathname, tab), hasPending: (tab.tabId === "members" && hasPendingMembers) || (tab.tabId === "class" && hasPendingClass) })),
       ];
 
   const activeLabel = links.find((l) => l.active)?.label ?? "관리자";
@@ -81,7 +85,7 @@ export function AdminTabs({
                 key={l.href}
                 href={l.href}
                 onClick={() => setOpen(false)}
-                className={cn(tabClass, l.active && "bg-muted text-foreground")}
+                className={cn(tabClass, l.active && "bg-muted text-foreground", !l.active && l.hasPending && "text-amber-500")}
               >
                 {l.label}
               </Link>
@@ -96,7 +100,7 @@ export function AdminTabs({
           <Link
             key={l.href}
             href={l.href}
-            className={cn(tabClass, l.active && "bg-muted text-foreground")}
+            className={cn(tabClass, l.active && "bg-muted text-foreground", !l.active && l.hasPending && "text-amber-500")}
           >
             {l.label}
           </Link>

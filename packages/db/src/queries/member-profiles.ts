@@ -366,6 +366,21 @@ export async function getPendingRiggerProfiles(): Promise<
   }));
 }
 
+/** 관리자용: 승인 대기 중인 리거가 한 명이라도 있으면 true. */
+export async function hasPendingRiggerProfiles(): Promise<boolean> {
+  const rows = await db
+    .select({ id: schema.memberProfiles.id })
+    .from(schema.memberProfiles)
+    .where(
+      and(
+        eq(schema.memberProfiles.memberType, "rigger"),
+        eq(schema.memberProfiles.status, "pending"),
+      ),
+    )
+    .limit(1);
+  return rows.length > 0;
+}
+
 export type ReRequestedRiggerProfileRow = PendingRiggerProfileRow & {
   reRequestedAt: Date | null;
 };
