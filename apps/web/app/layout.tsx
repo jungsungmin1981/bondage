@@ -89,7 +89,7 @@ const fontMono = Geist_Mono({
 
 const fontRiggerCard = Hahmlet({
   weight: "700",
-  subsets: ["korean"],
+  subsets: ["latin"],
   variable: "--font-rigger-card",
   display: "swap",
 });
