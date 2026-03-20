@@ -412,7 +412,7 @@ function BronzeCardWithImage({
         >
           <div className="inline-flex min-h-0 min-w-0 max-w-[78%] items-center justify-center">
             <span
-              className="truncate text-center font-bold leading-none tracking-widest text-amber-600 drop-shadow-md"
+              className="truncate text-center font-bold leading-none tracking-widest text-white drop-shadow-md"
               style={{
                 fontFamily: '"Maplestory Bold", sans-serif',
                 textShadow: "0 0 1px rgba(0,0,0,0.8), 0 1px 2px rgba(0,0,0,0.5)",
