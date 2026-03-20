@@ -10,9 +10,11 @@ import { resizeImageOnClient } from "@/lib/image/resize-client";
 
 type BunnyCardEditColumnProps = {
   profile: MemberProfileRow;
+  /** 기본 카드인 경우 동적 URL 사용 (부모에서 resolveBunnyCardUrl 적용) */
+  displayCardUrl?: string | null;
 };
 
-export function BunnyCardEditColumn({ profile }: BunnyCardEditColumnProps) {
+export function BunnyCardEditColumn({ profile, displayCardUrl }: BunnyCardEditColumnProps) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -35,7 +37,7 @@ export function BunnyCardEditColumn({ profile }: BunnyCardEditColumnProps) {
   return (
     <div className="flex w-full max-w-[280px] flex-col gap-1 sm:col-start-1 sm:row-start-1 sm:justify-end">
       <div className="w-full">
-        <BunnyCard cardImageUrl={profile.cardImageUrl} />
+        <BunnyCard cardImageUrl={displayCardUrl ?? profile.cardImageUrl} />
       </div>
       <input
         ref={inputRef}

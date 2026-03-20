@@ -14,6 +14,7 @@ const imageTabs = [
   { label: "마스터", href: "/admin/images/master" },
   { label: "감옥", href: "/admin/images/jail" },
   { label: "기부", href: "/admin/images/donation" },
+  { label: "버니 기본 카드", href: "/admin/images/bunny-default-card" },
 ] as const;
 
 export function AdminImageTabs({ allowedHrefs }: { allowedHrefs?: string[] }) {

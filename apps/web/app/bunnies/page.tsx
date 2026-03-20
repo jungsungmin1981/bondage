@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { unstable_cache } from "next/cache";
 import { BunnyCard } from "@/components/bunny-card";
+import { resolveBunnyCardUrl } from "@/lib/bunny-default-card-config";
 
 const getCachedApprovedBunnies = unstable_cache(
   () => getApprovedBunnyProfiles(),
@@ -81,7 +82,7 @@ export default async function BunniesPage() {
                     <div className="relative flex w-full flex-col items-center">
                       <div className="w-full min-w-0 max-w-[280px] rounded-xl shadow-[0_12px_28px_-8px_rgba(0,0,0,0.22)] transition-all duration-200 hover:-translate-y-2 hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.28)]">
                         <BunnyCard
-                        cardImageUrl={p.cardImageUrl}
+                        cardImageUrl={resolveBunnyCardUrl(p.cardImageUrl)}
                         jailOverlay={suspendedUserIds.has(p.userId)}
                       />
                       </div>

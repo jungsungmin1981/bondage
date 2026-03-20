@@ -5,10 +5,9 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@workspace/auth";
 import { resizeCardToPng } from "@/lib/image/resize";
 import { uploadBufferToS3 } from "@/lib/s3-upload";
+import { BUNNY_DEFAULT_CARD_S3_KEY } from "@/lib/bunny-default-card-config";
 
-const MAIN_BACKGROUND_S3_KEY = "uploads/main-background.png";
-
-export async function uploadMainBackgroundImage(
+export async function uploadBunnyDefaultCardImage(
   formData: FormData,
 ): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
   const session = await auth.api.getSession({
@@ -27,9 +26,9 @@ export async function uploadMainBackgroundImage(
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
     const resized = await resizeCardToPng(buffer);
-    const url = await uploadBufferToS3(MAIN_BACKGROUND_S3_KEY, resized, "image/png");
-    revalidatePath("/");
-    revalidatePath("/admin/images/main-background");
+    const url = await uploadBufferToS3(BUNNY_DEFAULT_CARD_S3_KEY, resized, "image/png");
+    revalidatePath("/bunnies");
+    revalidatePath("/admin/images/bunny-default-card");
     return { ok: true, url };
   } catch (e) {
     return {
@@ -38,4 +37,3 @@ export async function uploadMainBackgroundImage(
     };
   }
 }
-

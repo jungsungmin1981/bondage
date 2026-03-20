@@ -13,6 +13,7 @@ import { notFound, redirect } from "next/navigation";
 import { Button } from "@workspace/ui/components/button";
 import { BunnyCard } from "@/components/bunny-card";
 import { isAdmin } from "@/lib/admin";
+import { resolveBunnyCardUrl } from "@/lib/bunny-default-card-config";
 import { getInviteKeyMinAgeHours } from "@/lib/invite-key-config";
 import { BioPreview } from "@/app/rigger/[id]/bio-preview";
 import { BunnyProfileInline } from "./bunny-profile-inline";
@@ -105,7 +106,7 @@ export default async function BunnyDetailPage({
         {isOwnProfile ? (
           <OwnBunnyCardColumn
             profileId={profile.id}
-            cardImageUrl={profile.cardImageUrl}
+            cardImageUrl={resolveBunnyCardUrl(profile.cardImageUrl)}
             jailOverlay={jailOverlay}
             suspendedUntil={suspendedUntil}
           />
@@ -113,7 +114,7 @@ export default async function BunnyDetailPage({
           <div className="flex justify-center sm:col-start-1 sm:row-start-1 sm:justify-start">
             <div className="w-full max-w-[280px]">
               <BunnyCard
-                cardImageUrl={profile.cardImageUrl}
+                cardImageUrl={resolveBunnyCardUrl(profile.cardImageUrl)}
                 jailOverlay={jailOverlay}
                 suspendedUntil={suspendedUntil}
               />

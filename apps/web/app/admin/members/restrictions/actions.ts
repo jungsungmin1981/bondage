@@ -16,6 +16,7 @@ import {
   getOperatorAllowedTabIds,
 } from "@workspace/db";
 import { isAdmin } from "@/lib/admin";
+import { resolveBunnyCardUrl } from "@/lib/bunny-default-card-config";
 import { isOperatorAllowedPath } from "@/lib/admin-operator-permissions";
 import { mapRiggerProfileToRigger } from "@/lib/rigger-from-db";
 import type { Rigger } from "@/lib/rigger-sample";
@@ -176,7 +177,7 @@ export async function getMemberCardForRestrictionAction(
       ok: true,
       card: {
         memberType: "bunny",
-        cardImageUrl: profile.cardImageUrl ?? null,
+        cardImageUrl: resolveBunnyCardUrl(profile.cardImageUrl),
         suspended: !!suspension,
       },
     };

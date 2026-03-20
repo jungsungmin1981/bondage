@@ -2,6 +2,10 @@ import { headers } from "next/headers";
 import { auth } from "@workspace/auth";
 import { redirect } from "next/navigation";
 import { getThreadMessages, listThreadsForUser, markThreadRead, getRiggerProfileById } from "@workspace/db";
+import {
+  getBunnyDefaultCardUrl,
+  resolveBunnyCardUrl,
+} from "@/lib/bunny-default-card-config";
 import { ThreadView } from "../thread-view";
 
 export default async function ThreadPage({
@@ -36,7 +40,8 @@ export default async function ThreadPage({
       otherMarkImageUrl = null;
     }
   } else if (meta?.otherMemberType === "bunny") {
-    otherMarkImageUrl = meta?.otherCardImageUrl?.trim() || "/default-bunny-card.png";
+    otherMarkImageUrl =
+      resolveBunnyCardUrl(meta.otherCardImageUrl) ?? getBunnyDefaultCardUrl();
   }
 
   return (

@@ -210,7 +210,9 @@ export async function createBunnyProfile(
     nickname: data.nickname.trim().slice(0, 200),
     iconUrl: data.iconUrl?.trim() ?? null,
     bio: data.bio?.trim() ?? null,
-    cardImageUrl: "/default-bunny-card.png",
+    cardImageUrl: process.env.S3_PUBLIC_BASE_URL
+      ? `${process.env.S3_PUBLIC_BASE_URL.replace(/\/$/, "")}/uploads/default-bunny-card.png`
+      : "/default-bunny-card.png",
     gender: data.gender?.trim() ?? null,
     division: data.division?.trim() ?? null,
     bunnyRecruit: data.bunnyRecruit?.trim() ?? null,

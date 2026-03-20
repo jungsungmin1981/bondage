@@ -12,6 +12,7 @@ import { getRiggerOverride } from "@/lib/rigger-overrides";
 import { OwnProfileTierColumn } from "@/app/rigger/[id]/own-profile-tier-column";
 import { ProfileForm } from "./profile-form";
 import { BunnyCardEditColumn } from "./bunny-card-edit-column";
+import { resolveBunnyCardUrl } from "@/lib/bunny-default-card-config";
 
 export default async function ProfileEditPage() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -58,7 +59,10 @@ export default async function ProfileEditPage() {
         {isRigger && rigger ? (
           <OwnProfileTierColumn rigger={rigger} />
         ) : (
-          <BunnyCardEditColumn profile={profile} />
+          <BunnyCardEditColumn
+            profile={profile}
+            displayCardUrl={resolveBunnyCardUrl(profile.cardImageUrl)}
+          />
         )}
 
         <div className="min-h-0 min-w-0 overflow-y-auto rounded-xl border bg-card shadow-sm sm:col-start-2 sm:row-start-1">

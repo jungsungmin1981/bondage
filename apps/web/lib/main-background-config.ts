@@ -1,24 +1,12 @@
-import fs from "fs";
-import fsPromises from "fs/promises";
-import path from "path";
-import { getPublicDirSync, resolvePublicFileSync } from "@/lib/watermark-config";
+const MAIN_BACKGROUND_S3_KEY = "uploads/main-background.png";
 
-const MAIN_BACKGROUND_FILENAME = "main-background.png";
-
+/**
+ * 메인 백그라운드 이미지 URL 반환.
+ * S3_PUBLIC_BASE_URL 환경변수 기준으로 고정 키의 URL을 반환.
+ * S3 미설정 시 null 반환.
+ */
 export async function getMainBackgroundUrl(): Promise<string | null> {
-  const filePath = resolvePublicFileSync(`/${MAIN_BACKGROUND_FILENAME}`);
-  try {
-    await fsPromises.access(filePath);
-    return `/${MAIN_BACKGROUND_FILENAME}`;
-  } catch {
-    if (process.env.NODE_ENV !== "production") {
-      const publicDir = getPublicDirSync();
-      console.warn(
-        "[main-background] main-background 이미지가 없습니다:",
-        path.join(publicDir, MAIN_BACKGROUND_FILENAME),
-      );
-    }
-    return null;
-  }
+  const base = process.env.S3_PUBLIC_BASE_URL?.replace(/\/$/, "");
+  if (!base) return null;
+  return `${base}/${MAIN_BACKGROUND_S3_KEY}`;
 }
-

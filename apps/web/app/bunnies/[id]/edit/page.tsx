@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { isAdmin } from "@/lib/admin";
 import { BunnyCard } from "@/components/bunny-card";
+import { resolveBunnyCardUrl } from "@/lib/bunny-default-card-config";
 import { BunnyProfileInline } from "../bunny-profile-inline";
 
 export default async function BunnyEditPage({
@@ -47,7 +48,7 @@ export default async function BunnyEditPage({
       <div className="mx-auto grid min-h-0 w-full max-w-4xl flex-1 gap-6 sm:grid-cols-[minmax(0,280px)_1fr] sm:grid-rows-[1fr] sm:items-start sm:gap-x-6 lg:gap-x-10">
         <div className="flex w-full max-w-[280px] flex-col gap-1 sm:col-start-1 sm:row-start-1 sm:justify-start">
           <div className="w-full">
-            <BunnyCard cardImageUrl={profile.cardImageUrl} />
+            <BunnyCard cardImageUrl={resolveBunnyCardUrl(profile.cardImageUrl)} />
           </div>
         </div>
         <div className="min-h-0 min-w-0 overflow-y-auto rounded-xl border bg-card shadow-sm sm:col-start-2 sm:row-start-1">

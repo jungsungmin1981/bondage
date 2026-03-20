@@ -3,6 +3,10 @@ import { headers } from "next/headers";
 import { auth } from "@workspace/auth";
 import { redirect } from "next/navigation";
 import { listThreadsForUser, getRiggerProfileById } from "@workspace/db";
+import {
+  getBunnyDefaultCardUrl,
+  resolveBunnyCardUrl,
+} from "@/lib/bunny-default-card-config";
 import { ThreadList } from "./thread-list";
 
 export default async function MessagesLayout({
@@ -27,7 +31,7 @@ export default async function MessagesLayout({
       }
 
       if (t.otherMemberType === "bunny") {
-        const mark = t.otherCardImageUrl?.trim() || "/default-bunny-card.png";
+        const mark = resolveBunnyCardUrl(t.otherCardImageUrl) ?? getBunnyDefaultCardUrl();
         return { ...t, otherMarkImageUrl: mark };
       }
 
