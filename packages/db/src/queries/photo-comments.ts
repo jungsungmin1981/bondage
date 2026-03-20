@@ -8,7 +8,7 @@ export type PhotoCommentWithAuthor = PhotoCommentRow & {
   authorName: string | null;
 };
 
-/** 댓글 + 작성자 닉네임(users.name), 없으면 null */
+/** 댓글 + 작성자 닉네임(memberProfiles.nickname), 없으면 null */
 export async function getCommentsByPhotoIdWithAuthor(
   photoId: string,
 ): Promise<PhotoCommentWithAuthor[]> {
@@ -20,10 +20,13 @@ export async function getCommentsByPhotoIdWithAuthor(
       parentId: schema.photoComments.parentId,
       content: schema.photoComments.content,
       createdAt: schema.photoComments.createdAt,
-      authorName: schema.users.name,
+      authorName: schema.memberProfiles.nickname,
     })
     .from(schema.photoComments)
-    .leftJoin(schema.users, eq(schema.photoComments.userId, schema.users.id))
+    .leftJoin(
+      schema.memberProfiles,
+      eq(schema.photoComments.userId, schema.memberProfiles.userId),
+    )
     .where(eq(schema.photoComments.photoId, photoId))
     .orderBy(asc(schema.photoComments.createdAt));
   return rows;
@@ -48,10 +51,13 @@ export async function getCommentsByPhotoIdsWithAuthorGrouped(
       parentId: schema.photoComments.parentId,
       content: schema.photoComments.content,
       createdAt: schema.photoComments.createdAt,
-      authorName: schema.users.name,
+      authorName: schema.memberProfiles.nickname,
     })
     .from(schema.photoComments)
-    .leftJoin(schema.users, eq(schema.photoComments.userId, schema.users.id))
+    .leftJoin(
+      schema.memberProfiles,
+      eq(schema.photoComments.userId, schema.memberProfiles.userId),
+    )
     .where(inArray(schema.photoComments.photoId, unique))
     .orderBy(asc(schema.photoComments.createdAt));
 
