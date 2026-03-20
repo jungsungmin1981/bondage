@@ -218,21 +218,21 @@ function LegendCardWithImage({
         />
         {/* 2. 닉네임 */}
         <div
-          className="absolute left-0 right-0 flex justify-center px-[4cqw]"
-          style={{ top: "77%", transform: "translateY(-50%)" }}
+          className="absolute left-0 right-0 text-center"
+          style={{
+            top: "77%",
+            transform: "translateY(-50%)",
+            padding: "0 6px",
+            fontFamily: 'var(--font-rigger-card), system-ui, sans-serif',
+            fontSize: "clamp(1.5rem, 11.5cqw, 2.5rem)",
+            fontWeight: "bold",
+            lineHeight: 1,
+            color: "#e9d5ff",
+            textShadow:
+              "0 0 6px rgba(0,0,0,1), 0 0 3px rgba(0,0,0,1), 1px 1px 0 rgba(0,0,0,0.9), -1px -1px 0 rgba(0,0,0,0.9), 1px -1px 0 rgba(0,0,0,0.9), -1px 1px 0 rgba(0,0,0,0.9)",
+          }}
         >
-          <div className="inline-flex min-h-0 min-w-0 max-w-[78%] items-center justify-center">
-            <span
-              className="truncate text-center font-bold leading-none tracking-widest text-purple-200 drop-shadow-md"
-              style={{
-                fontFamily: '"Maplestory Bold", sans-serif',
-                textShadow: "0 0 1px rgba(0,0,0,0.8), 0 1px 2px rgba(0,0,0,0.5)",
-                fontSize: "clamp(1.5rem, 11.5cqw, 2.5rem)",
-              }}
-            >
-              {rigger.name}
-            </span>
-          </div>
+          {rigger.name}
         </div>
       </div>
     </article>
@@ -271,21 +271,21 @@ function GoldCardWithImage({
         />
         {/* 2. 닉네임 */}
         <div
-          className="absolute left-0 right-0 flex justify-center px-[4cqw]"
-          style={{ top: "77%", transform: "translateY(-50%)" }}
+          className="absolute left-0 right-0 text-center"
+          style={{
+            top: "77%",
+            transform: "translateY(-50%)",
+            padding: "0 6px",
+            fontFamily: 'var(--font-rigger-card), system-ui, sans-serif',
+            fontSize: "clamp(1.5rem, 11.5cqw, 2.5rem)",
+            fontWeight: "bold",
+            lineHeight: 1,
+            color: "#fde68a",
+            textShadow:
+              "0 0 6px rgba(0,0,0,1), 0 0 3px rgba(0,0,0,1), 1px 1px 0 rgba(0,0,0,0.9), -1px -1px 0 rgba(0,0,0,0.9), 1px -1px 0 rgba(0,0,0,0.9), -1px 1px 0 rgba(0,0,0,0.9)",
+          }}
         >
-          <div className="inline-flex min-h-0 min-w-0 max-w-[78%] items-center justify-center">
-            <span
-              className="truncate text-center font-bold leading-none tracking-widest text-amber-200 drop-shadow-md"
-              style={{
-                fontFamily: '"Maplestory Bold", sans-serif',
-                textShadow: "0 0 1px rgba(0,0,0,0.8), 0 1px 2px rgba(0,0,0,0.5)",
-                fontSize: "clamp(1.5rem, 11.5cqw, 2.5rem)",
-              }}
-            >
-              {rigger.name}
-            </span>
-          </div>
+          {rigger.name}
         </div>
         {/* 3. 별 */}
         <div
@@ -339,21 +339,21 @@ function SilverCardWithImage({
         />
         {/* 2. 닉네임 */}
         <div
-          className="absolute left-0 right-0 flex justify-center px-[4cqw]"
-          style={{ top: "77%", transform: "translateY(-50%)" }}
+          className="absolute left-0 right-0 text-center"
+          style={{
+            top: "77%",
+            transform: "translateY(-50%)",
+            padding: "0 6px",
+            fontFamily: 'var(--font-rigger-card), system-ui, sans-serif',
+            fontSize: "clamp(1.5rem, 11.5cqw, 2.5rem)",
+            fontWeight: "bold",
+            lineHeight: 1,
+            color: "#e2e8f0",
+            textShadow:
+              "0 0 6px rgba(0,0,0,1), 0 0 3px rgba(0,0,0,1), 1px 1px 0 rgba(0,0,0,0.9), -1px -1px 0 rgba(0,0,0,0.9), 1px -1px 0 rgba(0,0,0,0.9), -1px 1px 0 rgba(0,0,0,0.9)",
+          }}
         >
-          <div className="inline-flex min-h-0 min-w-0 max-w-[78%] items-center justify-center">
-            <span
-              className="truncate text-center font-bold leading-none tracking-widest text-slate-200 drop-shadow-md"
-              style={{
-                fontFamily: '"Maplestory Bold", sans-serif',
-                textShadow: "0 0 1px rgba(0,0,0,0.8), 0 1px 2px rgba(0,0,0,0.5)",
-                fontSize: "clamp(1.5rem, 11.5cqw, 2.5rem)",
-              }}
-            >
-              {rigger.name}
-            </span>
-          </div>
+          {rigger.name}
         </div>
         {/* 3. 별 */}
         <div
@@ -405,23 +405,23 @@ function BronzeCardWithImage({
           fallbackClassName="text-amber-200/90"
           onChooseImage={markPick?.onChooseImage}
         />
-        {/* 2. 닉네임 - 카드 기준 비율 위치·크기로 고정 (리사이즈 시에도 동일 비율 유지) */}
+        {/* 2. 닉네임 - 카드 기준 비율 위치·크기로 고정 */}
         <div
-          className="absolute left-0 right-0 flex justify-center px-[4cqw]"
-          style={{ top: "77%", transform: "translateY(-50%)" }}
+          className="absolute left-0 right-0 text-center"
+          style={{
+            top: "77%",
+            transform: "translateY(-50%)",
+            padding: "0 6px",
+            fontFamily: 'var(--font-rigger-card), system-ui, sans-serif',
+            fontSize: "clamp(1.5rem, 11.5cqw, 2.5rem)",
+            fontWeight: "bold",
+            lineHeight: 1,
+            color: "#ffffff",
+            textShadow:
+              "0 0 6px rgba(0,0,0,1), 0 0 3px rgba(0,0,0,1), 1px 1px 0 rgba(0,0,0,0.9), -1px -1px 0 rgba(0,0,0,0.9), 1px -1px 0 rgba(0,0,0,0.9), -1px 1px 0 rgba(0,0,0,0.9)",
+          }}
         >
-          <div className="inline-flex min-h-0 min-w-0 max-w-[78%] items-center justify-center">
-            <span
-              className="truncate text-center font-bold leading-none tracking-widest text-white drop-shadow-md"
-              style={{
-                fontFamily: '"Maplestory Bold", sans-serif',
-                textShadow: "0 0 1px rgba(0,0,0,0.8), 0 1px 2px rgba(0,0,0,0.5)",
-                fontSize: "clamp(1.5rem, 11.5cqw, 2.5rem)",
-              }}
-            >
-              {rigger.name}
-            </span>
-          </div>
+          {rigger.name}
         </div>
         {/* 3. 별: 등급 - 카드 크기 대비 항상 동일 비율 위치 */}
         <div

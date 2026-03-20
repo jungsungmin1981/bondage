@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Hahmlet } from "next/font/google";
 import type { Metadata, Viewport } from "next";
 import { redirect } from "next/navigation";
 import { unstable_cache } from "next/cache";
@@ -85,6 +85,13 @@ const fontSans = Geist({
 const fontMono = Geist_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
+});
+
+const fontRiggerCard = Hahmlet({
+  weight: "700",
+  subsets: ["korean"],
+  variable: "--font-rigger-card",
+  display: "swap",
 });
 
 /** 리거 미승인 시 허용 경로: 본인 리거 상세 및 그 하위, 인증·온보딩 등 */
@@ -202,7 +209,7 @@ export default async function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn("antialiased", fontMono.variable, "font-sans", fontSans.variable)}
+      className={cn("antialiased", fontMono.variable, "font-sans", fontSans.variable, fontRiggerCard.variable)}
     >
       <body
         suppressHydrationWarning
