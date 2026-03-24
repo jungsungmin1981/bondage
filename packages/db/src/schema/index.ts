@@ -21,6 +21,7 @@ export * from "./bunny-board-post-comment";
 export * from "./shared-board";
 export * from "./shared-board-post-comment";
 export * from "./bunny-photo";
+export * from "./bunny-photo-like";
 export * from "./invite-key";
 export * from "./user-suspension";
 export * from "./monthly-hotpick";

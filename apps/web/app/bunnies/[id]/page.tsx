@@ -4,7 +4,6 @@ import { auth } from "@workspace/auth";
 import {
   getActiveSuspensionForUser,
   getBunnyProfileById,
-  getBunnyPhotos,
   getMemberProfileByUserId,
   getUserCreatedAt,
 } from "@workspace/db";
@@ -16,8 +15,10 @@ import { isAdmin } from "@/lib/admin";
 import { resolveBunnyCardUrl } from "@/lib/bunny-default-card-config";
 import { getInviteKeyMinAgeHours } from "@/lib/invite-key-config";
 import { BioPreview } from "@/app/rigger/[id]/bio-preview";
+import { fetchBunnyPostsSlice, BUNNY_INITIAL_SIZE } from "@/lib/bunny-posts-slice";
 import { BunnyProfileInline } from "./bunny-profile-inline";
 import { OwnBunnyCardColumn } from "./own-bunny-card-column";
+import { BunnyPostsFeed } from "./bunny-posts-feed";
 
 export default async function BunnyDetailPage({
   params,
@@ -62,10 +63,11 @@ export default async function BunnyDetailPage({
 
   const rawBio = profile.bio?.trim() ? profile.bio : "-";
   const [photos, suspension] = await Promise.all([
-    getBunnyPhotos(profile.id),
+    fetchBunnyPostsSlice(profile.id, 0, BUNNY_INITIAL_SIZE, session.user.id),
     profile.userId ? getActiveSuspensionForUser(profile.userId) : Promise.resolve(null),
   ]);
-  const hasPhotos = photos.length > 0;
+  const { posts: initialPosts, likeByPhotoId: initialLikeByPhotoId, hasMore: initialHasMore } = photos;
+  const hasPhotos = initialPosts.length > 0;
   const isSuspended = !!suspension;
   const jailOverlay = isSuspended;
   const suspendedUntil =
@@ -230,25 +232,14 @@ export default async function BunnyDetailPage({
             등록된 사진이 없습니다.
           </p>
         ) : (
-          <ul className="mt-3 grid list-none grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-            {photos.map((photo) => (
-              <li key={photo.id} className="min-w-0">
-                <div className="relative aspect-[3/4] w-full min-w-0 overflow-hidden rounded-lg border border-border bg-muted">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={photo.imagePath}
-                    alt={photo.caption ?? "등록된 사진"}
-                    className="h-full w-full object-cover object-center"
-                  />
-                </div>
-                {photo.caption && (
-                  <p className="mt-1 truncate text-xs text-muted-foreground">
-                    {photo.caption}
-                  </p>
-                )}
-              </li>
-            ))}
-          </ul>
+          <BunnyPostsFeed
+            bunnyProfileId={profile.id}
+            sessionUserId={session.user.id}
+            isOwnProfile={isOwnProfile}
+            initialPosts={initialPosts}
+            initialLikeByPhotoId={initialLikeByPhotoId}
+            initialHasMore={initialHasMore}
+          />
         )}
       </div>
     </div>

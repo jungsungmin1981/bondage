@@ -37,6 +37,7 @@
     "db:ensure-bunny-boards": "tsx scripts/ensure-bunny-boards.ts",
     "db:ensure-shared-boards": "tsx scripts/ensure-shared-boards.ts",
     "db:ensure-bunny-photos": "tsx scripts/ensure-bunny-photos.ts",
+    "db:ensure-bunny-photo-likes": "tsx scripts/ensure-bunny-photo-likes.ts",
     "db:ensure-verification": "tsx scripts/ensure-verification.ts",
     "db:ensure-invite-keys": "tsx scripts/ensure-invite-keys.ts",
     "db:ensure-user-suspensions": "tsx scripts/ensure-user-suspensions.ts",

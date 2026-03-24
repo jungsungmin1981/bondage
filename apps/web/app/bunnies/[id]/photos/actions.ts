@@ -3,7 +3,7 @@
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { auth } from "@workspace/auth";
-import { db, schema, getActiveSuspensionForUser, getBunnyProfileById } from "@workspace/db";
+import { db, schema, getActiveSuspensionForUser, getBunnyProfileById, deleteBunnyPostOwnedByUser, updateBunnyPostCaptionOwnedByUser, isBunnyPhotoLikedByUser, insertBunnyPhotoLike, deleteBunnyPhotoLike, getBunnyPhotoLikeCount, isBunnyPostOwnedByUser, getBunnyPhotoLikersWithNames } from "@workspace/db";
 import { randomUUID } from "crypto";
 import sharp from "sharp";
 import fs from "fs/promises";
@@ -157,6 +157,8 @@ export async function uploadBunnyPhoto(
       }
     }
 
+    // 여러 장을 하나의 게시물(postId)로 묶어 저장
+    const postId = randomUUID();
     for (const file of files) {
       const originalExt = getExt(file);
       const arrayBuffer = await file.arrayBuffer();
@@ -169,6 +171,7 @@ export async function uploadBunnyPhoto(
 
       await db.insert(schema.bunnyPhotos).values({
         id: randomUUID(),
+        postId,
         bunnyProfileId,
         userId: session.user.id,
         imagePath: imageUrl,
@@ -183,4 +186,85 @@ export async function uploadBunnyPhoto(
     console.error("uploadBunnyPhoto error:", e);
     return { ok: false, error: "사진 저장에 실패했습니다. 잠시 후 다시 시도해 주세요." };
   }
+}
+
+export async function deleteBunnyPost(
+  bunnyProfileId: string,
+  postId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session) return { ok: false, error: "로그인이 필요합니다." };
+
+    const deletedCount = await deleteBunnyPostOwnedByUser(bunnyProfileId, postId, session.user.id);
+    if (deletedCount === 0) {
+      return { ok: false, error: "삭제할 게시물이 없거나 권한이 없습니다." };
+    }
+    revalidatePath(`/bunnies/${encodeURIComponent(bunnyProfileId)}`);
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "삭제에 실패했습니다." };
+  }
+}
+
+export async function updateBunnyPostCaption(
+  bunnyProfileId: string,
+  postId: string,
+  caption: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session) return { ok: false, error: "로그인이 필요합니다." };
+
+    const trimmed = caption.trim().slice(0, 30) || null;
+    const updatedCount = await updateBunnyPostCaptionOwnedByUser(
+      bunnyProfileId,
+      postId,
+      session.user.id,
+      trimmed,
+    );
+    if (updatedCount === 0) {
+      return { ok: false, error: "수정할 게시물이 없거나 권한이 없습니다." };
+    }
+    revalidatePath(`/bunnies/${encodeURIComponent(bunnyProfileId)}`);
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "저장에 실패했습니다." };
+  }
+}
+
+export async function toggleBunnyPhotoLike(
+  bunnyProfileId: string,
+  photoId: string,
+): Promise<{ ok: true; liked: boolean; count: number } | { ok: false; error: string }> {
+  try {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session) return { ok: false, error: "로그인이 필요합니다." };
+
+    if (await isBunnyPostOwnedByUser(photoId, session.user.id)) {
+      return { ok: false, error: "본인 게시물에는 좋아요할 수 없습니다." };
+    }
+
+    const liked = await isBunnyPhotoLikedByUser(photoId, session.user.id);
+    if (liked) {
+      await deleteBunnyPhotoLike(photoId, session.user.id);
+    } else {
+      await insertBunnyPhotoLike(randomUUID(), photoId, session.user.id);
+    }
+    const count = await getBunnyPhotoLikeCount(photoId);
+    revalidatePath(`/bunnies/${encodeURIComponent(bunnyProfileId)}`);
+    return { ok: true, liked: !liked, count };
+  } catch {
+    return { ok: false, error: "좋아요 처리에 실패했습니다." };
+  }
+}
+
+export async function getBunnyPhotoLikers(
+  photoId: string,
+): Promise<{ ok: true; likers: Awaited<ReturnType<typeof getBunnyPhotoLikersWithNames>> } | { ok: false }> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) return { ok: false };
+  if (!(await isBunnyPostOwnedByUser(photoId, session.user.id))) return { ok: false };
+  const likers = await getBunnyPhotoLikersWithNames(photoId);
+  return { ok: true, likers };
 }
