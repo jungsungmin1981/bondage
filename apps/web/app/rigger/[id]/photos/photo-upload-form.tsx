@@ -448,10 +448,7 @@ export function PhotoUploadForm({ riggerId }: Props) {
                         }}
                       >
                         <div className="min-w-0">
-                          <p className="truncate font-mono text-[12px] sm:text-sm">
-                            {u.email}
-                          </p>
-                          <p className="truncate text-xs text-muted-foreground">
+                          <p className="truncate text-sm">
                             {u.name ?? "-"}
                           </p>
                         </div>
