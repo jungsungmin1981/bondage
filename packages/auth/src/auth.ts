@@ -369,7 +369,7 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     /** 메일 발송 연결 전까지 비활성화. 연결 후 true로 변경하면 인증 메일 흐름이 자동 적용됨 */
-    requireEmailVerification: false,
+    requireEmailVerification: true,
     sendResetPassword: async ({ user, url }) => {
       if (!resendApiKey) return;
       const resend = new Resend(resendApiKey);
