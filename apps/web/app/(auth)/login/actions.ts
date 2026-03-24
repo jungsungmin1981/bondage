@@ -14,7 +14,7 @@ export async function requestPasswordResetAction(
   const redirectTo = `${baseURL}/reset-password`;
 
   try {
-    const response = await auth.api.forgetPassword({
+    const response = await auth.api.requestPasswordReset({
       body: { email, redirectTo },
       headers: await headers(),
     });
