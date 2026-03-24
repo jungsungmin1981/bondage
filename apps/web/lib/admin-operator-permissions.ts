@@ -53,6 +53,7 @@ export const ADMIN_TAB_SUB_OPTIONS: {
     subTabs: [
       { id: "watermark", label: "워터마크", pathPrefix: "/admin/watermark" },
       { id: "main-background", label: "메인 백그라운드", pathPrefix: "/admin/images/main-background" },
+      { id: "bunny-default-card", label: "버니 기본 카드", pathPrefix: "/admin/images/bunny-default-card" },
       { id: "resize", label: "이미지 리사이징", pathPrefix: "/admin/images/resize" },
       { id: "bronze", label: "브론즈", pathPrefix: "/admin/images/bronze" },
       { id: "silver", label: "실버", pathPrefix: "/admin/images/silver" },
