@@ -3,11 +3,10 @@ import {
   getBunnyPhotoLikesStateForPhotoIds,
   type BunnyPhotoPost,
 } from "@workspace/db";
-import type { SerializedBunnyPost } from "./bunny-posts-types";
+import { type SerializedBunnyPost, BUNNY_INITIAL_SIZE, BUNNY_PAGE_SIZE } from "./bunny-posts-types";
 export type { SerializedBunnyPost, SerializedBunnyPhotoRow } from "./bunny-posts-types";
+export { BUNNY_INITIAL_SIZE, BUNNY_PAGE_SIZE } from "./bunny-posts-types";
 
-export const BUNNY_INITIAL_SIZE = 12;
-export const BUNNY_PAGE_SIZE = 9;
 
 function serializeBunnyPost(p: BunnyPhotoPost): SerializedBunnyPost {
   return {

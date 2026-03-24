@@ -30,7 +30,7 @@ import {
   AlertDialogTrigger,
 } from "@workspace/ui/components/alert-dialog";
 import type { SerializedBunnyPost, SerializedBunnyPhotoRow } from "@/lib/bunny-posts-types";
-import { BUNNY_PAGE_SIZE } from "@/lib/bunny-posts-slice";
+import { BUNNY_PAGE_SIZE } from "@/lib/bunny-posts-types";
 import { loadMoreBunnyPosts } from "./post-feed-actions";
 import { deleteBunnyPost, updateBunnyPostCaption } from "./photos/actions";
 import { BunnyPhotoLikeButton } from "./bunny-photo-like-button";
