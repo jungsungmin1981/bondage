@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Lock, User, Mail } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
+import { requestPasswordResetAction } from "@/app/(auth)/login/actions";
 import { cn } from "@workspace/ui/lib/utils";
 import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
@@ -210,17 +211,10 @@ function ForgotPasswordDialog({
     e.preventDefault();
     setError(null);
     setPending(true);
-    const { error: reqError } = await authClient.requestPasswordReset({
-      email: email.trim(),
-      redirectTo: "/reset-password",
-    });
+    const result = await requestPasswordResetAction(email.trim());
     setPending(false);
-    if (reqError) {
-      setError(
-        typeof reqError === "string"
-          ? reqError
-          : (reqError as { message?: string }).message ?? "요청에 실패했습니다.",
-      );
+    if (!result.ok) {
+      setError(result.error);
       return;
     }
     setSent(true);

@@ -371,15 +371,25 @@ export const auth = betterAuth({
     /** 메일 발송 연결 전까지 비활성화. 연결 후 true로 변경하면 인증 메일 흐름이 자동 적용됨 */
     requireEmailVerification: true,
     sendResetPassword: async ({ user, url }) => {
-      if (!resendApiKey) return;
+      if (!resendApiKey) {
+        console.warn("[Better Auth] 비밀번호 재설정 메일 미발송: RESEND_API_KEY가 설정되지 않았습니다.");
+        return;
+      }
       const resend = new Resend(resendApiKey);
       const html = buildResetPasswordEmailHtml(url);
-      void resend.emails.send({
-        from: resendFrom,
-        to: user.email,
-        subject: "Bondage 비밀번호 재설정",
-        html,
-      });
+      try {
+        const result = await resend.emails.send({
+          from: resendFrom,
+          to: user.email,
+          subject: "Bondage 비밀번호 재설정",
+          html,
+        });
+        if (result.error) {
+          console.error("[Better Auth] 비밀번호 재설정 메일 발송 실패:", result.error);
+        }
+      } catch (e) {
+        console.error("[Better Auth] 비밀번호 재설정 메일 발송 예외:", e);
+      }
     },
   },
   socialProviders: {
