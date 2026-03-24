@@ -212,10 +212,7 @@ function ForgotPasswordDialog({
     setPending(true);
     const { error: reqError } = await authClient.requestPasswordReset({
       email: email.trim(),
-      redirectTo:
-        typeof window !== "undefined"
-          ? `${window.location.origin}/reset-password`
-          : "/reset-password",
+      redirectTo: "/reset-password",
     });
     setPending(false);
     if (reqError) {
