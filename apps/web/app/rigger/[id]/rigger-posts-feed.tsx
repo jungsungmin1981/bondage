@@ -175,6 +175,8 @@ function PostCard({
   const approvedCount = approvals.filter(
     (a) => a.status === "approved",
   ).length;
+  const visibleBunnies = approvals.slice(0, 3);
+  const extraBunnyCount = approvals.length - 3;
   const isRejected =
     isPending && approvals.some((a) => a.status === "rejected");
   const showPendingBunnyStatus =
@@ -194,15 +196,37 @@ function PostCard({
   return (
     <li className="min-w-0">
       <div className="relative flex flex-col overflow-visible rounded-2xl border border-border bg-card p-2 shadow-sm">
-        <p className="shrink-0 text-[10px] text-muted-foreground">
-          {createdAt && !Number.isNaN(createdAt.getTime())
-            ? createdAt.toLocaleString("ko-KR", {
-                year: "numeric",
-                month: "short",
-                day: "numeric",
-              })
-            : ""}
-        </p>
+        <div className="flex items-center gap-1 flex-wrap min-w-0">
+          <p className="shrink-0 text-[10px] text-muted-foreground">
+            {createdAt && !Number.isNaN(createdAt.getTime())
+              ? createdAt.toLocaleString("ko-KR", {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                })
+              : ""}
+          </p>
+          {visibleBunnies.map((b) => (
+            <span
+              key={b.email}
+              className={[
+                "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                b.status === "approved"
+                  ? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                  : b.status === "rejected"
+                    ? "bg-red-500/10 text-red-600 dark:text-red-400"
+                    : "bg-muted text-muted-foreground",
+              ].join(" ")}
+            >
+              @{b.name}
+            </span>
+          ))}
+          {extraBunnyCount > 0 && (
+            <span className="shrink-0 text-[10px] text-muted-foreground">
+              외 {extraBunnyCount}명
+            </span>
+          )}
+        </div>
         <p
           className="mt-1 shrink-0 truncate text-xs font-medium text-foreground"
           title={post.caption?.trim() || "제목 없음"}
