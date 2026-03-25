@@ -117,11 +117,16 @@ export async function getBunnyApprovalStatusesByPostIds(
       status: schema.bunnyApprovals.status,
       name: schema.users.name,
       email: schema.users.email,
+      nickname: schema.memberProfiles.nickname,
     })
     .from(schema.bunnyApprovals)
     .innerJoin(
       schema.users,
       eq(schema.bunnyApprovals.bunnyUserId, schema.users.id),
+    )
+    .leftJoin(
+      schema.memberProfiles,
+      eq(schema.bunnyApprovals.bunnyUserId, schema.memberProfiles.userId),
     )
     .where(inArray(schema.bunnyApprovals.postId, postIds));
 

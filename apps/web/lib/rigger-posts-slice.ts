@@ -120,6 +120,7 @@ export async function fetchRiggerPostsSlice(
     if (!rows || rows.length === 0) continue;
     post.bunnyApprovals = rows.map((row) => ({
       name:
+        (row.nickname && String(row.nickname).trim()) ||
         (row.name && String(row.name).trim()) ||
         (row.email ? row.email.replace(/@.*$/, "") : "버니"),
       email: row.email,
