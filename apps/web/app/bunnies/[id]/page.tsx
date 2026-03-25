@@ -145,7 +145,7 @@ export default async function BunnyDetailPage({
               />
             ) : (
               <>
-                <dl className="grid grid-cols-[5rem_1fr_5rem_1fr] gap-x-3 gap-y-1.5 items-baseline">
+                <dl className="grid grid-cols-[auto_1fr] sm:grid-cols-[5rem_1fr_5rem_1fr] gap-x-3 gap-y-1.5 items-baseline">
                   {[row1, row2, row3].map((pairs, rowIndex) => (
                     <Fragment key={rowIndex}>
                       {pairs.map(({ label, value }) => (
