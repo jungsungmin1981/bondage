@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { BunnyBoardPostListItemWithRecommendAndBody } from "@workspace/db";
 import {
   Accordion,
@@ -69,7 +70,21 @@ export function BunnyQnaAccordionList({
               </span>
             </span>
             <span className="w-full text-xs text-muted-foreground">
-              {post.authorNickname ?? "알 수 없음"} · {formatDate(post.createdAt)}
+              {post.authorMemberType !== "operator" && post.authorProfileId ? (
+                <Link
+                  href={
+                    post.authorMemberType === "bunny"
+                      ? `/bunnies/${post.authorProfileId}`
+                      : `/rigger/${post.authorProfileId}`
+                  }
+                  className="hover:underline hover:text-foreground"
+                >
+                  {post.authorNickname ?? "알 수 없음"}
+                </Link>
+              ) : (
+                post.authorNickname ?? "알 수 없음"
+              )}{" "}
+              · {formatDate(post.createdAt)}
               {(post.recommendCount ?? 0) > 0 && (
                 <span className="ml-1.5 inline-flex items-center gap-1 text-blue-600">
                   · 추천

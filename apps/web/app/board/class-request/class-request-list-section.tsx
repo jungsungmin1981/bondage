@@ -83,10 +83,7 @@ export async function ClassRequestListSection() {
             const statusInfo = STATUS_LABELS[req.status] ?? { label: "검토 대기", className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400" };
             return (
               <li key={req.id} className="border-b border-border">
-                <Link
-                  href={`/board/class-request/${encodeURIComponent(req.id)}`}
-                  className="flex min-h-[56px] flex-col justify-center gap-0.5 px-2 py-3 transition-colors hover:bg-muted/40 active:bg-muted/60"
-                >
+                <div className="relative flex min-h-[56px] flex-col justify-center gap-0.5 px-2 py-3 transition-colors hover:bg-muted/40 active:bg-muted/60">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-medium ${statusInfo.className}`}>
                       {statusInfo.label}
@@ -96,14 +93,31 @@ export async function ClassRequestListSection() {
                         {LEVEL_LABELS[req.level] ?? req.level}
                       </span>
                     )}
-                    <span className="line-clamp-1 min-w-0 flex-1 text-[15px] font-medium text-foreground">
+                    <Link
+                      href={`/board/class-request/${encodeURIComponent(req.id)}`}
+                      className="line-clamp-1 min-w-0 flex-1 text-[15px] font-medium text-foreground after:absolute after:inset-0"
+                    >
                       {req.title}
-                    </span>
+                    </Link>
                   </div>
-                  <span className="text-xs text-muted-foreground">
-                    {req.authorNickname} · {formatDate(req.createdAt)}
+                  <span className="relative z-10 text-xs text-muted-foreground">
+                    {req.authorMemberType !== "operator" && req.authorProfileId ? (
+                      <Link
+                        href={
+                          req.authorMemberType === "bunny"
+                            ? `/bunnies/${req.authorProfileId}`
+                            : `/rigger/${req.authorProfileId}`
+                        }
+                        className="hover:underline hover:text-foreground"
+                      >
+                        {req.authorNickname}
+                      </Link>
+                    ) : (
+                      req.authorNickname
+                    )}{" "}
+                    · {formatDate(req.createdAt)}
                   </span>
-                </Link>
+                </div>
               </li>
             );
           })}

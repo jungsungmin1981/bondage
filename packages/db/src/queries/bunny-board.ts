@@ -30,6 +30,8 @@ export type BunnyBoardPostListItem = {
   postNumber: number;
   title: string;
   authorUserId: string;
+  authorProfileId: string | null;
+  authorMemberType: string | null;
   authorNickname: string | null;
   coverImageUrl: string | null;
   isPublished: boolean;
@@ -131,6 +133,7 @@ export async function getBunnyBoardPosts(
       viewCount: schema.bunnyBoardPosts.viewCount,
       nickname: schema.memberProfiles.nickname,
       memberType: schema.memberProfiles.memberType,
+      profileId: schema.memberProfiles.id,
       updaterNickname: updaterProfile.nickname,
     })
     .from(schema.bunnyBoardPosts)
@@ -156,6 +159,8 @@ export async function getBunnyBoardPosts(
     postNumber: r.postNumber,
     title: r.title,
     authorUserId: r.authorUserId,
+    authorProfileId: r.profileId ?? null,
+    authorMemberType: r.memberType ?? null,
     authorNickname: resolveAuthorNickname(r.memberType, r.nickname),
     coverImageUrl: r.coverImageUrl ?? null,
     isPublished: r.isPublished ?? true,
@@ -212,6 +217,7 @@ export async function getBunnyBoardPostsWithRecommendCounts(
       viewCount: schema.bunnyBoardPosts.viewCount,
       nickname: schema.memberProfiles.nickname,
       memberType: schema.memberProfiles.memberType,
+      profileId: schema.memberProfiles.id,
       updaterNickname: updaterProfile.nickname,
       recommendCount: recCountSubq.recommendCount,
     })
@@ -242,6 +248,8 @@ export async function getBunnyBoardPostsWithRecommendCounts(
     postNumber: r.postNumber,
     title: r.title,
     authorUserId: r.authorUserId,
+    authorProfileId: r.profileId ?? null,
+    authorMemberType: r.memberType ?? null,
     authorNickname: resolveAuthorNickname(r.memberType, r.nickname),
     coverImageUrl: r.coverImageUrl ?? null,
     isPublished: r.isPublished ?? true,
@@ -300,6 +308,7 @@ export async function getBunnyBoardPostsWithBodies(
       viewCount: schema.bunnyBoardPosts.viewCount,
       nickname: schema.memberProfiles.nickname,
       memberType: schema.memberProfiles.memberType,
+      profileId: schema.memberProfiles.id,
       updaterNickname: updaterProfile.nickname,
       recommendCount: recCountSubq.recommendCount,
     })
@@ -331,6 +340,8 @@ export async function getBunnyBoardPostsWithBodies(
     title: r.title,
     body: r.body,
     authorUserId: r.authorUserId,
+    authorProfileId: r.profileId ?? null,
+    authorMemberType: r.memberType ?? null,
     authorNickname: resolveAuthorNickname(r.memberType, r.nickname),
     coverImageUrl: r.coverImageUrl ?? null,
     isPublished: r.isPublished ?? true,
@@ -391,6 +402,7 @@ export async function getBunnyBoardPostById(
       viewCount: schema.bunnyBoardPosts.viewCount,
       nickname: schema.memberProfiles.nickname,
       memberType: schema.memberProfiles.memberType,
+      profileId: schema.memberProfiles.id,
       updaterNickname: updaterProfile.nickname,
     })
     .from(schema.bunnyBoardPosts)
@@ -418,6 +430,8 @@ export async function getBunnyBoardPostById(
     title: r.title,
     body: r.body,
     authorUserId: r.authorUserId,
+    authorProfileId: r.profileId ?? null,
+    authorMemberType: r.memberType ?? null,
     isPublished: r.isPublished ?? true,
     authorNickname: resolveAuthorNickname(r.memberType, r.nickname),
     coverImageUrl: r.coverImageUrl ?? null,

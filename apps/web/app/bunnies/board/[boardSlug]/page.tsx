@@ -195,20 +195,34 @@ export default async function BunnyBoardListPage({
           ) : (
             posts.map((post) => (
               <li key={post.id} className="border-b border-border">
-                <Link
-                  href={`/bunnies/board/${encodeURIComponent(boardSlug)}/${encodeURIComponent(post.id)}`}
-                  className="flex min-h-[56px] flex-col justify-center gap-0.5 px-2 py-3 transition-colors hover:bg-muted/40 active:bg-muted/60"
-                >
+                <div className="relative flex min-h-[56px] flex-col justify-center gap-0.5 px-2 py-3 transition-colors hover:bg-muted/40 active:bg-muted/60">
                   <span className="flex items-center gap-2">
                     <span className="shrink-0 text-xs font-medium text-muted-foreground tabular-nums">
                       #{post.postNumber}
                     </span>
-                    <span className="line-clamp-2 min-w-0 flex-1 text-[15px] font-medium text-foreground">
+                    <Link
+                      href={`/bunnies/board/${encodeURIComponent(boardSlug)}/${encodeURIComponent(post.id)}`}
+                      className="line-clamp-2 min-w-0 flex-1 text-[15px] font-medium text-foreground after:absolute after:inset-0"
+                    >
                       {post.title}
-                    </span>
+                    </Link>
                   </span>
-                  <span className="text-xs text-muted-foreground">
-                    {post.authorNickname ?? "알 수 없음"} · {formatDate(post.createdAt)}
+                  <span className="relative z-10 text-xs text-muted-foreground">
+                    {post.authorMemberType !== "operator" && post.authorProfileId ? (
+                      <Link
+                        href={
+                          post.authorMemberType === "bunny"
+                            ? `/bunnies/${post.authorProfileId}`
+                            : `/rigger/${post.authorProfileId}`
+                        }
+                        className="hover:underline hover:text-foreground"
+                      >
+                        {post.authorNickname ?? "알 수 없음"}
+                      </Link>
+                    ) : (
+                      post.authorNickname ?? "알 수 없음"
+                    )}{" "}
+                    · {formatDate(post.createdAt)}
                     {boardSlug === "free" && (recommendCounts[post.id] ?? 0) > 0 && (
                       <span className="ml-1.5 inline-flex items-center gap-1 text-blue-600">
                         · 추천
@@ -229,7 +243,7 @@ export default async function BunnyBoardListPage({
                       · 조회 {(post.viewCount ?? 0).toLocaleString()}
                     </span>
                   </span>
-                </Link>
+                </div>
               </li>
             ))
           )}

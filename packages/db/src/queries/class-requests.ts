@@ -40,22 +40,41 @@ export async function createClassRequest(input: CreateClassRequestInput) {
   return inserted[0];
 }
 
+export type ClassRequestWithAuthor = ClassRequestRow & {
+  authorProfileId: string | null;
+  authorMemberType: string | null;
+};
+
 export async function getClassRequests(opts?: {
   status?: ClassRequestStatus;
   limit?: number;
   offset?: number;
-}) {
+}): Promise<ClassRequestWithAuthor[]> {
   const conditions = opts?.status
     ? [eq(schema.classRequests.status, opts.status)]
     : [];
 
-  return db
-    .select()
+  const rows = await db
+    .select({
+      ...schema.classRequests,
+      authorProfileId: schema.memberProfiles.id,
+      authorMemberType: schema.memberProfiles.memberType,
+    })
     .from(schema.classRequests)
+    .leftJoin(
+      schema.memberProfiles,
+      eq(schema.classRequests.userId, schema.memberProfiles.userId),
+    )
     .where(conditions.length ? and(...conditions) : undefined)
     .orderBy(desc(schema.classRequests.createdAt))
     .limit(opts?.limit ?? 50)
     .offset(opts?.offset ?? 0);
+
+  return rows.map((r) => ({
+    ...r,
+    authorProfileId: r.authorProfileId ?? null,
+    authorMemberType: r.authorMemberType ?? null,
+  }));
 }
 
 export async function getClassRequestCount(opts?: { status?: ClassRequestStatus }) {

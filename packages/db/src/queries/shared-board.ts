@@ -30,6 +30,8 @@ export type SharedBoardPostListItem = {
   postNumber: number;
   title: string;
   authorUserId: string;
+  authorProfileId: string | null;
+  authorMemberType: string | null;
   authorNickname: string | null;
   coverImageUrl: string | null;
   isPublished: boolean;
@@ -127,6 +129,7 @@ export async function getSharedBoardPosts(
       viewCount: schema.sharedBoardPosts.viewCount,
       nickname: schema.memberProfiles.nickname,
       memberType: schema.memberProfiles.memberType,
+      profileId: schema.memberProfiles.id,
       updaterNickname: updaterProfile.nickname,
     })
     .from(schema.sharedBoardPosts)
@@ -152,6 +155,8 @@ export async function getSharedBoardPosts(
     postNumber: r.postNumber,
     title: r.title,
     authorUserId: r.authorUserId,
+    authorProfileId: r.profileId ?? null,
+    authorMemberType: r.memberType ?? null,
     authorNickname: resolveAuthorNickname(r.memberType, r.nickname),
     coverImageUrl: r.coverImageUrl ?? null,
     isPublished: r.isPublished ?? true,
@@ -207,6 +212,7 @@ export async function getSharedBoardPostsWithRecommendCounts(
       viewCount: schema.sharedBoardPosts.viewCount,
       nickname: schema.memberProfiles.nickname,
       memberType: schema.memberProfiles.memberType,
+      profileId: schema.memberProfiles.id,
       updaterNickname: updaterProfile.nickname,
       recommendCount: recCountSubq.recommendCount,
     })
@@ -237,6 +243,8 @@ export async function getSharedBoardPostsWithRecommendCounts(
     postNumber: r.postNumber,
     title: r.title,
     authorUserId: r.authorUserId,
+    authorProfileId: r.profileId ?? null,
+    authorMemberType: r.memberType ?? null,
     authorNickname: resolveAuthorNickname(r.memberType, r.nickname),
     coverImageUrl: r.coverImageUrl ?? null,
     isPublished: r.isPublished ?? true,
@@ -295,6 +303,7 @@ export async function getSharedBoardPostsWithBodies(
       viewCount: schema.sharedBoardPosts.viewCount,
       nickname: schema.memberProfiles.nickname,
       memberType: schema.memberProfiles.memberType,
+      profileId: schema.memberProfiles.id,
       updaterNickname: updaterProfile.nickname,
       recommendCount: recCountSubq.recommendCount,
     })
@@ -326,6 +335,8 @@ export async function getSharedBoardPostsWithBodies(
     title: r.title,
     body: r.body,
     authorUserId: r.authorUserId,
+    authorProfileId: r.profileId ?? null,
+    authorMemberType: r.memberType ?? null,
     authorNickname: resolveAuthorNickname(r.memberType, r.nickname),
     coverImageUrl: r.coverImageUrl ?? null,
     isPublished: r.isPublished ?? true,
@@ -384,6 +395,7 @@ export async function getSharedBoardPostById(
       viewCount: schema.sharedBoardPosts.viewCount,
       nickname: schema.memberProfiles.nickname,
       memberType: schema.memberProfiles.memberType,
+      profileId: schema.memberProfiles.id,
       updaterNickname: updaterProfile.nickname,
     })
     .from(schema.sharedBoardPosts)
@@ -411,6 +423,8 @@ export async function getSharedBoardPostById(
     title: r.title,
     body: r.body,
     authorUserId: r.authorUserId,
+    authorProfileId: r.profileId ?? null,
+    authorMemberType: r.memberType ?? null,
     isPublished: r.isPublished ?? true,
     authorNickname: resolveAuthorNickname(r.memberType, r.nickname),
     coverImageUrl: r.coverImageUrl ?? null,
