@@ -56,7 +56,20 @@ export async function getClassRequests(opts?: {
 
   const rows = await db
     .select({
-      ...schema.classRequests,
+      id: schema.classRequests.id,
+      userId: schema.classRequests.userId,
+      authorNickname: schema.classRequests.authorNickname,
+      title: schema.classRequests.title,
+      level: schema.classRequests.level,
+      description: schema.classRequests.description,
+      ropeThicknessMm: schema.classRequests.ropeThicknessMm,
+      ropeLengthM: schema.classRequests.ropeLengthM,
+      quantity: schema.classRequests.quantity,
+      imageUrls: schema.classRequests.imageUrls,
+      status: schema.classRequests.status,
+      adminNote: schema.classRequests.adminNote,
+      createdAt: schema.classRequests.createdAt,
+      updatedAt: schema.classRequests.updatedAt,
       authorProfileId: schema.memberProfiles.id,
       authorMemberType: schema.memberProfiles.memberType,
     })
