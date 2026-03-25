@@ -218,7 +218,7 @@ function PostCard({
                     : "bg-muted text-muted-foreground",
               ].join(" ")}
             >
-              @{b.name}
+              {b.name}
             </span>
           ))}
           {extraBunnyCount > 0 && (
