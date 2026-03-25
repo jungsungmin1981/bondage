@@ -21,6 +21,7 @@ export type ThreadListItem = {
   otherIconUrl: string | null;
   otherMemberType: string | null;
   otherCardImageUrl: string | null;
+  otherMarkImageUrl: string | null;
   lastMessageBody: string | null;
   lastMessageAt: Date | null;
   unreadCount: number;
@@ -47,20 +48,7 @@ export async function ensureOneToOneThread(
 ): Promise<string> {
   if (userA === userB) throw new Error("잘못된 대상입니다.");
 
-  // Find existing thread containing both participants (1:1 only by convention)
-  const candidates = await db
-    .select({ threadId: schema.dmParticipants.threadId })
-    .from(schema.dmParticipants)
-    .where(inArray(schema.dmParticipants.userId, [userA, userB]));
-
-  const byThread = new Map<string, Set<string>>();
-  for (const r of candidates) {
-    const set = byThread.get(r.threadId) ?? new Set<string>();
-    byThread.set(r.threadId, set);
-    // We don't know which userId here; re-query would be expensive; do a second query:
-  }
-
-  // Second query: threads where both exist
+  // 두 참여자가 모두 있는 스레드를 JOIN으로 한 번에 조회
   const rows = await db.execute<{ thread_id: string }>(sql`
     SELECT p1.thread_id
     FROM dm_participants p1
@@ -116,6 +104,7 @@ export async function listThreadsForUser(userId: string): Promise<ThreadListItem
             iconUrl: schema.memberProfiles.iconUrl,
             memberType: schema.memberProfiles.memberType,
             cardImageUrl: schema.memberProfiles.cardImageUrl,
+            markImageUrl: schema.memberProfiles.markImageUrl,
           })
           .from(schema.memberProfiles)
           .where(inArray(schema.memberProfiles.userId, otherUserIds));
@@ -127,6 +116,7 @@ export async function listThreadsForUser(userId: string): Promise<ThreadListItem
       iconUrl: string | null;
       memberType: string | null;
       cardImageUrl: string | null;
+      markImageUrl: string | null;
     }
   >();
   for (const p of profiles) {
@@ -136,53 +126,56 @@ export async function listThreadsForUser(userId: string): Promise<ThreadListItem
       iconUrl: p.iconUrl ?? null,
       memberType: p.memberType ?? null,
       cardImageUrl: p.cardImageUrl ?? null,
+      markImageUrl: p.markImageUrl ?? null,
     });
   }
 
-  // last message per thread (sql.array 미지원 버전 호환: 전체 메시지 내림차순 조회 후 thread별 첫 건 pick)
-  const lastCandidates = await db
-    .select({
-      threadId: schema.dmMessages.threadId,
-      body: schema.dmMessages.body,
-      createdAt: schema.dmMessages.createdAt,
-      senderUserId: schema.dmMessages.senderUserId,
-    })
-    .from(schema.dmMessages)
-    .where(inArray(schema.dmMessages.threadId, threadIds))
-    .orderBy(desc(schema.dmMessages.createdAt));
+  // 스레드당 최신 메시지 1건: DISTINCT ON으로 DB에서 직접 추출
+  // 미읽음 카운트와 병렬 실행
+  const [lastRows, unreadRows] = await Promise.all([
+    db.execute<{
+      thread_id: string;
+      body: string | null;
+      created_at: Date;
+      sender_user_id: string;
+    }>(sql`
+      SELECT DISTINCT ON (thread_id) thread_id, body, created_at, sender_user_id
+      FROM dm_messages
+      WHERE thread_id = ANY(ARRAY[${sql.join(threadIds.map((id) => sql`${id}`), sql`, `)}]::text[])
+      ORDER BY thread_id, created_at DESC
+    `),
+    db
+      .select({
+        threadId: schema.dmParticipants.threadId,
+        cnt: sql<number>`count(*)`,
+      })
+      .from(schema.dmParticipants)
+      .innerJoin(
+        schema.dmMessages,
+        eq(schema.dmMessages.threadId, schema.dmParticipants.threadId),
+      )
+      .where(
+        and(
+          eq(schema.dmParticipants.userId, userId),
+          inArray(schema.dmParticipants.threadId, threadIds),
+          or(
+            isNull(schema.dmParticipants.lastReadAt),
+            gt(schema.dmMessages.createdAt, schema.dmParticipants.lastReadAt),
+          ),
+        ),
+      )
+      .groupBy(schema.dmParticipants.threadId),
+  ]);
+
   const lastByThread = new Map<string, { body: string | null; at: Date; senderUserId: string }>();
-  for (const m of lastCandidates) {
-    if (!lastByThread.has(m.threadId)) {
-      lastByThread.set(m.threadId, {
-        body: m.body ?? null,
-        at: m.createdAt,
-        senderUserId: m.senderUserId,
-      });
-    }
+  for (const m of Array.from(lastRows as Iterable<any>)) {
+    lastByThread.set(m.thread_id as string, {
+      body: m.body ?? null,
+      at: m.created_at instanceof Date ? m.created_at : new Date(m.created_at),
+      senderUserId: m.sender_user_id as string,
+    });
   }
 
-  // unread counts: messages newer than last_read_at (per thread)
-  const unreadRows = await db
-    .select({
-      threadId: schema.dmParticipants.threadId,
-      cnt: sql<number>`count(*)`,
-    })
-    .from(schema.dmParticipants)
-    .innerJoin(
-      schema.dmMessages,
-      eq(schema.dmMessages.threadId, schema.dmParticipants.threadId),
-    )
-    .where(
-      and(
-        eq(schema.dmParticipants.userId, userId),
-        inArray(schema.dmParticipants.threadId, threadIds),
-        or(
-          isNull(schema.dmParticipants.lastReadAt),
-          gt(schema.dmMessages.createdAt, schema.dmParticipants.lastReadAt),
-        ),
-      ),
-    )
-    .groupBy(schema.dmParticipants.threadId);
   const unreadByThread = new Map<string, number>();
   for (const r of unreadRows) unreadByThread.set(r.threadId, Number(r.cnt ?? 0));
 
@@ -200,6 +193,7 @@ export async function listThreadsForUser(userId: string): Promise<ThreadListItem
       otherIconUrl: profile?.iconUrl ?? null,
       otherMemberType: profile?.memberType ?? null,
       otherCardImageUrl: profile?.cardImageUrl ?? null,
+      otherMarkImageUrl: profile?.markImageUrl ?? null,
       lastMessageBody: last?.body ?? null,
       lastMessageAt: last?.at ?? null,
       unreadCount: unreadByThread.get(threadId) ?? 0,

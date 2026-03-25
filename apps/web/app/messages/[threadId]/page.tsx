@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { auth } from "@workspace/auth";
 import { redirect } from "next/navigation";
-import { getThreadMessages, listThreadsForUser, markThreadRead, getRiggerProfileById } from "@workspace/db";
+import { getThreadMessages, listThreadsForUser, markThreadRead } from "@workspace/db";
 import {
   getBunnyDefaultCardUrl,
   resolveBunnyCardUrl,
@@ -23,22 +23,16 @@ export default async function ThreadPage({
     messages = await getThreadMessages(decoded, session.user.id, 50);
     await markThreadRead(decoded, session.user.id);
   } catch {
-    // 참여자가 아닌 thread에 접근한 경우 등 — list=1 로 보내서 첫 스레드로 다시 리다이렉트되지 않게 함
     redirect("/messages?list=1");
   }
 
-  // 상단 헤더용 상대 정보 (닉네임, 마크 이미지)
+  // 상단 헤더용 상대 정보 — listThreadsForUser에서 markImageUrl 포함
   const threads = await listThreadsForUser(session.user.id);
   const meta = threads.find((t) => t.threadId === decoded);
 
   let otherMarkImageUrl: string | null = null;
-  if (meta?.otherProfileId && meta.otherMemberType === "rigger") {
-    try {
-      const profile = await getRiggerProfileById(meta.otherProfileId);
-      otherMarkImageUrl = profile?.markImageUrl?.trim() || null;
-    } catch {
-      otherMarkImageUrl = null;
-    }
+  if (meta?.otherMemberType === "rigger") {
+    otherMarkImageUrl = meta.otherMarkImageUrl?.trim() || null;
   } else if (meta?.otherMemberType === "bunny") {
     otherMarkImageUrl =
       resolveBunnyCardUrl(meta.otherCardImageUrl) ?? getBunnyDefaultCardUrl();

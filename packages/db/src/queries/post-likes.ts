@@ -45,28 +45,19 @@ export async function getPostLikesStateForPostIds(
     map.set(id, { postId: id, count: 0, liked: false });
   }
 
-  const counts = await db
+  // count + liked를 BOOL_OR로 한 번에 조회
+  const rows = await db
     .select({
       postId: schema.postLikes.postId,
-      count: sql<number>`count(*)::int`.as("count"),
+      count: sql<number>`count(*)::int`,
+      liked: sql<boolean>`bool_or(${schema.postLikes.userId} = ${userId})`,
     })
     .from(schema.postLikes)
     .where(inArray(schema.postLikes.postId, unique))
     .groupBy(schema.postLikes.postId);
 
-  for (const row of counts) {
-    const cur = map.get(row.postId);
-    if (cur) cur.count = row.count;
-  }
-
-  const likedRows = await db
-    .select({ postId: schema.postLikes.postId })
-    .from(schema.postLikes)
-    .where(and(inArray(schema.postLikes.postId, unique), eq(schema.postLikes.userId, userId)));
-
-  for (const row of likedRows) {
-    const cur = map.get(row.postId);
-    if (cur) cur.liked = true;
+  for (const row of rows) {
+    map.set(row.postId, { postId: row.postId, count: row.count, liked: row.liked });
   }
 
   return map;

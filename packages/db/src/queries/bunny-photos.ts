@@ -156,33 +156,19 @@ export async function getBunnyPhotoLikesStateForPhotoIds(
     map.set(id, { photoId: id, count: 0, liked: false });
   }
 
-  const counts = await db
+  // count + liked를 BOOL_OR로 한 번에 조회
+  const rows = await db
     .select({
       photoId: schema.bunnyPhotoLikes.photoId,
-      count: sql<number>`count(*)::int`.as("count"),
+      count: sql<number>`count(*)::int`,
+      liked: sql<boolean>`bool_or(${schema.bunnyPhotoLikes.userId} = ${userId})`,
     })
     .from(schema.bunnyPhotoLikes)
     .where(inArray(schema.bunnyPhotoLikes.photoId, unique))
     .groupBy(schema.bunnyPhotoLikes.photoId);
 
-  for (const row of counts) {
-    const cur = map.get(row.photoId);
-    if (cur) cur.count = row.count;
-  }
-
-  const likedRows = await db
-    .select({ photoId: schema.bunnyPhotoLikes.photoId })
-    .from(schema.bunnyPhotoLikes)
-    .where(
-      and(
-        inArray(schema.bunnyPhotoLikes.photoId, unique),
-        eq(schema.bunnyPhotoLikes.userId, userId),
-      ),
-    );
-
-  for (const row of likedRows) {
-    const cur = map.get(row.photoId);
-    if (cur) cur.liked = true;
+  for (const row of rows) {
+    map.set(row.photoId, { photoId: row.photoId, count: row.count, liked: row.liked });
   }
 
   return map;

@@ -93,8 +93,16 @@ export async function fetchRiggerPostsSlice(
   const pageSlice = visibleSummaries.slice(offset, offset + limit);
   const slicePostIds = pageSlice.map((s) => s.effectivePostId);
 
-  // 2단계: 슬라이스에 해당하는 postId의 사진만 조회
-  const photos = await getRiggerPhotosByPostIds(slicePostIds);
+  // 2단계: 슬라이스 postId의 사진·버니승인·좋아요를 동시에 조회
+  const [photos, bunnyApprovalsByPostId, likeStateMap] = await Promise.all([
+    getRiggerPhotosByPostIds(slicePostIds),
+    slicePostIds.length > 0
+      ? getBunnyApprovalStatusesByPostIds(slicePostIds)
+      : Promise.resolve(new Map<string, any[]>()),
+    slicePostIds.length > 0
+      ? getPostLikesStateForPostIds(slicePostIds, userId)
+      : Promise.resolve(new Map()),
+  ]);
   const posts = groupPhotosByPost(photos);
 
   // summaries 정렬 순서에 맞게 재정렬
@@ -106,11 +114,6 @@ export async function fetchRiggerPostsSlice(
   const serialized = posts.map(serializePost);
 
   const postIds = posts.map((p) => p.postId);
-
-  const bunnyApprovalsByPostId =
-    postIds.length > 0
-      ? await getBunnyApprovalStatusesByPostIds(postIds)
-      : new Map<string, any[]>();
 
   for (const post of serialized) {
     const rows = bunnyApprovalsByPostId.get(post.postId);
@@ -124,10 +127,6 @@ export async function fetchRiggerPostsSlice(
     }));
   }
 
-  const likeStateMap =
-    postIds.length > 0
-      ? await getPostLikesStateForPostIds(postIds, userId)
-      : new Map();
   const likeByPostId: Record<string, { count: number; liked: boolean }> = {};
   for (const post of posts) {
     const s = likeStateMap.get(post.postId);

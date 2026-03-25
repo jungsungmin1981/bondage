@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { headers } from "next/headers";
 import { auth } from "@workspace/auth";
 import { redirect } from "next/navigation";
-import { listThreadsForUser, getRiggerProfileById } from "@workspace/db";
+import { listThreadsForUser } from "@workspace/db";
 import {
   getBunnyDefaultCardUrl,
   resolveBunnyCardUrl,
@@ -18,26 +18,17 @@ export default async function MessagesLayout({
   if (!session) redirect("/login");
 
   const baseThreads = await listThreadsForUser(session.user.id);
-  const threads = await Promise.all(
-    baseThreads.map(async (t) => {
-      if (t.otherProfileId && t.otherMemberType === "rigger") {
-        try {
-          const profile = await getRiggerProfileById(t.otherProfileId);
-          const mark = profile?.markImageUrl?.trim() || "/default-rigger-mark.png";
-          return { ...t, otherMarkImageUrl: mark };
-        } catch {
-          return { ...t, otherMarkImageUrl: null as string | null };
-        }
-      }
-
-      if (t.otherMemberType === "bunny") {
-        const mark = resolveBunnyCardUrl(t.otherCardImageUrl) ?? getBunnyDefaultCardUrl();
-        return { ...t, otherMarkImageUrl: mark };
-      }
-
-      return { ...t, otherMarkImageUrl: null as string | null };
-    }),
-  );
+  const threads = baseThreads.map((t) => {
+    if (t.otherMemberType === "rigger") {
+      const mark = t.otherMarkImageUrl?.trim() || "/default-rigger-mark.png";
+      return { ...t, otherMarkImageUrl: mark };
+    }
+    if (t.otherMemberType === "bunny") {
+      const mark = resolveBunnyCardUrl(t.otherCardImageUrl) ?? getBunnyDefaultCardUrl();
+      return { ...t, otherMarkImageUrl: mark };
+    }
+    return t;
+  });
 
   return (
     <div className="mx-auto grid max-w-6xl gap-0 py-4 md:grid-cols-[minmax(0,360px)_1fr]">

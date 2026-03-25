@@ -153,14 +153,17 @@ export async function getChallengeCountsByPostIds(
     .select({
       classPostId: schema.classChallenges.classPostId,
       status: schema.classChallenges.status,
+      count: sql<number>`count(*)::int`,
     })
     .from(schema.classChallenges)
-    .where(inArray(schema.classChallenges.classPostId, classPostIds));
+    .where(inArray(schema.classChallenges.classPostId, classPostIds))
+    .groupBy(schema.classChallenges.classPostId, schema.classChallenges.status);
   for (const row of rows) {
-    const cur = map.get(row.classPostId)!;
-    if (row.status === "approved") cur.approved += 1;
-    else if (row.status === "pending") cur.pending += 1;
-    else if (row.status === "rejected") cur.rejected += 1;
+    const cur = map.get(row.classPostId);
+    if (!cur) continue;
+    if (row.status === "approved") cur.approved = row.count;
+    else if (row.status === "pending") cur.pending = row.count;
+    else if (row.status === "rejected") cur.rejected = row.count;
   }
   return map;
 }
