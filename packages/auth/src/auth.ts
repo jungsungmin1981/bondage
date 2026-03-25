@@ -1,4 +1,4 @@
-import { db, schema, eq, and, gt, isNull, ne } from "@workspace/db";
+import { db, schema, eq, and, gt, isNull } from "@workspace/db";
 import { betterAuth } from "better-auth";
 import { createAuthMiddleware, APIError } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -17,6 +17,20 @@ const baseURL = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
 const extraOrigins = process.env.BETTER_AUTH_TRUSTED_ORIGINS
   ? process.env.BETTER_AUTH_TRUSTED_ORIGINS.split(",").map((o) => o.trim()).filter(Boolean)
   : [];
+
+/** baseURL에서 www 유무 변형 도메인을 자동으로 신뢰 origin에 추가 */
+function deriveAutoOrigins(base: string): string[] {
+  try {
+    const { protocol, hostname } = new URL(base);
+    if (!hostname || hostname === "localhost") return [];
+    const alt = hostname.startsWith("www.")
+      ? `${protocol}//${hostname.slice(4)}`
+      : `${protocol}//www.${hostname}`;
+    return [alt];
+  } catch {
+    return [];
+  }
+}
 
 const resendApiKey = process.env.RESEND_API_KEY ?? "";
 const resendFrom =
@@ -157,7 +171,15 @@ async function validateInviteKey(key: string): Promise<{ id: string }> {
 
 export const auth = betterAuth({
   baseURL,
-  trustedOrigins: [baseURL, ...extraOrigins],
+  trustedOrigins: [baseURL, ...deriveAutoOrigins(baseURL), ...extraOrigins],
+  advanced: {
+    /**
+     * 일부 모바일 브라우저·인앱 브라우저는 쿠키 보유 상태에서 Origin 헤더를 누락하거나
+     * "null"로 전송하여 두 번째 로그인부터 FORBIDDEN 오류가 발생할 수 있음.
+     * CSRF 체크 대신 trustedOrigins 검증만 유지한다.
+     */
+    disableCSRFCheck: true,
+  },
   session: {
     cookieCache: {
       enabled: true,
@@ -184,8 +206,7 @@ export const auth = betterAuth({
   hooks: {
     before: createAuthMiddleware(async (ctx) => {
       if (!ctx.path.includes("sign-up/email")) return;
-      const body = ctx.body as Record<string, unknown> | undefined;
-      const normalizedUsername =
+      const body = ctx.body as Record<string, unknown> | undefined;      const normalizedUsername =
         typeof body?.username === "string" ? body.username.trim().toLowerCase() : body?.username;
       const bodyWithUsername = { ...body, username: normalizedUsername };
 
@@ -219,21 +240,6 @@ export const auth = betterAuth({
       };
     }),
     after: createAuthMiddleware(async (ctx) => {
-      // 다른 곳에서 로그인 시 기존 세션 무효화: 새 세션이 생성된 경우 해당 유저의 다른 세션만 삭제
-      const newSession = ctx.context?.newSession as
-        | { user?: { id?: string }; session?: { id?: string } }
-        | undefined;
-      if (newSession?.user?.id && newSession?.session?.id) {
-        await db
-          .delete(schema.sessions)
-          .where(
-            and(
-              eq(schema.sessions.userId, newSession.user.id),
-              ne(schema.sessions.id, newSession.session.id),
-            ),
-          );
-      }
-
       if (!ctx.path.includes("sign-up/email")) return;
       const c = ctx.context as Record<string, unknown> | undefined;
       const body = (ctx.body ?? c?.body) as Record<string, unknown> | undefined;
@@ -246,8 +252,8 @@ export const auth = betterAuth({
           inviteKeyId = undefined;
         }
       }
-      let userId: string | undefined = (c?.newSession as { user?: { id?: string } } | undefined)?.user?.id;
-      if (!userId && body) {
+      let userId: string | undefined;
+      if (body) {
         const email = typeof body.email === "string" ? body.email.trim() : "";
         if (email) {
           const [row] = await db

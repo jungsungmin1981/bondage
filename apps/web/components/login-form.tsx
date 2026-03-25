@@ -26,12 +26,16 @@ function getLoginErrorMessage(message: string): string {
     return "이메일 인증이 필요합니다. 가입 시 발송된 이메일의 인증 링크를 확인해 주세요.";
   if (lower.includes("invalid") && (lower.includes("password") || lower.includes("credential")))
     return "ID 또는 비밀번호가 올바르지 않습니다.";
+  if (lower.includes("invalid") && lower.includes("username"))
+    return "ID 또는 비밀번호가 올바르지 않습니다.";
   if (lower.includes("user not found") || (lower.includes("username") && lower.includes("not found")))
     return "등록되지 않은 ID입니다.";
   if (lower.includes("password") && (lower.includes("wrong") || lower.includes("invalid")))
     return "비밀번호가 올바르지 않습니다.";
   if (lower.includes("too many") || lower.includes("rate limit"))
     return "시도 횟수가 너무 많습니다. 잠시 후 다시 시도해 주세요.";
+  if (lower.includes("origin") || lower.includes("forbidden") || lower.includes("csrf"))
+    return "로그인 요청이 차단되었습니다. 페이지를 새로고침한 후 다시 시도해 주세요.";
   return "로그인에 실패했습니다. ID와 비밀번호를 확인해 주세요.";
 }
 
@@ -71,7 +75,6 @@ export function LoginForm({
       {
         username: username.trim().toLowerCase(),
         password,
-        callbackURL: "/operator/otp-gate",
         rememberMe: true,
       },
       {

@@ -104,12 +104,9 @@ export function PhotoUploadForm({ riggerId }: Props) {
 
   const filteredBunnies = useMemo(() => {
     const q = bunnyQuery.trim().toLowerCase();
-    const list = bunnyUsers.slice().sort((a, b) => a.email.localeCompare(b.email));
+    const list = bunnyUsers.slice().sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
     if (!q) return list;
-    return list.filter((u) => {
-      const name = (u.name ?? "").toLowerCase();
-      return u.email.toLowerCase().includes(q) || name.includes(q);
-    });
+    return list.filter((u) => (u.name ?? "").toLowerCase().includes(q));
   }, [bunnyUsers, bunnyQuery]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -418,7 +415,7 @@ export function PhotoUploadForm({ riggerId }: Props) {
             <Input
               value={bunnyQuery}
               onChange={(e) => setBunnyQuery(e.target.value)}
-              placeholder="이메일/이름 검색…"
+              placeholder="닉네임 검색…"
             />
 
             {bunnyLoading && (
