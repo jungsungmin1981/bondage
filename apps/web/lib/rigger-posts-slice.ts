@@ -3,7 +3,9 @@ import {
   getCommentsByPhotoIdsWithAuthorGrouped,
   getPostIdsWhereUserIsRequestedBunny,
   getPostLikesStateForPostIds,
-  getRiggerPhotoPosts,
+  getRiggerPhotosByPostIds,
+  getRiggerPostSummaries,
+  groupPhotosByPost,
 } from "@workspace/db";
 import type { RiggerPhotoPost } from "@workspace/db";
 import type { SerializedPost } from "./rigger-posts-types";
@@ -47,7 +49,12 @@ export type SliceResult = {
   totalCount: number;
 };
 
-/** 서버 전용: 오프셋 구간만 배치 조회 후 직렬화. visibilityAsUserId 있으면 해당 유저 시점으로 비공개/승인대기 노출(관리자용). */
+/**
+ * 서버 전용: 2단계 쿼리로 효율적으로 슬라이스 조회.
+ *  1단계: 포스트 요약(1행/포스트)으로 visibility 필터 + 총 개수 + 슬라이스 postId 결정
+ *  2단계: 슬라이스 postId에 해당하는 사진만 조회 → 전체 사진 로드 불필요
+ * visibilityAsUserId 있으면 해당 유저 시점으로 비공개/승인대기 노출(관리자용).
+ */
 export async function fetchRiggerPostsSlice(
   riggerId: string,
   offset: number,
@@ -55,28 +62,51 @@ export async function fetchRiggerPostsSlice(
   userId: string,
   options?: { visibilityAsUserId?: string },
 ): Promise<SliceResult> {
-  const all = await getRiggerPhotoPosts(riggerId);
-  const allPostIds = all.map((p) => p.postId);
-  const requestedBunnyPostIds =
-    allPostIds.length > 0
-      ? await getPostIdsWhereUserIsRequestedBunny(allPostIds, userId)
-      : new Set<string>();
+  // 1단계: 포스트당 1행 요약 조회 (전체 사진 대신 대표 행 1개)
+  const summaries = await getRiggerPostSummaries(riggerId);
+
   const ownerIdForVisibility = options?.visibilityAsUserId ?? userId;
-  // 비공개(private)는 작성자에게만, 승인대기(pending)는 작성자 또는 승인 요청된 버니에게 노출. 관리자는 visibilityAsUserId로 리거 시점 접근.
-  const visibleAll = all.filter((p) => {
-    const first: any = p.photos[0];
-    const visibility = String(first?.visibility ?? "public");
-    if (visibility !== "private" && visibility !== "pending") return true;
-    if (first?.userId === ownerIdForVisibility) return true;
-    if (visibility === "pending" && requestedBunnyPostIds.has(p.postId))
+
+  // pending 게시물 postId만 추출 → bunny 승인 여부 조회 범위 최소화
+  const pendingPostIds = summaries
+    .filter((s) => s.visibility === "pending")
+    .map((s) => s.effectivePostId);
+
+  const requestedBunnyPostIds =
+    pendingPostIds.length > 0
+      ? await getPostIdsWhereUserIsRequestedBunny(pendingPostIds, userId)
+      : new Set<string>();
+
+  // visibility 필터 (요약 행 기준)
+  const visibleSummaries = summaries.filter((s) => {
+    const vis = s.visibility;
+    if (vis !== "private" && vis !== "pending") return true;
+    if (s.userId === ownerIdForVisibility) return true;
+    if (vis === "pending" && requestedBunnyPostIds.has(s.effectivePostId))
       return true;
     return false;
   });
-  const totalCount = visibleAll.length;
-  const slice = visibleAll.slice(offset, offset + limit);
-  const serialized = slice.map(serializePost);
 
-  const postIds = slice.map((p) => p.postId);
+  const totalCount = visibleSummaries.length;
+
+  // 페이지 슬라이스
+  const pageSlice = visibleSummaries.slice(offset, offset + limit);
+  const slicePostIds = pageSlice.map((s) => s.effectivePostId);
+
+  // 2단계: 슬라이스에 해당하는 postId의 사진만 조회
+  const photos = await getRiggerPhotosByPostIds(slicePostIds);
+  const posts = groupPhotosByPost(photos);
+
+  // summaries 정렬 순서에 맞게 재정렬
+  const postOrder = new Map(slicePostIds.map((id, i) => [id, i]));
+  posts.sort(
+    (a, b) => (postOrder.get(a.postId) ?? 0) - (postOrder.get(b.postId) ?? 0),
+  );
+
+  const serialized = posts.map(serializePost);
+
+  const postIds = posts.map((p) => p.postId);
+
   const bunnyApprovalsByPostId =
     postIds.length > 0
       ? await getBunnyApprovalStatusesByPostIds(postIds)
@@ -99,12 +129,12 @@ export async function fetchRiggerPostsSlice(
       ? await getPostLikesStateForPostIds(postIds, userId)
       : new Map();
   const likeByPostId: Record<string, { count: number; liked: boolean }> = {};
-  for (const p of slice) {
-    const s = likeStateMap.get(p.postId);
-    likeByPostId[p.postId] = s ?? { count: 0, liked: false };
+  for (const post of posts) {
+    const s = likeStateMap.get(post.postId);
+    likeByPostId[post.postId] = s ?? { count: 0, liked: false };
   }
 
-  const commentPhotoIds = slice
+  const commentPhotoIds = posts
     .map((p) => p.photos[0]?.id)
     .filter((id): id is string => Boolean(id));
   const commentsGrouped =

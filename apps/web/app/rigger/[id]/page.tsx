@@ -5,7 +5,6 @@ import {
   getActiveSuspensionForUser,
   getApprovedClassChallengeCountsByUserId,
   getPublicClassPostCountsByLevel,
-  getRiggerPhotoPostCount,
   getRiggerProfileById,
   getUserCreatedAt,
 } from "@workspace/db";
@@ -63,25 +62,23 @@ export default async function RiggerDetailPage({
     isOwnProfile || (rigger.profileVisibility ?? "public") !== "private";
 
   // 병렬로 실행 가능한 쿼리들을 한 번에 처리
-  const [postCount, classCounts, totalByLevel, suspension, createdAt] = await Promise.all([
-    getRiggerPhotoPostCount(id),
+  const [classCounts, totalByLevel, suspension, createdAt, initialSlice] = await Promise.all([
     getApprovedClassChallengeCountsByUserId(rigger.userId),
     getPublicClassPostCountsByLevel(),
     rigger.userId ? getActiveSuspensionForUser(rigger.userId) : Promise.resolve(null),
     isOwnProfile ? getUserCreatedAt(session.user.id) : Promise.resolve(null),
-  ]);
-
-  const hasAnyPost = postCount > 0;
-  const initialSlice =
-    hasAnyPost && canSeePosts
-      ? await fetchRiggerPostsSlice(
+    canSeePosts
+      ? fetchRiggerPostsSlice(
           id,
           0,
           INITIAL_SIZE,
           session.user.id,
           isAdmin(session) ? { visibilityAsUserId: rigger.userId ?? undefined } : undefined,
         )
-      : null;
+      : Promise.resolve(null),
+  ]);
+
+  const hasAnyPost = (initialSlice?.totalCount ?? 0) > 0;
 
   const isSuspended = !!suspension;
   const jailOverlayUrl = isSuspended ? "/jail-card.png" : undefined;
@@ -268,15 +265,11 @@ export default async function RiggerDetailPage({
 
       <div className="mx-auto mt-8 max-w-4xl">
         <h2 className="text-sm font-medium text-muted-foreground">사진</h2>
-        {!hasAnyPost ? (
-          <p className="mt-2 text-sm text-muted-foreground">
-            등록된 사진이 없습니다.
-          </p>
-        ) : !canSeePosts ? (
+        {!canSeePosts ? (
           <p className="mt-2 text-sm text-muted-foreground">
             비공개 프로필입니다.
           </p>
-        ) : initialSlice ? (
+        ) : initialSlice && hasAnyPost ? (
           <RiggerPostsFeed
             riggerId={rigger.id}
             sessionUserId={session.user.id}

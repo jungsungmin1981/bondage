@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, ne, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, ne, or, sql } from "drizzle-orm";
 import { db } from "../client/node";
 import * as schema from "../schema";
 
@@ -56,6 +56,71 @@ export async function getRiggerPhotoPostCount(riggerId: string): Promise<number>
     .from(schema.riggerPhotos)
     .where(eq(schema.riggerPhotos.riggerId, riggerId));
   return rows.length;
+}
+
+/**
+ * 리거의 모든 게시물 요약 (포스트당 한 행).
+ * COALESCE(post_id, id)를 effective key로 사용하므로 레거시 사진(post_id=null)도 정확히 처리.
+ * 전체 사진 대신 대표 한 행만 반환 → 쿼리 부하 대폭 감소.
+ */
+export type RiggerPostSummary = {
+  effectivePostId: string;
+  userId: string;
+  visibility: string;
+  visibilityAfterApproval: string | null;
+  createdAt: Date;
+  caption: string | null;
+};
+
+export async function getRiggerPostSummaries(
+  riggerId: string,
+): Promise<RiggerPostSummary[]> {
+  const result = await db.execute(sql`
+    SELECT DISTINCT ON (COALESCE(post_id, id))
+      COALESCE(post_id, id) AS effective_post_id,
+      user_id,
+      visibility,
+      visibility_after_approval,
+      created_at,
+      caption
+    FROM rigger_photos
+    WHERE rigger_id = ${riggerId}
+    ORDER BY COALESCE(post_id, id), created_at ASC
+  `);
+
+  return Array.from(result as Iterable<Record<string, unknown>>)
+    .map((r) => ({
+      effectivePostId: r["effective_post_id"] as string,
+      userId: r["user_id"] as string,
+      visibility: r["visibility"] as string,
+      visibilityAfterApproval: r["visibility_after_approval"] as string | null,
+      createdAt:
+        r["created_at"] instanceof Date
+          ? r["created_at"]
+          : new Date(r["created_at"] as string),
+      caption: r["caption"] as string | null,
+    }))
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+}
+
+/**
+ * effectivePostId 목록에 해당하는 사진만 조회 (슬라이스된 페이지 상세용).
+ * effectivePostId = COALESCE(post_id, id) → 모던/레거시 모두 처리.
+ */
+export async function getRiggerPhotosByPostIds(
+  effectivePostIds: string[],
+): Promise<RiggerPhotoRow[]> {
+  if (effectivePostIds.length === 0) return [];
+  return db
+    .select()
+    .from(schema.riggerPhotos)
+    .where(
+      or(
+        inArray(schema.riggerPhotos.postId, effectivePostIds),
+        inArray(schema.riggerPhotos.id, effectivePostIds),
+      ),
+    )
+    .orderBy(asc(schema.riggerPhotos.createdAt));
 }
 
 /** postId 기준 해당 게시물의 사진 목록 (모달 상세용). created_at 오름차순. */
