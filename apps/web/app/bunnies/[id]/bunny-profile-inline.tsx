@@ -24,9 +24,22 @@ import {
   BUNNY_BIO_MAX_LENGTH,
   DIVISION_OPTIONS,
   GENDER_OPTIONS,
+  YES_NO_OPTIONS,
+  STYLE_OPTIONS,
+  styleArrayToString,
+  styleStringToArray,
 } from "@/lib/rigger-profile-options";
 import { BioPreview } from "@/app/rigger/[id]/bio-preview";
 import { saveBunnyProfile } from "./bunny-profile-actions";
+import { Checkbox } from "@workspace/ui/components/checkbox";
+
+function normalizeYesNo(v: string | null | undefined): string {
+  if (!v) return YES_NO_OPTIONS[0];
+  const u = v.toUpperCase();
+  if (u === "YES") return "Yes";
+  if (u === "NO") return "No";
+  return YES_NO_OPTIONS.includes(v as "Yes" | "No") ? v : YES_NO_OPTIONS[0];
+}
 
 function normalizeDivision(v: string | null | undefined): string {
   if (v && DIVISION_OPTIONS.includes(v as (typeof DIVISION_OPTIONS)[number]))
@@ -40,8 +53,11 @@ export type BunnyProfileInlineProps = {
   name: string;
   gender: string | null | undefined;
   division: string | null | undefined;
+  bondageRating: string | null | undefined;
+  style: string | null | undefined;
   activityRegion: string | null | undefined;
   bio: string | null | undefined;
+  profileVisibility?: "public" | "private" | null | undefined;
   /** true면 처음부터 편집 모드로 열림 (예: /bunnies/[id]/edit) */
   defaultEditing?: boolean;
   /** 가입 후 N시간 경과 시 true. 없으면 기본 true */
@@ -58,8 +74,11 @@ export function BunnyProfileInline({
   name,
   gender: initialGender,
   division: initialDivision,
+  bondageRating: initialBondage,
+  style: initialStyle,
   activityRegion: initialRegion,
   bio: initialBio,
+  profileVisibility: initialProfileVisibility,
   defaultEditing = false,
   canCreateInviteKey = true,
   inviteKeyAllowedAt: inviteKeyAllowedAtProp = null,
@@ -280,6 +299,15 @@ export function BunnyProfileInline({
   const [division, setDivision] = useState(() =>
     normalizeDivision(initialDivision),
   );
+  const [bondageRating, setBondageRating] = useState(() =>
+    normalizeYesNo(initialBondage),
+  );
+  const [styles, setStyles] = useState<string[]>(() =>
+    styleStringToArray(initialStyle),
+  );
+  const [profileVisibility, setProfileVisibility] = useState<"public" | "private">(
+    () => initialProfileVisibility === "private" ? "private" : "public",
+  );
   const [activityRegion, setActivityRegion] = useState(() => {
     const t = initialRegion?.trim() ?? "";
     return t.slice(0, BUNNY_ACTIVITY_REGION_MAX_LENGTH);
@@ -293,26 +321,40 @@ export function BunnyProfileInline({
     () => ({
       gender: genderOption,
       division: normalizeDivision(initialDivision),
+      bondageRating: normalizeYesNo(initialBondage),
+      stylesSorted: [...styleStringToArray(initialStyle)].sort().join("\0"),
+      profileVisibility: initialProfileVisibility === "private" ? "private" : "public",
       activityRegion: (initialRegion?.trim() ?? "").slice(
         0,
         BUNNY_ACTIVITY_REGION_MAX_LENGTH,
       ),
       bio: (initialBio?.trim() ?? "").slice(0, BUNNY_BIO_MAX_LENGTH),
     }),
-    [genderOption, initialDivision, initialRegion, initialBio],
+    [genderOption, initialDivision, initialBondage, initialStyle, initialProfileVisibility, initialRegion, initialBio],
+  );
+
+  const stylesSortedKey = useMemo(
+    () => [...styles].sort().join("\0"),
+    [styles],
   );
 
   const isDirty = useMemo(() => {
     if (gender !== baseline.gender) return true;
     if (division !== baseline.division) return true;
+    if (bondageRating !== baseline.bondageRating) return true;
+    if (stylesSortedKey !== baseline.stylesSorted) return true;
+    if (profileVisibility !== baseline.profileVisibility) return true;
     if (activityRegion.trim() !== baseline.activityRegion) return true;
     if (bio.trim() !== baseline.bio) return true;
     return false;
-  }, [gender, division, activityRegion, bio, baseline]);
+  }, [gender, division, bondageRating, stylesSortedKey, profileVisibility, activityRegion, bio, baseline]);
 
   function resetToBaseline() {
     setGender(baseline.gender);
     setDivision(baseline.division);
+    setBondageRating(baseline.bondageRating);
+    setStyles(styleStringToArray(initialStyle));
+    setProfileVisibility(baseline.profileVisibility === "private" ? "private" : "public");
     setActivityRegion(baseline.activityRegion);
     setBio(baseline.bio);
   }
@@ -329,6 +371,8 @@ export function BunnyProfileInline({
   });
   const row1 = [pair("닉네임", name || "-"), pair("상태", statusLabel)];
   const regionDisplay = activityRegion || initialRegion?.trim() || "-";
+  const styleDisplay =
+    styles.length > 0 ? styles.join(", ") : initialStyle?.trim() || "-";
 
   async function handleSave() {
     setSaving(true);
@@ -340,6 +384,9 @@ export function BunnyProfileInline({
     const res = await saveBunnyProfile(profileId, {
       activityRegion: regionTrimmed || null,
       bio: bioTrimmed || null,
+      bondageRating,
+      style: styleArrayToString(styles) || null,
+      profileVisibility,
     });
     setSaving(false);
     if (res.ok) {
@@ -353,13 +400,14 @@ export function BunnyProfileInline({
   if (!editing) {
     const genderDisplay = gender?.trim() || initialGender?.trim() || "-";
     const row2 = [pair("성별", genderDisplay), pair("구분", "버니")];
-    const row3 = [pair("활동지역", regionDisplay, true)];
+    const row3 = [pair("본러팅", bondageRating), pair("활동지역", regionDisplay, true)];
+    const row4 = [pair("스타일", styleDisplay)];
     const rawBio = bio || initialBio?.trim() || "-";
 
     return (
       <>
-        <dl className="grid grid-cols-[5rem_1fr_5rem_1fr] gap-x-3 gap-y-1.5 items-baseline">
-          {[row1, row2, row3].map((pairs, rowIndex) => (
+        <dl className="grid grid-cols-[auto_1fr] sm:grid-cols-[5rem_1fr_5rem_1fr] gap-x-3 gap-y-1.5 items-baseline">
+          {[row1, row2, row3, row4].map((pairs, rowIndex) => (
             <FragmentBlock key={rowIndex} pairs={pairs} />
           ))}
         </dl>
@@ -596,46 +644,91 @@ export function BunnyProfileInline({
 
   return (
     <div className="space-y-5">
-      <dl className="grid grid-cols-[5rem_1fr_5rem_1fr] gap-x-3 gap-y-1.5 items-baseline">
-        {[row1].map((pairs, rowIndex) => (
-          <FragmentBlock key={rowIndex} pairs={pairs} />
-        ))}
-        <dt className="shrink-0 text-sm font-medium text-muted-foreground">
-          성별
-        </dt>
-        <dd className="min-w-0 text-base font-medium">
-          {gender?.trim() || initialGender?.trim() || "-"}
-        </dd>
-        <dt className="shrink-0 text-sm font-medium text-muted-foreground">
-          구분
-        </dt>
-        <dd className="min-w-0 text-base font-medium">버니</dd>
-        <dt className="col-span-4 mt-2 shrink-0 text-sm font-medium text-muted-foreground sm:col-span-1 sm:mt-0">
-          활동지역
-        </dt>
-        <dd className="col-span-4 min-w-0 sm:col-span-3">
-          <div className="relative w-full max-w-md">
-            <Input
-              value={activityRegion}
-              maxLength={BUNNY_ACTIVITY_REGION_MAX_LENGTH}
-              onChange={(e) =>
-                setActivityRegion(
-                  e.target.value.slice(0, BUNNY_ACTIVITY_REGION_MAX_LENGTH),
-                )
-              }
-              placeholder="예: 서울·경기"
-              className="w-full min-w-0 overflow-hidden text-ellipsis whitespace-nowrap pr-[4.25rem]"
-              title={activityRegion || undefined}
-            />
-            <span
-              className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs tabular-nums text-muted-foreground"
-              aria-hidden
+      <div className="space-y-1.5">
+        <dl className="grid grid-cols-[auto_1fr_auto_1fr] gap-x-4 gap-y-1.5 items-baseline">
+          {[row1].map((pairs, rowIndex) => (
+            <FragmentBlock key={rowIndex} pairs={pairs} />
+          ))}
+          <dt className="shrink-0 text-sm font-medium text-muted-foreground">성별</dt>
+          <dd className="min-w-0 text-base font-medium">
+            {gender?.trim() || initialGender?.trim() || "-"}
+          </dd>
+          <dt className="shrink-0 text-sm font-medium text-muted-foreground">구분</dt>
+          <dd className="min-w-0 text-base font-medium">버니</dd>
+        </dl>
+        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-3 items-center">
+          <dt className="shrink-0 text-sm font-medium text-muted-foreground">본러팅</dt>
+          <dd className="min-w-0">
+            <ToggleGroup
+              type="single"
+              value={bondageRating}
+              onValueChange={(v) => v && setBondageRating(v)}
+              variant="outline"
+              size="sm"
+              spacing={0}
+              className="w-full max-w-[200px]"
             >
-              {activityRegion.length}/{BUNNY_ACTIVITY_REGION_MAX_LENGTH}
-            </span>
-          </div>
-        </dd>
-      </dl>
+              {YES_NO_OPTIONS.map((opt) => (
+                <ToggleGroupItem key={opt} value={opt} className="flex-1 px-3">
+                  {opt}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+          </dd>
+          <dt className="shrink-0 text-sm font-medium text-muted-foreground">활동지역</dt>
+          <dd className="min-w-0">
+            <div className="relative w-full max-w-md">
+              <Input
+                value={activityRegion}
+                maxLength={BUNNY_ACTIVITY_REGION_MAX_LENGTH}
+                onChange={(e) =>
+                  setActivityRegion(e.target.value.slice(0, BUNNY_ACTIVITY_REGION_MAX_LENGTH))
+                }
+                placeholder="예: 서울·경기"
+                className="w-full min-w-0 overflow-hidden text-ellipsis whitespace-nowrap pr-[4.25rem]"
+                title={activityRegion || undefined}
+              />
+              <span
+                className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs tabular-nums text-muted-foreground"
+                aria-hidden
+              >
+                {activityRegion.length}/{BUNNY_ACTIVITY_REGION_MAX_LENGTH}
+              </span>
+            </div>
+          </dd>
+          <dt className="self-start pt-1 shrink-0 text-sm font-medium text-muted-foreground">스타일</dt>
+          <dd className="min-w-0 flex flex-wrap gap-4">
+            {STYLE_OPTIONS.map((opt) => (
+              <label key={opt} className="flex cursor-pointer items-center gap-2 text-sm font-medium">
+                <Checkbox
+                  checked={styles.includes(opt)}
+                  onCheckedChange={(c) =>
+                    setStyles((prev) =>
+                      c === true ? [...new Set([...prev, opt])] : prev.filter((s) => s !== opt),
+                    )
+                  }
+                />
+                {opt}
+              </label>
+            ))}
+          </dd>
+          <dt className="shrink-0 text-sm font-medium text-muted-foreground">공개</dt>
+          <dd className="min-w-0">
+            <ToggleGroup
+              type="single"
+              value={profileVisibility}
+              onValueChange={(v) => (v === "public" || v === "private") && setProfileVisibility(v)}
+              variant="outline"
+              size="sm"
+              spacing={0}
+              className="w-full max-w-[200px]"
+            >
+              <ToggleGroupItem value="public" className="flex-1 px-3">공개</ToggleGroupItem>
+              <ToggleGroupItem value="private" className="flex-1 px-3">비공개</ToggleGroupItem>
+            </ToggleGroup>
+          </dd>
+        </dl>
+      </div>
       <div className="border-t pt-4">
         <Label htmlFor="bunny-bio" className="text-sm font-medium text-muted-foreground">
           자기소개

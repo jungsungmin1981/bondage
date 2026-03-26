@@ -59,7 +59,11 @@ export default async function BunnyDetailPage({
     pair("성별", profile.gender),
     pair("구분", "버니"),
   ];
-  const row3 = [pair("활동지역", profile.activityRegion)];
+  const row3 = [
+    pair("본러팅", profile.bondageRating),
+    pair("활동지역", profile.activityRegion),
+  ];
+  const row4 = [pair("스타일", profile.style)];
 
   const rawBio = profile.bio?.trim() ? profile.bio : "-";
   const [photos, suspension] = await Promise.all([
@@ -137,8 +141,11 @@ export default async function BunnyDetailPage({
                 name={name}
                 gender={profile.gender}
                 division={profile.division}
+                bondageRating={profile.bondageRating}
+                style={profile.style}
                 activityRegion={profile.activityRegion}
                 bio={profile.bio}
+                profileVisibility={profile.profileVisibility as "public" | "private" | null | undefined}
                 canCreateInviteKey={canCreateInviteKey}
                 inviteKeyAllowedAt={inviteKeyAllowedAt}
                 showInviteKeyButton={showInviteKeyButton}
@@ -146,7 +153,7 @@ export default async function BunnyDetailPage({
             ) : (
               <>
                 <dl className="grid grid-cols-[auto_1fr] sm:grid-cols-[5rem_1fr_5rem_1fr] gap-x-3 gap-y-1.5 items-baseline">
-                  {[row1, row2, row3].map((pairs, rowIndex) => (
+                  {[row1, row2, row3, row4].map((pairs, rowIndex) => (
                     <Fragment key={rowIndex}>
                       {pairs.map(({ label, value }) => (
                         <Fragment key={label}>
