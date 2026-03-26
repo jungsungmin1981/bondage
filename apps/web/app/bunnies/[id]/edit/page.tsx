@@ -62,8 +62,11 @@ export default async function BunnyEditPage({
               name={name}
               gender={profile.gender}
               division={profile.division}
+              bondageRating={profile.bondageRating}
+              style={profile.style}
               activityRegion={profile.activityRegion}
               bio={profile.bio}
+              profileVisibility={profile.profileVisibility as "public" | "private" | null | undefined}
               defaultEditing={true}
             />
           </div>
