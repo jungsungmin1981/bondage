@@ -42,6 +42,13 @@ const DESCRIPTION_MAX_LEN = 200;
 const TITLE_MAX_LEN = 15;
 const LEVEL = "intermediate" as const;
 
+function toEmbedUrl(url: string): string | null {
+  const match = url.match(
+    /(?:youtube\.com\/watch\?(?:.*&)?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+  );
+  return match ? `https://www.youtube.com/embed/${match[1]}` : null;
+}
+
 function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -295,9 +302,12 @@ export function ClassIntermediateAdmin() {
     ...form.extraImageUrls,
   ].filter((v): v is string => !!v);
   const extraPhotoOffset = hasCoverPhoto ? 1 : 0;
-  const canGoPrev = previewPhotos.length > 1 && previewPhotoIndex > 0;
+  const videoEmbedUrl = form.videoUrl?.trim() ? toEmbedUrl(form.videoUrl) : null;
+  const videoOffset = videoEmbedUrl ? 1 : 0;
+  const totalSlideCount = videoOffset + previewPhotos.length;
+  const canGoPrev = totalSlideCount > 1 && previewPhotoIndex > 0;
   const canGoNext =
-    previewPhotos.length > 1 && previewPhotoIndex < previewPhotos.length - 1;
+    totalSlideCount > 1 && previewPhotoIndex < totalSlideCount - 1;
 
   const goPrev = useCallback(() => {
     if (!canGoPrev) return;
@@ -691,9 +701,10 @@ export function ClassIntermediateAdmin() {
               {form.title?.trim() || "제목 없음"}
             </p>
 
+            {/* 사진(대표사진 먼저, 이후 추가 이미지) — 동영상이 있으면 1번 슬라이드 */}
             <div className="relative flex flex-col items-center justify-center">
               <div className="flex w-full max-w-full items-center justify-center gap-1 sm:gap-2">
-                {previewPhotos.length > 1 && (
+                {totalSlideCount > 1 && (
                   <div className="flex w-7 shrink-0 flex-col items-center justify-center sm:w-8">
                     {canGoPrev ? (
                       <button
@@ -718,7 +729,7 @@ export function ClassIntermediateAdmin() {
                   }}
                   onTouchEnd={(e) => {
                     const start = touchStartX.current;
-                    if (start == null || previewPhotos.length <= 1) return;
+                    if (start == null || totalSlideCount <= 1) return;
                     const end =
                       e.changedTouches[0]?.clientX ?? e.touches[0]?.clientX ?? start;
                     const delta = start - end;
@@ -727,11 +738,23 @@ export function ClassIntermediateAdmin() {
                     touchStartX.current = null;
                   }}
                 >
-                  {previewPhotos[previewPhotoIndex] ? (
+                  {videoEmbedUrl && previewPhotoIndex === 0 ? (
+                    <div className="w-full overflow-hidden rounded-xl">
+                      <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
+                        <iframe
+                          src={videoEmbedUrl}
+                          title="클래스 영상 미리보기"
+                          className="absolute inset-0 h-full w-full rounded-xl"
+                          allowFullScreen
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        />
+                      </div>
+                    </div>
+                  ) : previewPhotos[previewPhotoIndex - videoOffset] ? (
                     <div className="relative flex w-full justify-center">
                       <div className="flex w-full justify-center">
                         <img
-                          src={previewPhotos[previewPhotoIndex]!}
+                          src={previewPhotos[previewPhotoIndex - videoOffset]!}
                           alt=""
                           className="h-auto w-full max-h-[50dvh] object-contain object-center"
                           draggable={false}
@@ -745,7 +768,7 @@ export function ClassIntermediateAdmin() {
                   )}
                 </div>
 
-                {previewPhotos.length > 1 && (
+                {totalSlideCount > 1 && (
                   <div className="flex w-7 shrink-0 flex-col items-center justify-center sm:w-8">
                     {canGoNext ? (
                       <button
@@ -763,9 +786,9 @@ export function ClassIntermediateAdmin() {
                 )}
               </div>
 
-              {previewPhotos.length > 1 && (
+              {totalSlideCount > 1 && (
                 <p className="mt-2 text-xs text-muted-foreground">
-                  {previewPhotoIndex + 1} / {previewPhotos.length}
+                  {previewPhotoIndex + 1} / {totalSlideCount}
                 </p>
               )}
             </div>
@@ -779,7 +802,7 @@ export function ClassIntermediateAdmin() {
                       key={url}
                       type="button"
                       className="aspect-square overflow-hidden rounded-md border border-border bg-muted/20"
-                      onClick={() => setPreviewPhotoIndex(extraPhotoOffset + idx)}
+                      onClick={() => setPreviewPhotoIndex(videoOffset + extraPhotoOffset + idx)}
                       aria-label="추가 이미지로 이동"
                     >
                       <img src={url} alt="" className="size-full object-cover" />

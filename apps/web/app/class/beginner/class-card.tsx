@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { CheckCircle, Clock } from "lucide-react";
+import { CheckCircle, Clock, PlayCircle } from "lucide-react";
 import type { ClassCard as ClassCardType } from "./data";
 
 const isOptimizableUrl = (url: string) =>
@@ -87,9 +87,17 @@ export function ClassCard({
       {/* 오른쪽: 레벨 · 제목 · 로프 스펙 · 설명 · 도전 통계 / 하단 고정 추가 이미지 */}
       <div className="flex min-w-0 flex-1 flex-col justify-between px-4 py-4 sm:px-5 sm:py-5">
         <div className="min-h-0">
-          <p className="mb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            [{levelLabel} 클래스]
-          </p>
+          <div className="mb-1 flex items-center gap-2">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              [{levelLabel} 클래스]
+            </p>
+            {card.videoUrl?.trim() && (
+              <span className="inline-flex items-center gap-0.5 rounded-full bg-rose-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-rose-600 dark:bg-rose-400/10 dark:text-rose-400">
+                <PlayCircle className="size-3 shrink-0" strokeWidth={2} />
+                동영상
+              </span>
+            )}
+          </div>
           <h2
             id={`class-card-title-${card.id}`}
             className="text-base font-semibold leading-snug text-foreground sm:text-lg"

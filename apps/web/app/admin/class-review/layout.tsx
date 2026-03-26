@@ -12,7 +12,11 @@ export default async function AdminClassReviewLayout({
 
   return (
     <div className="space-y-4">
-      <AdminClassSectionTabs />
+      <AdminClassSectionTabs
+        hasPendingClassReview={
+          pending.beginner > 0 || pending.intermediate > 0 || pending.advanced > 0
+        }
+      />
       <div>
         <h1 className="text-lg font-semibold">클래스 심사</h1>
         <p className="text-sm text-muted-foreground">
@@ -29,7 +33,13 @@ export default async function AdminClassReviewLayout({
           )}
         </p>
       </div>
-      <AdminClassReviewTabs />
+      <AdminClassReviewTabs
+        pendingCounts={{
+          beginner: pending.beginner,
+          intermediate: pending.intermediate,
+          advanced: pending.advanced,
+        }}
+      />
       {children}
     </div>
   );

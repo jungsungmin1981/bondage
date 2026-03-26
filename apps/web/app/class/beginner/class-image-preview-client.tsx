@@ -29,6 +29,13 @@ import { ClassCard } from "./class-card";
 const isOptimizableImageUrl = (url: string) =>
   url.startsWith("https://") || url.startsWith("http://");
 
+function toEmbedUrl(url: string): string | null {
+  const match = url.match(
+    /(?:youtube\.com\/watch\?(?:.*&)?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+  );
+  return match ? `https://www.youtube.com/embed/${match[1]}` : null;
+}
+
 type Props = {
   cards: ClassCardType[];
 };
@@ -36,12 +43,15 @@ type Props = {
 /** Carousel 내부에서만 사용. 이전/다음 버튼 + 슬라이드 인덱스 표시 */
 function ClassDetailCarouselSlides({
   previewPhotos,
+  embedUrl,
 }: {
   previewPhotos: string[];
+  embedUrl?: string | null;
 }) {
   const { scrollPrev, scrollNext, canScrollPrev, canScrollNext, api } =
     useCarousel();
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const totalSlides = (embedUrl ? 1 : 0) + previewPhotos.length;
 
   useEffect(() => {
     if (!api) return;
@@ -70,39 +80,54 @@ function ClassDetailCarouselSlides({
             <span className="h-9 w-7 sm:h-10 sm:w-8" aria-hidden />
           )}
         </div>
-        <div className="min-h-[40dvh] min-w-0 flex-1" aria-hidden>
+        <div className="min-w-0 flex-1" aria-hidden>
           <CarouselContent className="h-full w-full ml-0">
+            {embedUrl && (
+              <CarouselItem key="__video__" className="pl-0">
+                <div className="w-full overflow-hidden rounded-xl">
+                  <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
+                    <iframe
+                      src={embedUrl}
+                      title="클래스 영상"
+                      className="absolute inset-0 h-full w-full rounded-xl"
+                      allowFullScreen
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    />
+                  </div>
+                </div>
+              </CarouselItem>
+            )}
             {previewPhotos.map((url) => (
               <CarouselItem key={url} className="pl-0">
-                <div className="flex h-full w-full justify-center">
-                {url.startsWith("blob:") ? (
-                  <img
-                    src={url}
-                    alt=""
-                    className="h-auto w-full max-h-[50dvh] object-contain object-center"
-                    draggable={false}
-                  />
-                ) : isOptimizableImageUrl(url) ? (
-                  <Image
-                    src={url}
-                    alt=""
-                    width={800}
-                    height={600}
-                    className="h-auto w-full max-h-[50dvh] object-contain object-center"
-                    sizes="(max-width: 768px) 100vw, 800px"
-                    draggable={false}
-                  />
-                ) : (
-                  <img
-                    src={url}
-                    alt=""
-                    className="h-auto w-full max-h-[50dvh] object-contain object-center"
-                    draggable={false}
-                  />
-                )}
-              </div>
-            </CarouselItem>
-          ))}
+                <div className="flex min-h-[40dvh] w-full items-center justify-center">
+                  {url.startsWith("blob:") ? (
+                    <img
+                      src={url}
+                      alt=""
+                      className="h-auto w-full max-h-[50dvh] object-contain object-center"
+                      draggable={false}
+                    />
+                  ) : isOptimizableImageUrl(url) ? (
+                    <Image
+                      src={url}
+                      alt=""
+                      width={800}
+                      height={600}
+                      className="h-auto w-full max-h-[50dvh] object-contain object-center"
+                      sizes="(max-width: 768px) 100vw, 800px"
+                      draggable={false}
+                    />
+                  ) : (
+                    <img
+                      src={url}
+                      alt=""
+                      className="h-auto w-full max-h-[50dvh] object-contain object-center"
+                      draggable={false}
+                    />
+                  )}
+                </div>
+              </CarouselItem>
+            ))}
           </CarouselContent>
         </div>
         <div className="flex w-7 shrink-0 flex-col items-center justify-center sm:w-8">
@@ -121,7 +146,7 @@ function ClassDetailCarouselSlides({
         </div>
       </div>
       <p className="mt-2 text-xs text-muted-foreground">
-        {selectedIndex + 1} / {previewPhotos.length}
+        {selectedIndex + 1} / {totalSlides}
       </p>
     </>
   );
@@ -203,50 +228,51 @@ export function ClassImagePreviewClient({ cards }: Props) {
           {active && (
             <div className="flex min-h-0 flex-1 flex-col space-y-2 sm:space-y-3">
               {/* 대표/추가 이미지 슬라이드 (2장 이상이면 Carousel로 드래그·스와이프) */}
-              <div className="relative flex flex-col items-center justify-center">
-                {previewPhotos.length === 0 ? (
-                  <div className="flex h-56 w-full items-center justify-center text-muted-foreground">
-                    <span className="text-sm">이미지 없음</span>
-                  </div>
-                ) : previewPhotos.length === 1 ? (
-                  <>
+              {(() => {
+                const embedUrl = active.videoUrl?.trim() ? toEmbedUrl(active.videoUrl) : null;
+                const totalSlides = (embedUrl ? 1 : 0) + previewPhotos.length;
+                if (totalSlides === 0) {
+                  return (
+                    <div className="flex h-56 w-full items-center justify-center text-muted-foreground">
+                      <span className="text-sm">이미지 없음</span>
+                    </div>
+                  );
+                }
+                if (embedUrl && previewPhotos.length === 0) {
+                  return (
+                    <div className="w-full overflow-hidden rounded-xl">
+                      <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
+                        <iframe
+                          src={embedUrl}
+                          title="클래스 영상"
+                          className="absolute inset-0 h-full w-full rounded-xl"
+                          allowFullScreen
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        />
+                      </div>
+                    </div>
+                  );
+                }
+                if (totalSlides === 1) {
+                  const url = previewPhotos[0]!;
+                  return (
                     <div className="flex w-full justify-center">
-                      {previewPhotos[0]!.startsWith("blob:") ? (
-                        <img
-                          src={previewPhotos[0]!}
-                          alt=""
-                          className="h-auto w-full max-h-[50dvh] object-contain object-center"
-                          draggable={false}
-                        />
-                      ) : isOptimizableImageUrl(previewPhotos[0]!) ? (
-                        <Image
-                          src={previewPhotos[0]!}
-                          alt=""
-                          width={800}
-                          height={600}
-                          className="h-auto w-full max-h-[50dvh] object-contain object-center"
-                          sizes="(max-width: 768px) 100vw, 800px"
-                          draggable={false}
-                        />
+                      {url.startsWith("blob:") ? (
+                        <img src={url} alt="" className="h-auto w-full max-h-[50dvh] object-contain object-center" draggable={false} />
+                      ) : isOptimizableImageUrl(url) ? (
+                        <Image src={url} alt="" width={800} height={600} className="h-auto w-full max-h-[50dvh] object-contain object-center" sizes="(max-width: 768px) 100vw, 800px" draggable={false} />
                       ) : (
-                        <img
-                          src={previewPhotos[0]!}
-                          alt=""
-                          className="h-auto w-full max-h-[50dvh] object-contain object-center"
-                          draggable={false}
-                        />
+                        <img src={url} alt="" className="h-auto w-full max-h-[50dvh] object-contain object-center" draggable={false} />
                       )}
                     </div>
-                  </>
-                ) : (
-                  <Carousel
-                    className="w-full"
-                    opts={{ loop: false, align: "center" }}
-                  >
-                    <ClassDetailCarouselSlides previewPhotos={previewPhotos} />
+                  );
+                }
+                return (
+                  <Carousel className="w-full" opts={{ loop: false, align: "center" }}>
+                    <ClassDetailCarouselSlides previewPhotos={previewPhotos} embedUrl={embedUrl} />
                   </Carousel>
-                )}
-              </div>
+                );
+              })()}
 
               {/* 로프 스펙 + 도전 아이콘 카드 (있을 때만) */}
               {active.ropeThicknessMm != null &&
