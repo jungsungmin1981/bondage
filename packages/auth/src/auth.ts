@@ -401,8 +401,8 @@ export const auth = betterAuth({
   },
   emailAndPassword: {
     enabled: true,
-    /** 메일 발송 연결 전까지 비활성화. 연결 후 true로 변경하면 인증 메일 흐름이 자동 적용됨 */
-    requireEmailVerification: true,
+    /** 이메일 인증 비활성화 (정식 오픈 시 true로 변경) */
+    requireEmailVerification: false,
     sendResetPassword: async ({ user, url }) => {
       if (!resendApiKey) {
         console.warn("[Better Auth] 비밀번호 재설정 메일 미발송: RESEND_API_KEY가 설정되지 않았습니다.");
