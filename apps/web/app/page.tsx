@@ -109,7 +109,7 @@ export default async function MainPage() {
   const resultMonthLabel = getPrevMonthLabel(resultMonthKey);
 
   const getCachedLatestPosts = unstable_cache(
-    () => getLatestPublicPosts(5),
+    () => getLatestPublicPosts(10),
     ["latest-public-posts-main"],
     { revalidate: 120 },
   );
