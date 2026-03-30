@@ -9,6 +9,7 @@ import {
   updateTierConditionThreshold,
   recalculateAllRiggerStars,
   updateRiggerTierAndStars,
+  cancelManualOverrideAndRecalculate,
 } from "@workspace/db";
 import { isAdmin } from "@/lib/admin";
 import { isOperatorAllowedPath } from "@/lib/admin-operator-permissions";
@@ -51,7 +52,17 @@ export async function recalculateAllStarsAction(): Promise<{
   return { ok: true, count };
 }
 
-/** 특정 리거 tier/stars 수동 변경 */
+/** 특정 리거 수동 조정 취소 후 재계산 */
+export async function cancelManualOverrideAction(
+  profileId: string,
+  userId: string,
+): Promise<{ ok: boolean; tier?: string; stars?: number; error?: string }> {
+  const ok = await checkAccess("/admin/tier/riggers");
+  if (!ok) return { ok: false, error: "권한이 없습니다." };
+  const result = await cancelManualOverrideAndRecalculate(profileId, userId);
+  revalidatePath("/admin/tier/riggers");
+  return { ok: true, ...result };
+}
 export async function updateRiggerTierAction(
   profileId: string,
   tier: string,

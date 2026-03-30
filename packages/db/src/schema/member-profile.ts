@@ -1,4 +1,4 @@
-import { index, integer, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { boolean, index, integer, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { users } from "./user";
 
 export const memberProfiles = pgTable(
@@ -29,6 +29,8 @@ export const memberProfiles = pgTable(
     tier: text("tier").notNull().default("bronze"),
     /** 리거 전용: 현재 등급 내 별 수 (1~5) */
     stars: integer("stars").notNull().default(0),
+    /** 리거 전용: 관리자가 수동으로 tier/stars를 변경한 경우 true */
+    tierManualOverride: boolean("tier_manual_override").notNull().default(false),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },

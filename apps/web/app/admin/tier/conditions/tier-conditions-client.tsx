@@ -5,17 +5,21 @@ import { updateConditionThresholdAction } from "../actions";
 import type { TierConditionRow } from "@workspace/db";
 
 const CONDITION_TYPE_LABEL: Record<string, string> = {
-  first_post:       "공개 게시물 최초 등록",
-  post_count:       "공개 게시물 수",
-  total_likes:      "누적 좋아요",
-  class_clear_rate: "초급 클래스 클리어율 (%)",
+  first_post:                "공개 게시물 최초 등록",
+  post_count:                "공개 게시물 수",
+  total_likes:               "누적 좋아요",
+  class_clear_rate:          "초급 클래스 클리어율 (%)",
+  intermediate_class_clear:  "중급 클래스 클리어율 (%)",
+  advanced_class_clear:      "고급 클래스 클리어율 (%)",
 };
 
 const CONDITION_TYPE_UNIT: Record<string, string> = {
-  first_post:       "개 이상",
-  post_count:       "개 이상",
-  total_likes:      "개 이상",
-  class_clear_rate: "% 이상",
+  first_post:                "개 이상",
+  post_count:                "개 이상",
+  total_likes:               "개 이상",
+  class_clear_rate:          "% 이상",
+  intermediate_class_clear:  "% 이상",
+  advanced_class_clear:      "% 이상",
 };
 
 /** 편집 불가 조건 (브론즈 first_post는 항상 1로 고정) */

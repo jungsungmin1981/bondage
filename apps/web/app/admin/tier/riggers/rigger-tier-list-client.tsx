@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { recalculateAllStarsAction, updateRiggerTierAction } from "../actions";
+import { recalculateAllStarsAction, updateRiggerTierAction, cancelManualOverrideAction } from "../actions";
 import type { RiggerTierRow } from "@workspace/db";
 
 const TIERS = ["bronze", "silver", "gold", "legend"] as const;
@@ -41,6 +41,8 @@ export function RiggerTierListClient({ riggers }: { riggers: RiggerTierRow[] }) 
   const [recalcMsg, setRecalcMsg] = useState("");
   const [, startTransition] = useTransition();
 
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+
   function openEdit(r: RiggerTierRow) {
     setEditing(r.profileId);
     setEditValues({ tier: r.tier, stars: r.stars });
@@ -59,7 +61,7 @@ export function RiggerTierListClient({ riggers }: { riggers: RiggerTierRow[] }) 
         setRows((prev) =>
           prev.map((r) =>
             r.profileId === profileId
-              ? { ...r, tier: editValues.tier, stars: editValues.stars }
+              ? { ...r, tier: editValues.tier, stars: editValues.stars, tierManualOverride: true }
               : r,
           ),
         );
@@ -72,7 +74,28 @@ export function RiggerTierListClient({ riggers }: { riggers: RiggerTierRow[] }) 
     setRecalcMsg("재계산 중...");
     startTransition(async () => {
       const result = await recalculateAllStarsAction();
-      setRecalcMsg(result.ok ? `완료 (${result.count}명 업데이트)` : (result.error ?? "오류"));
+      if (result.ok) {
+        setRecalcMsg(`완료 (${result.count}명 업데이트, 수동 조정건 제외)`);
+      } else {
+        setRecalcMsg(result.error ?? "오류");
+      }
+    });
+  }
+
+  function handleCancelOverride(profileId: string, userId: string) {
+    setCancellingId(profileId);
+    startTransition(async () => {
+      const result = await cancelManualOverrideAction(profileId, userId);
+      setCancellingId(null);
+      if (result.ok && result.tier !== undefined && result.stars !== undefined) {
+        setRows((prev) =>
+          prev.map((r) =>
+            r.profileId === profileId
+              ? { ...r, tier: result.tier!, stars: result.stars!, tierManualOverride: false }
+              : r,
+          ),
+        );
+      }
     });
   }
 
@@ -98,6 +121,7 @@ export function RiggerTierListClient({ riggers }: { riggers: RiggerTierRow[] }) 
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">닉네임</th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">등급</th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">별</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">수동조정</th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">관리</th>
             </tr>
           </thead>
@@ -149,6 +173,25 @@ export function RiggerTierListClient({ riggers }: { riggers: RiggerTierRow[] }) 
                   )}
                 </td>
                 <td className="px-4 py-3">
+                  {r.tierManualOverride ? (
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-orange-500/15 px-2 py-0.5 text-xs font-medium text-orange-500">
+                        수동
+                      </span>
+                      <button
+                        type="button"
+                        disabled={cancellingId === r.profileId}
+                        onClick={() => handleCancelOverride(r.profileId, r.userId)}
+                        className="rounded-md border border-border px-2 py-0.5 text-xs font-medium hover:bg-muted disabled:opacity-50"
+                      >
+                        {cancellingId === r.profileId ? "취소 중..." : "취소"}
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-muted-foreground/40">—</span>
+                  )}
+                </td>
+                <td className="px-4 py-3">
                   {editing === r.profileId ? (
                     <div className="flex gap-2">
                       <button
@@ -181,7 +224,7 @@ export function RiggerTierListClient({ riggers }: { riggers: RiggerTierRow[] }) 
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                <td colSpan={5} className="px-4 py-8 text-center text-sm text-muted-foreground">
                   승인된 리거가 없습니다.
                 </td>
               </tr>

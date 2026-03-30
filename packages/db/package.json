@@ -59,7 +59,9 @@
     "db:ensure-tier-conditions-all": "tsx scripts/ensure-tier-conditions-all.ts",
     "db:create-open-invite-key": "tsx scripts/create-open-invite-key.ts",
     "db:ensure-invite-keys-reusable": "tsx scripts/ensure-invite-keys-reusable.ts",
-    "db:create-typed-invite-keys": "tsx scripts/create-typed-invite-keys.ts"
+    "db:create-typed-invite-keys": "tsx scripts/create-typed-invite-keys.ts",
+    "db:ensure-member-profiles-tier-manual-override": "tsx scripts/ensure-member-profiles-tier-manual-override.ts",
+    "db:update-tier-conditions-class-level": "tsx scripts/update-tier-conditions-class-level.ts"
   },
   "dependencies": {
     "@workspace/typescript-config": "workspace:*",
