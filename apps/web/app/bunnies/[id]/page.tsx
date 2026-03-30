@@ -22,8 +22,10 @@ import { BunnyPostsFeed } from "./bunny-posts-feed";
 
 export default async function BunnyDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ postId?: string }>;
 }) {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -31,6 +33,7 @@ export default async function BunnyDetailPage({
   if (!session) redirect("/login");
 
   const { id } = await params;
+  const { postId: openPostId } = await searchParams;
   const [profile, viewerProfile] = await Promise.all([
     getBunnyProfileById(id),
     getMemberProfileByUserId(session.user.id),
@@ -246,6 +249,7 @@ export default async function BunnyDetailPage({
             initialPosts={initialPosts}
             initialLikeByPhotoId={initialLikeByPhotoId}
             initialHasMore={initialHasMore}
+            initialOpenPostId={openPostId}
           />
         )}
       </div>

@@ -111,7 +111,7 @@ export default async function MainPage() {
   const getCachedLatestPosts = unstable_cache(
     () => getLatestPublicPosts(10),
     ["latest-public-posts-main"],
-    { revalidate: 120 },
+    { revalidate: 600, tags: ["latest-public-posts"] },
   );
   const latestPosts = await getCachedLatestPosts();
 

@@ -12,9 +12,11 @@ function clamp(val: number, min: number, max: number) {
 
 function getHref(item: LatestPublicPostItem): string | null {
   if (!item.authorProfileId) return null;
-  return item.authorType === "rigger"
-    ? `/rigger/${item.authorProfileId}`
-    : `/bunnies/${item.authorProfileId}`;
+  const base =
+    item.authorType === "rigger"
+      ? `/rigger/${item.authorProfileId}`
+      : `/bunnies/${item.authorProfileId}`;
+  return `${base}?postId=${encodeURIComponent(item.postId)}`;
 }
 
 export function LatestPostsSection({ posts }: { posts: LatestPublicPostItem[] }) {

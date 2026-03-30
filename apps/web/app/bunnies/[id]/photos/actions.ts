@@ -1,7 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { auth } from "@workspace/auth";
 import { db, schema, getActiveSuspensionForUser, getBunnyProfileById, deleteBunnyPostOwnedByUser, updateBunnyPostCaptionOwnedByUser, isBunnyPhotoLikedByUser, insertBunnyPhotoLike, deleteBunnyPhotoLike, getBunnyPhotoLikeCount, isBunnyPostOwnedByUser, getBunnyPhotoLikersWithNames } from "@workspace/db";
 import { randomUUID } from "crypto";
@@ -181,6 +181,7 @@ export async function uploadBunnyPhoto(
 
     revalidatePath(`/bunnies/${encodeURIComponent(bunnyProfileId)}`);
     revalidatePath(`/bunnies/${encodeURIComponent(bunnyProfileId)}/photos`);
+    revalidateTag("latest-public-posts", "default");
     return { ok: true };
   } catch (e) {
     console.error("uploadBunnyPhoto error:", e);

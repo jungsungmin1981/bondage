@@ -84,6 +84,7 @@ export default async function BunniesPage() {
                         <BunnyCard
                         cardImageUrl={resolveBunnyCardUrl(p.cardImageUrl)}
                         jailOverlay={suspendedUserIds.has(p.userId)}
+                        likeCount={p.totalLikes}
                       />
                       </div>
                       <p

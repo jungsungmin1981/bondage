@@ -1,7 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { auth } from "@workspace/auth";
 import {
   db,
@@ -246,6 +246,7 @@ export async function uploadPhoto(
 
     revalidatePath(`/rigger/${encodeURIComponent(riggerId)}`);
     revalidatePath(`/rigger/${encodeURIComponent(riggerId)}/photos`);
+    revalidateTag("latest-public-posts", "default");
     return { ok: true };
   } catch (e) {
     console.error("uploadPhoto error:", e);

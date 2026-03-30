@@ -8,6 +8,7 @@ export function BunnyCard({
   jailOverlay,
   suspendedUntil,
   objectFit = "cover",
+  likeCount,
 }: {
   cardImageUrl: string | null | undefined;
   /** 계정 사용 제한 시 감옥 이미지 오버레이 */
@@ -16,6 +17,8 @@ export function BunnyCard({
   suspendedUntil?: string | null;
   /** 이미지 맞춤 방식. contain이면 비율 유지하며 전부 노출, cover가 기본 */
   objectFit?: "cover" | "contain";
+  /** 총 좋아요 수. 0이면 표시하지 않음 */
+  likeCount?: number;
 }) {
   const url = cardImageUrl?.trim();
   return (
@@ -39,6 +42,15 @@ export function BunnyCard({
           </span>
         </div>
       )}
+
+      {/* 좋아요 수 뱃지 (0이면 미표시) */}
+      {typeof likeCount === "number" && likeCount > 0 && (
+        <div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-black/55 px-2 py-0.5 text-xs font-medium text-white backdrop-blur-sm">
+          <span aria-hidden>❤️</span>
+          {likeCount.toLocaleString()}
+        </div>
+      )}
+
       {jailOverlay && (
         <>
           <img

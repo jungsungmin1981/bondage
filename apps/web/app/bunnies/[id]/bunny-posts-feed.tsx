@@ -420,6 +420,7 @@ type Props = {
   initialPosts: SerializedBunnyPost[];
   initialLikeByPhotoId: Record<string, { count: number; liked: boolean }>;
   initialHasMore: boolean;
+  initialOpenPostId?: string;
 };
 
 export function BunnyPostsFeed({
@@ -428,6 +429,7 @@ export function BunnyPostsFeed({
   initialPosts,
   initialLikeByPhotoId,
   initialHasMore,
+  initialOpenPostId,
 }: Props) {
   const [posts, setPosts] = useState<SerializedBunnyPost[]>(initialPosts);
   const [likeByPhotoId, setLikeByPhotoId] = useState(initialLikeByPhotoId);
@@ -492,6 +494,7 @@ export function BunnyPostsFeed({
               bunnyProfileId={bunnyProfileId}
               sessionUserId={sessionUserId}
               like={likeByPhotoId[firstPhotoId] ?? { count: 0, liked: false }}
+              openDetailInitially={post.postId === initialOpenPostId}
             />
           );
         })}

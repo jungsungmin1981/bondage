@@ -785,6 +785,7 @@ export async function requestRiggerApprovalAgain(
 export type ApprovedBunnyWithUser = MemberProfileRow & {
   email: string | null;
   userName: string | null;
+  totalLikes: number;
 };
 
 export type RiggerProfileWithUser = MemberProfileRow & {
@@ -1071,11 +1072,13 @@ export async function getBunnyProfileById(
     updatedAt: r.updatedAt,
     email: r.email ?? null,
     userName: r.userName ?? null,
+    totalLikes: 0,
   };
 }
 
 /**
  * 버니 목록: memberType = 'bunny' 이고 status = 'approved' 인 프로필 + users join.
+ * bunny_photos.like_count 합산 기준 내림차순 정렬.
  */
 export async function getApprovedBunnyProfiles(): Promise<
   ApprovedBunnyWithUser[]
@@ -1102,15 +1105,48 @@ export async function getApprovedBunnyProfiles(): Promise<
       updatedAt: schema.memberProfiles.updatedAt,
       email: schema.users.email,
       userName: schema.users.name,
+      totalLikes: sql<number>`COALESCE(COUNT(DISTINCT ${schema.bunnyPhotoLikes.id}), 0)`,
     })
     .from(schema.memberProfiles)
     .innerJoin(schema.users, eq(schema.memberProfiles.userId, schema.users.id))
+    .leftJoin(
+      schema.bunnyPhotos,
+      eq(schema.bunnyPhotos.bunnyProfileId, schema.memberProfiles.id),
+    )
+    .leftJoin(
+      schema.bunnyPhotoLikes,
+      eq(schema.bunnyPhotoLikes.photoId, schema.bunnyPhotos.id),
+    )
     .where(
-    and(
-      eq(schema.memberProfiles.memberType, "bunny"),
-      eq(schema.memberProfiles.status, "approved"),
-    ),
-  );
+      and(
+        eq(schema.memberProfiles.memberType, "bunny"),
+        eq(schema.memberProfiles.status, "approved"),
+      ),
+    )
+    .groupBy(
+      schema.memberProfiles.id,
+      schema.memberProfiles.userId,
+      schema.memberProfiles.memberType,
+      schema.memberProfiles.nickname,
+      schema.memberProfiles.iconUrl,
+      schema.memberProfiles.bio,
+      schema.memberProfiles.cardImageUrl,
+      schema.memberProfiles.gender,
+      schema.memberProfiles.division,
+      schema.memberProfiles.bunnyRecruit,
+      schema.memberProfiles.bondageRating,
+      schema.memberProfiles.activityRegion,
+      schema.memberProfiles.style,
+      schema.memberProfiles.markImageUrl,
+      schema.memberProfiles.profileVisibility,
+      schema.memberProfiles.status,
+      schema.memberProfiles.createdAt,
+      schema.memberProfiles.updatedAt,
+      schema.users.email,
+      schema.users.name,
+    )
+    .orderBy(sql`COUNT(DISTINCT ${schema.bunnyPhotoLikes.id}) DESC`);
+
   return rows.map((r) => ({
     id: r.id,
     userId: r.userId,
@@ -1132,5 +1168,6 @@ export async function getApprovedBunnyProfiles(): Promise<
     updatedAt: r.updatedAt,
     email: r.email ?? null,
     userName: r.userName ?? null,
+    totalLikes: Number(r.totalLikes),
   }));
 }
