@@ -278,3 +278,81 @@ export async function setRiggerPostVisibilityByPostId(
     .returning({ id: schema.riggerPhotos.id });
   return updated.length;
 }
+
+export type LatestPublicPostItem = {
+  postId: string;
+  authorType: "rigger" | "bunny";
+  authorProfileId: string | null;
+  authorNickname: string | null;
+  imagePath: string;
+  caption: string | null;
+  effectiveDate: Date;
+};
+
+/**
+ * 리거(public) + 버니 게시물을 합쳐 최신 limit건 반환.
+ * 리거: bunny_approvals.updated_at 있으면 그 기준, 없으면 created_at.
+ * 버니: created_at 기준.
+ */
+export async function getLatestPublicPosts(
+  limit: number,
+): Promise<LatestPublicPostItem[]> {
+  const result = await db.execute(sql`
+    SELECT * FROM (
+      -- 리거 게시물 (visibility='public')
+      SELECT
+        COALESCE(rp.post_id, rp.id)              AS post_id,
+        'rigger'                                  AS author_type,
+        rp.rigger_id                              AS author_profile_id,
+        mp.nickname                               AS author_nickname,
+        MIN(rp.image_path)                        AS image_path,
+        MIN(rp.caption)                           AS caption,
+        COALESCE(MAX(ba.updated_at), MIN(rp.created_at)) AS effective_date
+      FROM rigger_photos rp
+      LEFT JOIN bunny_approvals ba
+             ON ba.post_id = COALESCE(rp.post_id, rp.id)
+      LEFT JOIN member_profiles mp
+             ON mp.id = rp.rigger_id
+      WHERE rp.visibility = 'public'
+      GROUP BY COALESCE(rp.post_id, rp.id), rp.rigger_id, mp.nickname
+
+      UNION ALL
+
+      -- 버니 게시물 (visibility 컬럼 없음, 전체 공개)
+      SELECT
+        COALESCE(bp.post_id, bp.id)               AS post_id,
+        'bunny'                                   AS author_type,
+        bp.bunny_profile_id                       AS author_profile_id,
+        mp.nickname                               AS author_nickname,
+        MIN(bp.image_path)                        AS image_path,
+        MIN(bp.caption)                           AS caption,
+        MIN(bp.created_at)                        AS effective_date
+      FROM bunny_photos bp
+      LEFT JOIN member_profiles mp
+             ON mp.id = bp.bunny_profile_id
+      GROUP BY COALESCE(bp.post_id, bp.id), bp.bunny_profile_id, mp.nickname
+    ) combined
+    ORDER BY effective_date DESC
+    LIMIT ${limit}
+  `);
+
+  return Array.from(result as Iterable<Record<string, unknown>>).map((r) => ({
+    postId: r["post_id"] as string,
+    authorType: (r["author_type"] as string) === "bunny" ? "bunny" : "rigger",
+    authorProfileId: (r["author_profile_id"] as string | null) ?? null,
+    authorNickname: (r["author_nickname"] as string | null) ?? null,
+    imagePath: r["image_path"] as string,
+    caption: (r["caption"] as string | null) ?? null,
+    effectiveDate:
+      r["effective_date"] instanceof Date
+        ? r["effective_date"]
+        : new Date(r["effective_date"] as string),
+  }));
+}
+
+/** @deprecated use getLatestPublicPosts */
+export async function getLatestPublicRiggerPosts(
+  limit: number,
+): Promise<LatestPublicPostItem[]> {
+  return getLatestPublicPosts(limit);
+}
