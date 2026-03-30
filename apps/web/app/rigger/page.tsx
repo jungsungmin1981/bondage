@@ -53,9 +53,10 @@ export default async function RiggerPage() {
   // DB에서 markImageUrl, profileVisibility 등이 이미 포함되어 있으므로 별도 override 조회 불필요
   const list = approved.map(mapRiggerProfileToRigger);
   const riggersByTier = TIER_ORDER.map((tier) =>
-    list.filter((r) => r.tier === tier).map((r) =>
-      applyCurrentUserToRigger(r, session.user.id, session.user),
-    ),
+    list
+      .filter((r) => r.tier === tier)
+      .map((r) => applyCurrentUserToRigger(r, session.user.id, session.user))
+      .sort((a, b) => (b.stars ?? 0) - (a.stars ?? 0)),
   );
   const hasAny = riggersByTier.some((arr) => arr.length > 0);
 
