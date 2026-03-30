@@ -54,7 +54,9 @@
     "db:ensure-operator-admin-tabs": "tsx scripts/ensure-operator-admin-tabs.ts",
     "db:delete-admin-hotpick-votes": "tsx scripts/delete-admin-hotpick-votes.ts",
     "db:clear-all-posts-and-comments": "tsx scripts/clear-all-posts-and-comments.ts",
-    "db:delete-all-users": "tsx scripts/delete-all-users.ts"
+    "db:delete-all-users": "tsx scripts/delete-all-users.ts",
+    "db:ensure-tier-system": "tsx scripts/ensure-tier-system.ts",
+    "db:ensure-tier-conditions-all": "tsx scripts/ensure-tier-conditions-all.ts"
   },
   "dependencies": {
     "@workspace/typescript-config": "workspace:*",

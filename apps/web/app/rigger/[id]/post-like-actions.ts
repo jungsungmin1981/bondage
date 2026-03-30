@@ -10,6 +10,8 @@ import {
   insertPostLike,
   isPostLikedByUser,
   isPostOwnedByUser,
+  getRiggerProfileById,
+  recalculateRiggerStars,
 } from "@workspace/db";
 import { randomUUID } from "crypto";
 
@@ -32,6 +34,14 @@ export async function togglePostLike(
     }
     const count = await getPostLikeCount(postId);
     revalidatePath(`/rigger/${encodeURIComponent(riggerId)}`);
+
+    // 좋아요 변경 시 리거 별 자동 재계산 (비동기, 실패해도 무시)
+    getRiggerProfileById(riggerId).then((profile) => {
+      if (profile?.userId) {
+        recalculateRiggerStars(riggerId, profile.userId).catch(() => {});
+      }
+    }).catch(() => {});
+
     return { ok: true, liked: !liked, count };
   } catch {
     return { ok: false, error: "좋아요 처리에 실패했습니다." };

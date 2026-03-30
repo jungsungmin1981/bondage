@@ -5,6 +5,7 @@ import * as schema from "../schema";
 export const OPERATOR_TAB_IDS = [
   "operators",
   "members",
+  "tier",
   "class",
   "notice",
   "images",
@@ -15,6 +16,7 @@ export type OperatorTabId = (typeof OPERATOR_TAB_IDS)[number];
 export const OPERATOR_SUB_IDS: Record<OperatorTabId, readonly string[]> = {
   operators: [],
   members: ["riggers", "restrictions"],
+  tier: ["conditions", "riggers"],
   class: ["beginner", "intermediate", "advanced"],
   notice: ["rigger", "qna", "bunny", "bunny-qna"],
   images: ["watermark", "main-background", "resize", "bronze", "silver", "gold", "master", "jail", "donation"],

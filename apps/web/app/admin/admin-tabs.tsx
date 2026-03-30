@@ -25,6 +25,7 @@ function isActive(pathname: string, tab: { tabId: string; href: string }): boole
   if (tab.tabId === "members") return pathname.startsWith("/admin/members");
   if (tab.tabId === "class") return pathname.startsWith("/admin/class") || pathname.startsWith("/admin/class-requests");
   if (tab.tabId === "images") return pathname.startsWith("/admin/images") || pathname.startsWith("/admin/watermark");
+  if (tab.tabId === "tier") return pathname.startsWith("/admin/tier");
   return pathname === tab.href || pathname.startsWith(`${tab.href}/`);
 }
 

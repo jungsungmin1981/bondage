@@ -9,6 +9,7 @@ import {
   getActiveSuspensionForUser,
   getUserIdListByEmails,
   getRiggerProfileByUserId,
+  recalculateRiggerStars,
 } from "@workspace/db";
 import fs from "fs/promises";
 import { randomUUID } from "crypto";
@@ -247,6 +248,12 @@ export async function uploadPhoto(
     revalidatePath(`/rigger/${encodeURIComponent(riggerId)}`);
     revalidatePath(`/rigger/${encodeURIComponent(riggerId)}/photos`);
     revalidateTag("latest-public-posts", "default");
+
+    // 공개 게시물 등록 시 별 자동 재계산
+    if (visibility === "public" && myRigger) {
+      recalculateRiggerStars(riggerId, session.user.id).catch(() => {});
+    }
+
     return { ok: true };
   } catch (e) {
     console.error("uploadPhoto error:", e);

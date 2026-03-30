@@ -24,6 +24,10 @@ export type MemberProfileRow = {
   profileVisibility: string | null;
   status: string;
   rejectionNote?: string | null;
+  /** 리거 전용: 등급 (bronze | silver | gold | legend) */
+  tier?: string | null;
+  /** 리거 전용: 별 수 (0~5) */
+  stars?: number | null;
   createdAt: Date | null;
   updatedAt: Date | null;
 };
@@ -817,6 +821,8 @@ export async function getRiggerProfileById(
       markImageUrl: schema.memberProfiles.markImageUrl,
       profileVisibility: schema.memberProfiles.profileVisibility,
       status: schema.memberProfiles.status,
+      tier: schema.memberProfiles.tier,
+      stars: schema.memberProfiles.stars,
       createdAt: schema.memberProfiles.createdAt,
       updatedAt: schema.memberProfiles.updatedAt,
       email: schema.users.email,
@@ -850,6 +856,8 @@ export async function getRiggerProfileById(
     markImageUrl: r.markImageUrl ?? null,
     profileVisibility: r.profileVisibility ?? null,
     status: r.status,
+    tier: r.tier ?? "bronze",
+    stars: r.stars ?? 0,
     createdAt: r.createdAt,
     updatedAt: r.updatedAt,
     email: r.email ?? null,
@@ -881,6 +889,8 @@ export async function getRiggerProfileByUserId(
       markImageUrl: schema.memberProfiles.markImageUrl,
       profileVisibility: schema.memberProfiles.profileVisibility,
       status: schema.memberProfiles.status,
+      tier: schema.memberProfiles.tier,
+      stars: schema.memberProfiles.stars,
       createdAt: schema.memberProfiles.createdAt,
       updatedAt: schema.memberProfiles.updatedAt,
       email: schema.users.email,
@@ -914,6 +924,8 @@ export async function getRiggerProfileByUserId(
     markImageUrl: r.markImageUrl ?? null,
     profileVisibility: r.profileVisibility ?? null,
     status: r.status,
+    tier: r.tier ?? "bronze",
+    stars: r.stars ?? 0,
     createdAt: r.createdAt,
     updatedAt: r.updatedAt,
     email: r.email ?? null,
@@ -979,6 +991,8 @@ export async function getApprovedRiggerProfiles(
       markImageUrl: schema.memberProfiles.markImageUrl,
       profileVisibility: schema.memberProfiles.profileVisibility,
       status: schema.memberProfiles.status,
+      tier: schema.memberProfiles.tier,
+      stars: schema.memberProfiles.stars,
       createdAt: schema.memberProfiles.createdAt,
       updatedAt: schema.memberProfiles.updatedAt,
       email: schema.users.email,
@@ -1004,6 +1018,8 @@ export async function getApprovedRiggerProfiles(
     markImageUrl: r.markImageUrl ?? null,
     profileVisibility: r.profileVisibility ?? null,
     status: r.status,
+    tier: r.tier ?? "bronze",
+    stars: r.stars ?? 0,
     createdAt: r.createdAt,
     updatedAt: r.updatedAt,
     email: r.email ?? null,

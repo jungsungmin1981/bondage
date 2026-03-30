@@ -1,7 +1,7 @@
 import { ADMIN_TABS } from "./admin-tabs";
 
 /** 운영진 탭 ID (클라이언트에서 사용, @workspace/db와 동일한 값 유지) */
-export type OperatorTabId = "operators" | "members" | "class" | "notice" | "images";
+export type OperatorTabId = "operators" | "members" | "tier" | "class" | "notice" | "images";
 
 /** 탭별 하위 메뉴 (라벨 + path prefix). pathPrefix 기준으로 pathname 매칭 */
 export const ADMIN_TAB_SUB_OPTIONS: {
@@ -23,6 +23,15 @@ export const ADMIN_TAB_SUB_OPTIONS: {
     subTabs: [
       { id: "riggers", label: "리거승인", pathPrefix: "/admin/members/riggers" },
       { id: "restrictions", label: "이용제한", pathPrefix: "/admin/members/restrictions" },
+    ],
+  },
+  {
+    tabId: "tier",
+    label: "등급관리",
+    defaultHref: "/admin/tier",
+    subTabs: [
+      { id: "riggers", label: "리거 등급관리", pathPrefix: "/admin/tier/riggers" },
+      { id: "conditions", label: "브론즈 조건 설정", pathPrefix: "/admin/tier/conditions" },
     ],
   },
   {

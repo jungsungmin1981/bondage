@@ -293,10 +293,15 @@ function GoldCardWithImage({
           style={{ bottom: "11.5%" }}
         >
           <div className="flex items-center justify-center gap-[0.125rem]">
-            {Array.from({ length: starCount }, (_, i) => (
+            {Array.from({ length: 5 }, (_, i) => (
               <Star
                 key={i}
-                className={cn("size-[7cqw] min-w-3 min-h-3 shrink-0", TIER_STYLES.gold.star)}
+                className={cn(
+                  "size-[7cqw] min-w-3 min-h-3 shrink-0",
+                  i < starCount
+                    ? TIER_STYLES.gold.star
+                    : "text-white/20 fill-white/10",
+                )}
                 strokeWidth={1.5}
               />
             ))}
@@ -361,10 +366,15 @@ function SilverCardWithImage({
           style={{ bottom: "11.5%" }}
         >
           <div className="flex items-center justify-center gap-[0.125rem]">
-            {Array.from({ length: starCount }, (_, i) => (
+            {Array.from({ length: 5 }, (_, i) => (
               <Star
                 key={i}
-                className={cn("size-[7cqw] min-w-3 min-h-3 shrink-0", TIER_STYLES.silver.star)}
+                className={cn(
+                  "size-[7cqw] min-w-3 min-h-3 shrink-0",
+                  i < starCount
+                    ? TIER_STYLES.silver.star
+                    : "text-white/20 fill-white/10",
+                )}
                 strokeWidth={1.5}
               />
             ))}
@@ -429,10 +439,15 @@ function BronzeCardWithImage({
           style={{ bottom: "11.5%" }}
         >
           <div className="flex items-center justify-center gap-[0.125rem]">
-            {Array.from({ length: starCount }, (_, i) => (
+            {Array.from({ length: 5 }, (_, i) => (
               <Star
                 key={i}
-                className={cn("size-[7cqw] min-w-3 min-h-3 shrink-0", TIER_STYLES.bronze.star)}
+                className={cn(
+                  "size-[7cqw] min-w-3 min-h-3 shrink-0",
+                  i < starCount
+                    ? TIER_STYLES.bronze.star
+                    : "text-white/20 fill-white/10",
+                )}
                 strokeWidth={1.5}
               />
             ))}

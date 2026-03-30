@@ -17,6 +17,7 @@ export const ADMIN_ONLY_TAB = {
 export const ADMIN_TABS = [
   { tabId: "operators" as const, label: "운영진", href: "/admin/operators", primaryAdminOnly: false },
   { tabId: "members" as const, label: "회원관리", href: "/admin/members", primaryAdminOnly: false },
+  { tabId: "tier" as const, label: "등급관리", href: "/admin/tier", primaryAdminOnly: false },
   { tabId: "class" as const, label: "클래스", href: "/admin/class", primaryAdminOnly: false },
   { tabId: "notice" as const, label: "공지사항", href: "/admin/notice/bunny", primaryAdminOnly: false },
   { tabId: "images" as const, label: "이미지", href: "/admin/images", primaryAdminOnly: false },
@@ -33,12 +34,14 @@ export function pathnameToTabId(pathname: string): OperatorTabId | "invite-keys"
   if (pathname.startsWith("/admin/class-requests")) return "class";
   if (pathname.startsWith("/admin/notice")) return "notice";
   if (pathname.startsWith("/admin/images") || pathname.startsWith("/admin/watermark")) return "images";
+  if (pathname.startsWith("/admin/tier")) return "tier";
   return null;
 }
 
 export const OPERATOR_TAB_IDS: OperatorTabId[] = [
   "operators",
   "members",
+  "tier",
   "class",
   "notice",
   "images",
