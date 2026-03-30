@@ -110,9 +110,9 @@ export default async function BunnyDetailPage({
       </Link>
 
       <div
-        className={`mx-auto grid max-w-4xl gap-6 sm:grid-cols-[minmax(0,280px)_1fr] lg:gap-10 ${isOwnProfile ? "sm:grid-rows-[auto_auto] sm:gap-x-6 lg:gap-x-10" : ""}`}
+        className={`mx-auto grid max-w-4xl gap-6 sm:grid-cols-[minmax(0,280px)_1fr] lg:gap-10 ${isOwnProfile || canEditAsAdmin ? "sm:grid-rows-[auto_auto] sm:gap-x-6 lg:gap-x-10" : ""}`}
       >
-        {isOwnProfile ? (
+        {isOwnProfile || canEditAsAdmin ? (
           <OwnBunnyCardColumn
             profileId={profile.id}
             cardImageUrl={resolveBunnyCardUrl(profile.cardImageUrl)}
@@ -132,12 +132,12 @@ export default async function BunnyDetailPage({
         )}
 
         <div
-          className={`min-w-0 rounded-xl border bg-card shadow-sm sm:col-start-2 sm:row-start-1 ${isOwnProfile ? "sm:row-span-2" : ""} ${!isOwnProfile ? "sm:relative sm:min-h-0" : ""}`}
+          className={`min-w-0 rounded-xl border bg-card shadow-sm sm:col-start-2 sm:row-start-1 ${isOwnProfile || canEditAsAdmin ? "sm:row-span-2" : ""} ${!(isOwnProfile || canEditAsAdmin) ? "sm:relative sm:min-h-0" : ""}`}
         >
           <div
-            className={`p-6 ${!isOwnProfile ? "sm:absolute sm:inset-0 sm:overflow-y-auto sm:rounded-xl" : ""}`}
+            className={`p-6 ${!(isOwnProfile || canEditAsAdmin) ? "sm:absolute sm:inset-0 sm:overflow-y-auto sm:rounded-xl" : ""}`}
           >
-            {isOwnProfile ? (
+            {isOwnProfile || canEditAsAdmin ? (
               <BunnyProfileInline
                 profileId={profile.id}
                 statusLabel={statusLabel}
