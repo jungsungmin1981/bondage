@@ -89,7 +89,7 @@ export default async function MainPage() {
     redirect("/onboarding");
   }
 
-  const displayName = session.user.name ?? session.user.email ?? "회원";
+  const displayName = profile.nickname?.trim() || session.user.name || session.user.email || "회원";
   const mainBackgroundUrl = (await getMainBackgroundUrl()) ?? "/main-bg.png";
   const prevMonthKey = getPrevMonthKey();
 
