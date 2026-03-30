@@ -56,7 +56,10 @@
     "db:clear-all-posts-and-comments": "tsx scripts/clear-all-posts-and-comments.ts",
     "db:delete-all-users": "tsx scripts/delete-all-users.ts",
     "db:ensure-tier-system": "tsx scripts/ensure-tier-system.ts",
-    "db:ensure-tier-conditions-all": "tsx scripts/ensure-tier-conditions-all.ts"
+    "db:ensure-tier-conditions-all": "tsx scripts/ensure-tier-conditions-all.ts",
+    "db:create-open-invite-key": "tsx scripts/create-open-invite-key.ts",
+    "db:ensure-invite-keys-reusable": "tsx scripts/ensure-invite-keys-reusable.ts",
+    "db:create-typed-invite-keys": "tsx scripts/create-typed-invite-keys.ts"
   },
   "dependencies": {
     "@workspace/typescript-config": "workspace:*",

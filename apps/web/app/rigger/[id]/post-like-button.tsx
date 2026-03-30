@@ -11,6 +11,7 @@ type Props = {
   initialLiked: boolean;
   /** 본인이 올린 게시물이면 true — 클릭 시 좋아요 한 사람 목록 */
   isOwnPost?: boolean;
+  onToggle?: (liked: boolean, count: number) => void;
 };
 
 type Liker = {
@@ -31,6 +32,7 @@ export function PostLikeButton({
   initialCount,
   initialLiked,
   isOwnPost = false,
+  onToggle,
 }: Props) {
   const [liked, setLiked] = useState(initialLiked);
   const [count, setCount] = useState(initialCount);
@@ -77,6 +79,7 @@ export function PostLikeButton({
       if (result.ok) {
         setLiked(result.liked);
         setCount(result.count);
+        onToggle?.(result.liked, result.count);
       }
     } finally {
       setPending(false);

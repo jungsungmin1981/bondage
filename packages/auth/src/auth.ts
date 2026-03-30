@@ -1,4 +1,4 @@
-import { db, schema, eq, and, gt, isNull } from "@workspace/db";
+import { db, schema, eq, and, gt, isNull, lt, sql } from "@workspace/db";
 import { betterAuth } from "better-auth";
 import { createAuthMiddleware, APIError } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -150,21 +150,34 @@ async function validateInviteKey(key: string): Promise<{ id: string }> {
       and(
         eq(schema.inviteKeys.key, key),
         gt(schema.inviteKeys.expiresAt, now),
-        isNull(schema.inviteKeys.usedAt),
+        // maxUses가 설정된 키: usedCount < maxUses (재사용 가능)
+        // maxUses가 null인 키: 기존 1회용 방식 (usedAt IS NULL)
+        sql`(
+          (${schema.inviteKeys.maxUses} IS NOT NULL AND ${schema.inviteKeys.usedCount} < ${schema.inviteKeys.maxUses})
+          OR
+          (${schema.inviteKeys.maxUses} IS NULL AND ${schema.inviteKeys.usedAt} IS NULL)
+        )`,
       ),
     )
     .limit(1);
   if (row) return { id: row.id };
-  const [expiredOrUsed] = await db
-    .select({ id: schema.inviteKeys.id, usedAt: schema.inviteKeys.usedAt })
+
+  // 오류 원인 파악
+  const [found] = await db
+    .select({ id: schema.inviteKeys.id, usedAt: schema.inviteKeys.usedAt, maxUses: schema.inviteKeys.maxUses, usedCount: schema.inviteKeys.usedCount, expiresAt: schema.inviteKeys.expiresAt })
     .from(schema.inviteKeys)
     .where(eq(schema.inviteKeys.key, key))
     .limit(1);
-  if (expiredOrUsed) {
-    if (expiredOrUsed.usedAt) {
+  if (found) {
+    if (found.expiresAt <= now) {
+      throw new APIError("BAD_REQUEST", { message: "INVITE_KEY_EXPIRED" });
+    }
+    if (found.maxUses != null && found.usedCount >= found.maxUses) {
       throw new APIError("BAD_REQUEST", { message: "INVITE_KEY_ALREADY_USED" });
     }
-    throw new APIError("BAD_REQUEST", { message: "INVITE_KEY_EXPIRED" });
+    if (found.maxUses == null && found.usedAt) {
+      throw new APIError("BAD_REQUEST", { message: "INVITE_KEY_ALREADY_USED" });
+    }
   }
   throw new APIError("BAD_REQUEST", { message: "INVITE_KEY_INVALID" });
 }
@@ -304,10 +317,24 @@ export const auth = betterAuth({
             ...(memberType && { memberType }),
           })
           .where(eq(schema.users.id, userId));
-        await db
-          .update(schema.inviteKeys)
-          .set({ usedAt: new Date() })
-          .where(eq(schema.inviteKeys.id, inviteKeyId));
+
+        // maxUses가 설정된 키는 usedCount 증가, 1회용 키는 usedAt 기록
+        const [keyMeta] = await db
+          .select({ maxUses: schema.inviteKeys.maxUses })
+          .from(schema.inviteKeys)
+          .where(eq(schema.inviteKeys.id, inviteKeyId))
+          .limit(1);
+        if (keyMeta?.maxUses != null) {
+          await db
+            .update(schema.inviteKeys)
+            .set({ usedCount: sql`${schema.inviteKeys.usedCount} + 1` })
+            .where(eq(schema.inviteKeys.id, inviteKeyId));
+        } else {
+          await db
+            .update(schema.inviteKeys)
+            .set({ usedAt: new Date(), usedCount: sql`${schema.inviteKeys.usedCount} + 1` })
+            .where(eq(schema.inviteKeys.id, inviteKeyId));
+        }
 
         // operator 인증키로 가입한 경우 member_profiles에 pending 프로필 자동 생성
         if (memberType === "operator") {

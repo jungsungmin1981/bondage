@@ -80,7 +80,7 @@ function BunnyDetailCarouselSlides({
                   <img
                     src={photo.imagePath}
                     alt={caption ?? "등록된 사진"}
-                    className="h-full w-auto max-h-[min(88dvh,calc(95dvh-7rem))] max-w-full object-contain object-center"
+                    className="h-full w-auto max-h-[70dvh] max-w-full object-contain object-center"
                     draggable={false}
                   />
                 </div>
@@ -129,6 +129,13 @@ function BunnyPostCard({
   const [captionInput, setCaptionInput] = useState(post.caption ?? "");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [likeCount, setLikeCount] = useState(like.count);
+  const [likedState, setLikedState] = useState(like.liked);
+
+  useEffect(() => {
+    setLikeCount(like.count);
+    setLikedState(like.liked);
+  }, [like.count, like.liked]);
 
   const createdAt = post.createdAt ? new Date(post.createdAt) : null;
   const totalPhotos = post.photos.length;
@@ -252,19 +259,19 @@ function BunnyPostCard({
               <p className="shrink-0 text-sm font-medium text-foreground">
                 {post.caption?.trim() || "제목 없음"}
               </p>
-              <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center">
+              <div className="relative flex min-h-0 flex-col items-center justify-center">
                 {totalPhotos === 0 ? (
                   <div className="flex min-h-[40dvh] w-full items-center justify-center text-sm text-muted-foreground">
                     이미지 없음
                   </div>
                 ) : totalPhotos === 1 ? (
-                  <div className="relative flex h-full w-full min-h-[40dvh] justify-center sm:min-h-[50dvh]">
-                    <div className="flex h-full w-full justify-center">
+                  <div className="relative flex w-full justify-center">
+                    <div className="flex w-full justify-center">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={post.photos[0]!.imagePath}
                         alt={post.caption ?? "등록된 사진"}
-                        className="h-full w-auto max-h-[min(88dvh,calc(95dvh-7rem))] max-w-full object-contain object-center"
+                        className="w-auto max-h-[70dvh] max-w-full object-contain object-center"
                         draggable={false}
                       />
                     </div>
@@ -275,6 +282,19 @@ function BunnyPostCard({
                   </Carousel>
                 )}
               </div>
+              {/* 다이얼로그 좋아요 */}
+              {firstPhotoId && (
+                <div className="shrink-0 border-t border-border/60 pt-2 flex justify-center">
+                  <BunnyPhotoLikeButton
+                    bunnyProfileId={bunnyProfileId}
+                    photoId={firstPhotoId}
+                    initialCount={likeCount}
+                    initialLiked={likedState}
+                    isOwnPost={isOwnPost}
+                    onToggle={(liked, count) => { setLikedState(liked); setLikeCount(count); }}
+                  />
+                </div>
+              )}
             </div>
           </DialogContent>
         </Dialog>
@@ -400,9 +420,10 @@ function BunnyPostCard({
                 <BunnyPhotoLikeButton
                   bunnyProfileId={bunnyProfileId}
                   photoId={firstPhotoId}
-                  initialCount={like.count}
-                  initialLiked={like.liked}
+                  initialCount={likeCount}
+                  initialLiked={likedState}
                   isOwnPost={isOwnPost}
+                  onToggle={(liked, count) => { setLikedState(liked); setLikeCount(count); }}
                 />
               )}
             </div>

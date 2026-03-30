@@ -69,16 +69,16 @@ export type PostLikerRow = {
   createdAt: Date | null;
 };
 
-/** 해당 게시물에 좋아요 누른 사용자 목록 (닉네임 = users.name) */
+/** 해당 게시물에 좋아요 누른 사용자 목록 (닉네임 = member_profiles.nickname 우선, 없으면 users.name) */
 export async function getPostLikersWithNames(postId: string): Promise<PostLikerRow[]> {
   const rows = await db
     .select({
       userId: schema.postLikes.userId,
-      name: schema.users.name,
+      name: schema.memberProfiles.nickname,
       createdAt: schema.postLikes.createdAt,
     })
     .from(schema.postLikes)
-    .leftJoin(schema.users, eq(schema.postLikes.userId, schema.users.id))
+    .leftJoin(schema.memberProfiles, eq(schema.postLikes.userId, schema.memberProfiles.userId))
     .where(eq(schema.postLikes.postId, postId))
     .orderBy(asc(schema.postLikes.createdAt));
   return rows;

@@ -1,4 +1,4 @@
-export { eq, and, gt, isNull, ne } from "drizzle-orm";
+export { eq, and, gt, isNull, ne, lt, sql } from "drizzle-orm";
 export * from "./client/node";
 export * as schema from "./schema";
 export * from "./direct-message-source";

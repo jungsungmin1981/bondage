@@ -10,6 +10,7 @@ type Props = {
   initialCount: number;
   initialLiked: boolean;
   isOwnPost?: boolean;
+  onToggle?: (liked: boolean, count: number) => void;
 };
 
 type Liker = {
@@ -30,6 +31,7 @@ export function BunnyPhotoLikeButton({
   initialCount,
   initialLiked,
   isOwnPost = false,
+  onToggle,
 }: Props) {
   const [liked, setLiked] = useState(initialLiked);
   const [count, setCount] = useState(initialCount);
@@ -73,6 +75,7 @@ export function BunnyPhotoLikeButton({
       if (result.ok) {
         setLiked(result.liked);
         setCount(result.count);
+        onToggle?.(result.liked, result.count);
       }
     } finally {
       setPending(false);

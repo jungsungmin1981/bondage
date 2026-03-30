@@ -10,7 +10,6 @@ import {
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { LayoutDashboard, Settings } from "lucide-react";
 import { getMainBackgroundUrl } from "@/lib/main-background-config";
 import { unstable_cache } from "next/cache";
 import { LatestPostsSection } from "./latest-posts-section";
@@ -117,6 +116,15 @@ export default async function MainPage() {
 
   return (
     <div className="relative min-h-[calc(100svh-3.5rem)] overflow-hidden">
+      {/* 시범 운영 안내 배너 */}
+      <div className="relative z-20 w-full bg-yellow-400 text-center py-4 px-4">
+        <p className="text-base font-extrabold text-black sm:text-xl">
+          ⚠️ 시범 운영 기간입니다.
+        </p>
+        <p className="text-base font-extrabold text-black sm:text-xl">
+          정식 오픈 시 모든 데이터는 초기화됩니다.
+        </p>
+      </div>
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: `url(${mainBackgroundUrl})` }}
@@ -161,32 +169,6 @@ export default async function MainPage() {
 
         {/* 최신 게시물 */}
         <LatestPostsSection posts={latestPosts} />
-
-        {/* 바로가기 카드 */}
-        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Link
-            href="/dashboard"
-            className="group flex items-center gap-4 rounded-xl border border-white/20 bg-black/40 p-5 shadow-lg backdrop-blur-sm transition hover:border-white/40 hover:bg-black/50 hover:shadow-xl"
-          >
-            <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-white/15 text-white">
-              <LayoutDashboard className="size-6" />
-            </div>
-            <div>
-              <h2 className="font-medium text-white group-hover:text-white">대시보드</h2>
-              <p className="text-sm text-white/70">요약 정보를 확인하세요</p>
-            </div>
-          </Link>
-
-          <div className="flex items-center gap-4 rounded-xl border border-white/10 bg-black/20 p-5 opacity-80 backdrop-blur-sm">
-            <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white/70">
-              <Settings className="size-6" />
-            </div>
-            <div>
-              <h2 className="font-medium text-white/70">설정</h2>
-              <p className="text-sm text-white/50">준비 중입니다</p>
-            </div>
-          </div>
-        </section>
 
         <p className="mt-10 text-center text-xs text-white/60">헤더에서 로그아웃할 수 있습니다.</p>
       </div>
