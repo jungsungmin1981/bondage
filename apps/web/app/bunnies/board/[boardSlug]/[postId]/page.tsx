@@ -109,7 +109,31 @@ export default async function BunnyBoardPostDetailPage({
           <p className="mt-2 text-sm text-muted-foreground">
             {boardSlug === "notice"
               ? formatDateTime(post.createdAt)
-              : `${post.authorNickname ?? "알 수 없음"} · ${formatDateTime(post.createdAt)}`}
+              : (() => {
+                  const nickname = post.authorNickname ?? "알 수 없음";
+                  const href =
+                    post.authorProfileId && post.authorMemberType !== "operator"
+                      ? post.authorMemberType === "rigger"
+                        ? `/rigger/${post.authorProfileId}`
+                        : `/bunnies/${post.authorProfileId}`
+                      : null;
+                  return (
+                    <>
+                      {href ? (
+                        <Link
+                          href={href}
+                          className="font-medium text-foreground hover:underline underline-offset-2"
+                        >
+                          {nickname}
+                        </Link>
+                      ) : (
+                        <span>{nickname}</span>
+                      )}
+                      {" · "}
+                      {formatDateTime(post.createdAt)}
+                    </>
+                  );
+                })()}
             {isEdited && boardSlug !== "notice" && (
               <span className="ml-1">
                 · 수정됨 ({formatDateTime(post.updatedAt)})

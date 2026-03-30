@@ -7,6 +7,8 @@ export type SharedBoardCommentRow = {
   postId: string;
   parentId: string | null;
   authorUserId: string;
+  authorProfileId: string | null;
+  authorMemberType: string | null;
   authorNickname: string | null;
   body: string;
   deletedAt: Date | null;
@@ -34,6 +36,8 @@ export async function getAllSharedBoardCommentsWithRepliesByPostId(
       createdAt: schema.sharedBoardPostComments.createdAt,
       updatedAt: schema.sharedBoardPostComments.updatedAt,
       nickname: schema.memberProfiles.nickname,
+      profileId: schema.memberProfiles.id,
+      memberType: schema.memberProfiles.memberType,
     })
     .from(schema.sharedBoardPostComments)
     .leftJoin(
@@ -48,6 +52,8 @@ export async function getAllSharedBoardCommentsWithRepliesByPostId(
     postId: r.postId,
     parentId: r.parentId ?? null,
     authorUserId: r.authorUserId,
+    authorProfileId: r.profileId ?? null,
+    authorMemberType: r.memberType ?? null,
     authorNickname: r.nickname ?? null,
     body: r.body,
     deletedAt: r.deletedAt ?? null,
@@ -83,6 +89,8 @@ export async function getSharedBoardTopLevelCommentsByPostId(
       createdAt: schema.sharedBoardPostComments.createdAt,
       updatedAt: schema.sharedBoardPostComments.updatedAt,
       nickname: schema.memberProfiles.nickname,
+      profileId: schema.memberProfiles.id,
+      memberType: schema.memberProfiles.memberType,
     })
     .from(schema.sharedBoardPostComments)
     .leftJoin(
@@ -105,6 +113,8 @@ export async function getSharedBoardTopLevelCommentsByPostId(
     postId: r.postId,
     parentId: r.parentId ?? null,
     authorUserId: r.authorUserId,
+    authorProfileId: r.profileId ?? null,
+    authorMemberType: r.memberType ?? null,
     authorNickname: r.nickname ?? null,
     body: r.body,
     deletedAt: r.deletedAt ?? null,
@@ -127,6 +137,8 @@ export async function getSharedBoardRepliesByCommentId(
       createdAt: schema.sharedBoardPostComments.createdAt,
       updatedAt: schema.sharedBoardPostComments.updatedAt,
       nickname: schema.memberProfiles.nickname,
+      profileId: schema.memberProfiles.id,
+      memberType: schema.memberProfiles.memberType,
     })
     .from(schema.sharedBoardPostComments)
     .leftJoin(
@@ -144,6 +156,8 @@ export async function getSharedBoardRepliesByCommentId(
     postId: r.postId,
     parentId: r.parentId ?? null,
     authorUserId: r.authorUserId,
+    authorProfileId: r.profileId ?? null,
+    authorMemberType: r.memberType ?? null,
     authorNickname: r.nickname ?? null,
     body: r.body,
     deletedAt: r.deletedAt ?? null,

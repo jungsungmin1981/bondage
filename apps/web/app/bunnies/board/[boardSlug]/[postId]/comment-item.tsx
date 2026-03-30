@@ -2,6 +2,7 @@
 
 import { useActionState, useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { CommentRow } from "@workspace/db";
 import { Button } from "@workspace/ui/components/button";
 import { Textarea } from "@workspace/ui/components/textarea";
@@ -99,9 +100,25 @@ export function CommentItem({
         ) : (
           <>
             <div className="flex flex-wrap items-center gap-2 text-sm">
-              <span className="font-medium text-foreground">
-                {comment.authorNickname ?? "알 수 없음"}
-              </span>
+              {(() => {
+                const nickname = comment.authorNickname ?? "알 수 없음";
+                const href =
+                  comment.authorProfileId && comment.authorMemberType !== "operator"
+                    ? comment.authorMemberType === "rigger"
+                      ? `/rigger/${comment.authorProfileId}`
+                      : `/bunnies/${comment.authorProfileId}`
+                    : null;
+                return href ? (
+                  <Link
+                    href={href}
+                    className="font-medium text-foreground hover:underline underline-offset-2"
+                  >
+                    {nickname}
+                  </Link>
+                ) : (
+                  <span className="font-medium text-foreground">{nickname}</span>
+                );
+              })()}
               <span className="text-muted-foreground">
                 {formatDateTime(comment.createdAt)}
               </span>

@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, notInArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, notInArray, sql, count } from "drizzle-orm";
 import { db } from "../client/node";
 import * as schema from "../schema";
 
@@ -324,5 +324,73 @@ export async function getSubmissionsByIds(
     userId: r.userId,
     imageUrl: r.imageUrl,
     createdAt: r.createdAt,
+  }));
+}
+
+/**
+ * 투표가 1건 이상 존재하는 가장 최근 월 키 반환.
+ * 결과 발표 대상 월을 자동으로 찾을 때 사용.
+ */
+export async function getLatestCompletedHotpickMonth(): Promise<string | null> {
+  const s = schema.monthlyHotpickSubmissions;
+  const v = schema.monthlyHotpickVotes;
+
+  const [row] = await db
+    .selectDistinct({ month: s.month })
+    .from(v)
+    .innerJoin(s, eq(v.submissionId, s.id))
+    .orderBy(desc(s.month))
+    .limit(1);
+
+  return row?.month ?? null;
+}
+
+export type HotpickRankRow = {
+  rank: number;
+  submissionId: string;
+  imageUrl: string;
+  nickname: string | null;
+  profileId: string | null;
+  memberType: string | null;
+};
+
+/**
+ * 해당 월 득표순 TOP N 랭킹.
+ * 동득표 시 등록일 빠른 순(ASC) 우선.
+ */
+export async function getMonthlyHotpickTopRanking(
+  month: string,
+  limit: number,
+): Promise<HotpickRankRow[]> {
+  const s = schema.monthlyHotpickSubmissions;
+  const v = schema.monthlyHotpickVotes;
+  const p = schema.memberProfiles;
+
+  const rows = await db
+    .select({
+      submissionId: s.id,
+      imageUrl: s.imageUrl,
+      createdAt: s.createdAt,
+      userId: s.userId,
+      voteCount: count(v.id),
+      nickname: p.nickname,
+      profileId: p.id,
+      memberType: p.memberType,
+    })
+    .from(s)
+    .leftJoin(v, eq(v.submissionId, s.id))
+    .leftJoin(p, eq(p.userId, s.userId))
+    .where(eq(s.month, month))
+    .groupBy(s.id, s.imageUrl, s.createdAt, s.userId, p.nickname, p.id, p.memberType)
+    .orderBy(desc(count(v.id)), asc(s.createdAt))
+    .limit(limit);
+
+  return rows.map((r, i) => ({
+    rank: i + 1,
+    submissionId: r.submissionId,
+    imageUrl: r.imageUrl,
+    nickname: r.nickname ?? null,
+    profileId: r.profileId ?? null,
+    memberType: r.memberType ?? null,
   }));
 }

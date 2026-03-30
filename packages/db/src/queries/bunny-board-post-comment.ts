@@ -7,6 +7,8 @@ export type CommentRow = {
   postId: string;
   parentId: string | null;
   authorUserId: string;
+  authorProfileId: string | null;
+  authorMemberType: string | null;
   authorNickname: string | null;
   body: string;
   deletedAt: Date | null;
@@ -34,6 +36,8 @@ export async function getAllCommentsWithRepliesByPostId(
       createdAt: schema.bunnyBoardPostComments.createdAt,
       updatedAt: schema.bunnyBoardPostComments.updatedAt,
       nickname: schema.memberProfiles.nickname,
+      profileId: schema.memberProfiles.id,
+      memberType: schema.memberProfiles.memberType,
     })
     .from(schema.bunnyBoardPostComments)
     .leftJoin(
@@ -48,6 +52,8 @@ export async function getAllCommentsWithRepliesByPostId(
     postId: r.postId,
     parentId: r.parentId ?? null,
     authorUserId: r.authorUserId,
+    authorProfileId: r.profileId ?? null,
+    authorMemberType: r.memberType ?? null,
     authorNickname: r.nickname ?? null,
     body: r.body,
     deletedAt: r.deletedAt ?? null,
@@ -84,6 +90,8 @@ export async function getTopLevelCommentsByPostId(
       createdAt: schema.bunnyBoardPostComments.createdAt,
       updatedAt: schema.bunnyBoardPostComments.updatedAt,
       nickname: schema.memberProfiles.nickname,
+      profileId: schema.memberProfiles.id,
+      memberType: schema.memberProfiles.memberType,
     })
     .from(schema.bunnyBoardPostComments)
     .leftJoin(
@@ -106,6 +114,8 @@ export async function getTopLevelCommentsByPostId(
     postId: r.postId,
     parentId: r.parentId ?? null,
     authorUserId: r.authorUserId,
+    authorProfileId: r.profileId ?? null,
+    authorMemberType: r.memberType ?? null,
     authorNickname: r.nickname ?? null,
     body: r.body,
     deletedAt: r.deletedAt ?? null,
@@ -129,6 +139,8 @@ export async function getRepliesByCommentId(
       createdAt: schema.bunnyBoardPostComments.createdAt,
       updatedAt: schema.bunnyBoardPostComments.updatedAt,
       nickname: schema.memberProfiles.nickname,
+      profileId: schema.memberProfiles.id,
+      memberType: schema.memberProfiles.memberType,
     })
     .from(schema.bunnyBoardPostComments)
     .leftJoin(
@@ -146,6 +158,8 @@ export async function getRepliesByCommentId(
     postId: r.postId,
     parentId: r.parentId ?? null,
     authorUserId: r.authorUserId,
+    authorProfileId: r.profileId ?? null,
+    authorMemberType: r.memberType ?? null,
     authorNickname: r.nickname ?? null,
     body: r.body,
     deletedAt: r.deletedAt ?? null,
