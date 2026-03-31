@@ -61,7 +61,10 @@
     "db:ensure-invite-keys-reusable": "tsx scripts/ensure-invite-keys-reusable.ts",
     "db:create-typed-invite-keys": "tsx scripts/create-typed-invite-keys.ts",
     "db:ensure-member-profiles-tier-manual-override": "tsx scripts/ensure-member-profiles-tier-manual-override.ts",
-    "db:update-tier-conditions-class-level": "tsx scripts/update-tier-conditions-class-level.ts"
+    "db:update-tier-conditions-class-level": "tsx scripts/update-tier-conditions-class-level.ts",
+    "db:ensure-site-config": "tsx scripts/ensure-site-config.ts",
+    "db:migrate-watermark-config": "tsx scripts/migrate-watermark-config.ts",
+    "db:fix-watermark-config": "tsx scripts/fix-watermark-config.ts"
   },
   "dependencies": {
     "@workspace/typescript-config": "workspace:*",

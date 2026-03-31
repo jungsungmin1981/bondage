@@ -29,3 +29,4 @@ export * from "./user-totp";
 export * from "./operator-admin-tabs";
 export * from "./class-request";
 export * from "./tier-condition";
+export * from "./site-config";

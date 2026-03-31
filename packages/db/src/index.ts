@@ -22,4 +22,5 @@ export * from "./queries/shared-board-post-comment";
 export * from "./queries/operator-admin-tabs";
 export * from "./queries/class-requests";
 export * from "./queries/tier";
+export * from "./queries/site-config";
 

@@ -6,10 +6,8 @@ import { auth } from "@workspace/auth";
 import { db, schema, getActiveSuspensionForUser, getBunnyProfileById, deleteBunnyPostOwnedByUser, updateBunnyPostCaptionOwnedByUser, isBunnyPhotoLikedByUser, insertBunnyPhotoLike, deleteBunnyPhotoLike, getBunnyPhotoLikeCount, isBunnyPostOwnedByUser, getBunnyPhotoLikersWithNames } from "@workspace/db";
 import { randomUUID } from "crypto";
 import sharp from "sharp";
-import fs from "fs/promises";
 import {
   getWatermarkConfig,
-  resolvePublicFileSync,
 } from "@/lib/watermark-config";
 import { uploadBufferToS3 } from "@/lib/s3-upload";
 
@@ -44,19 +42,37 @@ async function applyWatermark(jpegBuffer: Buffer): Promise<Buffer> {
     const meta = await sharp(jpegBuffer).metadata();
     const w = meta.width ?? 1280;
     const h = meta.height ?? 720;
+    const opacity = config.opacity ?? 0.6;
 
     if (config.type === "image" && config.imagePath) {
-      const rel = config.imagePath.replace(/^\//, "");
-      const overlayPath = resolvePublicFileSync(rel);
-      const overlayBuf = await fs.readFile(overlayPath).catch(() => null);
+      let overlayBuf: Buffer | null = null;
+      if (config.imagePath.startsWith("http")) {
+        const res = await fetch(config.imagePath).catch(() => null);
+        if (res?.ok) overlayBuf = Buffer.from(await res.arrayBuffer());
+      } else {
+        // 로컬 public 경로 fallback
+        const { resolvePublicFileSync } = await import("@/lib/watermark-config");
+        const fsPromises = await import("fs/promises");
+        overlayBuf = await fsPromises.readFile(resolvePublicFileSync(config.imagePath)).catch(() => null);
+      }
       if (!overlayBuf) return jpegBuffer;
       const scale = config.scale ?? 1;
       const overlayW = Math.max(16, Math.round(w * 0.18 * scale));
-      const overlay = await sharp(overlayBuf)
+      const resized = await sharp(overlayBuf)
         .resize(overlayW, null, { withoutEnlargement: false })
         .ensureAlpha()
         .png()
         .toBuffer();
+
+      // alpha 채널에 opacity 적용
+      const { data, info } = await sharp(resized).raw().toBuffer({ resolveWithObject: true });
+      for (let i = 3; i < data.length; i += 4) {
+        data[i] = Math.round(data[i] * opacity);
+      }
+      const overlay = await sharp(data, {
+        raw: { width: info.width, height: info.height, channels: 4 },
+      }).png().toBuffer();
+
       const om = await sharp(overlay).metadata();
       const ow = om.width ?? 0;
       const oh = om.height ?? 0;
@@ -72,7 +88,7 @@ async function applyWatermark(jpegBuffer: Buffer): Promise<Buffer> {
       const fontSize = Math.max(12, Math.round(22 * (config.scale ?? 1)));
       const x = Math.round(w * config.positionX);
       const y = Math.round(h * config.positionY);
-      const svg = `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg"><text x="${x}" y="${y}" font-size="${fontSize}" fill="white" fill-opacity="${config.opacity}" text-anchor="middle" dominant-baseline="middle">${escapeXml(config.text.trim())}</text></svg>`;
+      const svg = `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg"><text x="${x}" y="${y}" font-size="${fontSize}" fill="white" fill-opacity="${opacity}" text-anchor="middle" dominant-baseline="middle">${escapeXml(config.text.trim())}</text></svg>`;
       const overlay = await sharp(Buffer.from(svg)).png().toBuffer();
       return await sharp(jpegBuffer)
         .composite([{ input: overlay, left: 0, top: 0, blend: "over" }])

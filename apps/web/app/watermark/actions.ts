@@ -2,35 +2,19 @@
 
 import { headers } from "next/headers";
 import { auth } from "@workspace/auth";
-import fs from "fs/promises";
-import path from "path";
-import {
-  getPublicDirSync,
-  type WatermarkConfig,
-} from "@/lib/watermark-config";
 import sharp from "sharp";
-
-function getConfigFilePath(): string {
-  return path.join(getPublicDirSync(), "watermark-config.json");
-}
-
-function getWatermarkImagePath(): string {
-  return path.join(getPublicDirSync(), "watermark.png");
-}
+import { saveWatermarkConfigToDB, type WatermarkConfig } from "@/lib/watermark-config";
+import { uploadBufferToS3 } from "@/lib/s3-upload";
+import { isAdmin } from "@/lib/admin";
 
 export async function saveWatermarkConfig(
   data: WatermarkConfig,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-  if (!session) return { ok: false, error: "로그인이 필요합니다." };
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session || !isAdmin(session)) return { ok: false, error: "권한이 없습니다." };
 
-  const filePath = getConfigFilePath();
-  const dir = path.dirname(filePath);
   try {
-    await fs.mkdir(dir, { recursive: true });
-    await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf-8");
+    await saveWatermarkConfigToDB(data);
     return { ok: true };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "설정 저장에 실패했습니다." };
@@ -40,10 +24,8 @@ export async function saveWatermarkConfig(
 export async function uploadWatermarkImage(
   formData: FormData,
 ): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-  if (!session) return { ok: false, error: "로그인이 필요합니다." };
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session || !isAdmin(session)) return { ok: false, error: "권한이 없습니다." };
 
   const file = formData.get("image") as File | null;
   if (!file || !(file instanceof File))
@@ -52,17 +34,18 @@ export async function uploadWatermarkImage(
   if (!allowed.includes(file.type))
     return { ok: false, error: "JPEG, PNG, WebP만 업로드할 수 있습니다." };
 
-  const filePath = getWatermarkImagePath();
-  const dir = path.dirname(filePath);
   try {
-    await fs.mkdir(dir, { recursive: true });
     const buffer = Buffer.from(await file.arrayBuffer());
     const resized = await sharp(buffer)
-      .resize({ width: 1600, withoutEnlargement: true })
+      .resize({ width: 800, withoutEnlargement: true })
       .png()
       .toBuffer();
-    await fs.writeFile(filePath, resized);
-    return { ok: true, url: "/watermark.png" };
+    const url = await uploadBufferToS3(
+      `config/watermark.png`,
+      resized,
+      "image/png",
+    );
+    return { ok: true, url };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "이미지 저장에 실패했습니다." };
   }
