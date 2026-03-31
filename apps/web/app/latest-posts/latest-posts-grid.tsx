@@ -1,9 +1,15 @@
 "use client";
 
-import { useState, useCallback, useTransition } from "react";
+import { useState, useCallback, useTransition, useEffect } from "react";
 import Link from "next/link";
 import { Heart, X, ChevronLeft, ChevronRight } from "lucide-react";
 import type { LatestPublicPostItem } from "@workspace/db";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  type CarouselApi,
+} from "@workspace/ui/components/carousel";
 import { toggleLatestPostLike } from "./actions";
 
 type LikeState = { count: number; liked: boolean };
@@ -20,52 +26,134 @@ function getProfileHref(item: LatestPublicPostItem): string | null {
     : `/bunnies/${item.authorProfileId}`;
 }
 
+/** 이미지 슬라이드 (모달 내부용) */
+function ImageSlider({ images, caption }: { images: string[]; caption: string | null }) {
+  const [api, setApi] = useState<CarouselApi>();
+  const [current, setCurrent] = useState(0);
+  const [canPrev, setCanPrev] = useState(false);
+  const [canNext, setCanNext] = useState(false);
+
+  useEffect(() => {
+    if (!api) return;
+    const update = () => {
+      setCurrent(api.selectedScrollSnap());
+      setCanPrev(api.canScrollPrev());
+      setCanNext(api.canScrollNext());
+    };
+    update();
+    api.on("select", update);
+    api.on("reInit", update);
+    return () => { api.off("select", update); api.off("reInit", update); };
+  }, [api]);
+
+  const hasMultiple = images.length > 1;
+
+  return (
+    <div className="relative aspect-[3/4] w-full overflow-hidden bg-muted">
+      <Carousel
+        setApi={setApi}
+        opts={{ loop: false, dragFree: false }}
+        className="h-full w-full"
+      >
+        <CarouselContent className="ml-0 h-full">
+          {images.map((src, i) => (
+            <CarouselItem key={src + i} className="pl-0">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={src}
+                alt={caption ?? `이미지 ${i + 1}`}
+                className="h-full w-full object-cover"
+                draggable={false}
+                style={{ aspectRatio: "3/4" }}
+              />
+            </CarouselItem>
+          ))}
+        </CarouselContent>
+      </Carousel>
+
+      {/* 좌우 버튼 */}
+      {hasMultiple && (
+        <>
+          <button
+            type="button"
+            onClick={() => api?.scrollPrev()}
+            disabled={!canPrev}
+            className="absolute left-2 top-1/2 z-10 -translate-y-1/2 flex size-8 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm transition hover:bg-black/70 active:scale-95 disabled:opacity-30"
+            aria-label="이전 이미지"
+          >
+            <ChevronLeft className="size-5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => api?.scrollNext()}
+            disabled={!canNext}
+            className="absolute right-2 top-1/2 z-10 -translate-y-1/2 flex size-8 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm transition hover:bg-black/70 active:scale-95 disabled:opacity-30"
+            aria-label="다음 이미지"
+          >
+            <ChevronRight className="size-5" />
+          </button>
+
+          {/* 장 수 표시 */}
+          <div className="absolute right-3 top-3 z-10 rounded-md bg-black/60 px-2 py-0.5 backdrop-blur-sm">
+            <span className="text-xs font-semibold text-white">
+              {current + 1}/{images.length}
+            </span>
+          </div>
+
+          {/* 닷 인디케이터 */}
+          <div className="absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 gap-1">
+            {images.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => api?.scrollTo(i)}
+                className={`rounded-full transition-all ${
+                  i === current
+                    ? "h-1.5 w-4 bg-white"
+                    : "size-1.5 bg-white/50 hover:bg-white/80"
+                }`}
+                aria-label={`${i + 1}번째 이미지`}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export function LatestPostsGrid({ posts, likeStates: initialLikeStates }: Props) {
   const [likeStates, setLikeStates] = useState<Record<string, LikeState>>(initialLikeStates);
   const [activePost, setActivePost] = useState<LatestPublicPostItem | null>(null);
-  const [slideIndex, setSlideIndex] = useState(0);
-  const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [pendingLikes, startLikeTransition] = useTransition();
 
-  const openModal = useCallback((post: LatestPublicPostItem) => {
-    setActivePost(post);
-    setSlideIndex(0);
-  }, []);
-
-  const closeModal = useCallback(() => {
-    setActivePost(null);
-    setSlideIndex(0);
-  }, []);
-
-  const goPrev = useCallback(() => {
-    setSlideIndex((i) => (activePost ? (i - 1 + activePost.imagePaths.length) % activePost.imagePaths.length : 0));
+  /* 모달 열릴 때 body 스크롤 방지 */
+  useEffect(() => {
+    if (activePost) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => { document.body.style.overflow = prev; };
+    }
   }, [activePost]);
 
-  const goNext = useCallback(() => {
-    setSlideIndex((i) => (activePost ? (i + 1) % activePost.imagePaths.length : 0));
-  }, [activePost]);
+  const openModal = useCallback((post: LatestPublicPostItem) => setActivePost(post), []);
+  const closeModal = useCallback(() => setActivePost(null), []);
 
-  const handleLike = useCallback(
-    (postId: string) => {
-      startLikeTransition(async () => {
-        const result = await toggleLatestPostLike(postId);
-        if (result.ok) {
-          setLikeStates((prev) => ({
-            ...prev,
-            [postId]: { count: result.count, liked: result.liked },
-          }));
-        }
-      });
-    },
-    [],
-  );
+  const handleLike = useCallback((postId: string) => {
+    startLikeTransition(async () => {
+      const result = await toggleLatestPostLike(postId);
+      if (result.ok) {
+        setLikeStates((prev) => ({
+          ...prev,
+          [postId]: { count: result.count, liked: result.liked },
+        }));
+      }
+    });
+  }, []);
 
   const activeLike = activePost
     ? (likeStates[activePost.postId] ?? { count: 0, liked: false })
     : null;
-
-  const activeImages = activePost?.imagePaths ?? [];
-  const hasMultiple = activeImages.length > 1;
 
   return (
     <>
@@ -89,7 +177,6 @@ export function LatestPostsGrid({ posts, likeStates: initialLikeStates }: Props)
                   loading="lazy"
                 />
               </div>
-              {/* 여러 장 뱃지 */}
               {post.imagePaths.length > 1 && (
                 <div className="absolute right-1.5 top-1.5 flex items-center gap-0.5 rounded-md bg-black/60 px-1.5 py-0.5 backdrop-blur-sm">
                   <span className="text-[10px] font-semibold text-white">
@@ -97,7 +184,6 @@ export function LatestPostsGrid({ posts, likeStates: initialLikeStates }: Props)
                   </span>
                 </div>
               )}
-              {/* 하단 오버레이 */}
               <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent p-2">
                 <p className="truncate text-[11px] font-semibold text-white sm:text-xs">
                   {post.authorNickname ?? "알 수 없음"}
@@ -122,15 +208,13 @@ export function LatestPostsGrid({ posts, likeStates: initialLikeStates }: Props)
       {/* 모달 */}
       {activePost && activeLike && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4"
           onClick={closeModal}
         >
-          {/* 배경 오버레이 */}
           <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" aria-hidden />
 
-          {/* 모달 패널 */}
           <div
-            className="relative z-10 w-full max-w-sm overflow-hidden rounded-2xl bg-background shadow-2xl sm:max-w-md"
+            className="relative z-10 w-full max-w-sm overflow-hidden rounded-t-2xl bg-background shadow-2xl sm:max-w-md sm:rounded-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             {/* 닫기 버튼 */}
@@ -143,76 +227,11 @@ export function LatestPostsGrid({ posts, likeStates: initialLikeStates }: Props)
               <X className="size-4" />
             </button>
 
-            {/* 이미지 슬라이드 영역 */}
-            <div
-              className="relative aspect-[3/4] w-full overflow-hidden bg-muted"
-              onTouchStart={(e) => setTouchStartX(e.touches[0]?.clientX ?? null)}
-              onTouchEnd={(e) => {
-                if (touchStartX === null || !hasMultiple) return;
-                const diff = touchStartX - (e.changedTouches[0]?.clientX ?? touchStartX);
-                if (diff > 50) goNext();
-                else if (diff < -50) goPrev();
-                setTouchStartX(null);
-              }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                key={activeImages[slideIndex]}
-                src={activeImages[slideIndex] ?? activePost.imagePath}
-                alt={`${activePost.caption ?? "게시물"} ${slideIndex + 1}/${activeImages.length}`}
-                className="h-full w-full object-cover"
-              />
-
-              {/* 좌우 화살표 (여러 장일 때만) */}
-              {hasMultiple && (
-                <>
-                  <button
-                    type="button"
-                    onClick={goPrev}
-                    className="absolute left-2 top-1/2 z-10 -translate-y-1/2 flex size-8 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm transition hover:bg-black/70 active:scale-95"
-                    aria-label="이전 이미지"
-                  >
-                    <ChevronLeft className="size-5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={goNext}
-                    className="absolute right-2 top-1/2 z-10 -translate-y-1/2 flex size-8 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm transition hover:bg-black/70 active:scale-95"
-                    aria-label="다음 이미지"
-                  >
-                    <ChevronRight className="size-5" />
-                  </button>
-
-                  {/* 이미지 인디케이터 (닷) */}
-                  <div className="absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 gap-1">
-                    {activeImages.map((_, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => setSlideIndex(i)}
-                        className={`rounded-full transition-all ${
-                          i === slideIndex
-                            ? "h-1.5 w-4 bg-white"
-                            : "size-1.5 bg-white/50 hover:bg-white/80"
-                        }`}
-                        aria-label={`${i + 1}번째 이미지`}
-                      />
-                    ))}
-                  </div>
-
-                  {/* 장 수 표시 */}
-                  <div className="absolute right-3 top-3 z-10 rounded-md bg-black/60 px-2 py-0.5 backdrop-blur-sm">
-                    <span className="text-xs font-semibold text-white">
-                      {slideIndex + 1}/{activeImages.length}
-                    </span>
-                  </div>
-                </>
-              )}
-            </div>
+            {/* 이미지 슬라이드 */}
+            <ImageSlider images={activePost.imagePaths} caption={activePost.caption} />
 
             {/* 하단 정보 */}
             <div className="p-4">
-              {/* 작성자 + 좋아요 */}
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   {getProfileHref(activePost) ? (
@@ -252,17 +271,12 @@ export function LatestPostsGrid({ posts, likeStates: initialLikeStates }: Props)
                         : "text-muted-foreground"
                     }`}
                   />
-                  <span
-                    className={`text-xs font-semibold ${
-                      activeLike.liked ? "text-red-500" : "text-muted-foreground"
-                    }`}
-                  >
+                  <span className={`text-xs font-semibold ${activeLike.liked ? "text-red-500" : "text-muted-foreground"}`}>
                     {activeLike.count}
                   </span>
                 </button>
               </div>
 
-              {/* 프로필 이동 버튼 */}
               {getProfileHref(activePost) && (
                 <Link
                   href={getProfileHref(activePost)!}
