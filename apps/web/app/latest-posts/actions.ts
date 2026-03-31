@@ -33,7 +33,7 @@ export async function toggleLatestPostLike(
       await insertPostLike(randomUUID(), postId, session.user.id);
     }
     const count = await getPostLikeCount(postId);
-    revalidateTag("latest-public-posts");
+    revalidateTag("latest-public-posts", "default");
     return { ok: true, liked: !liked, count };
   } catch {
     return { ok: false, error: "좋아요 처리에 실패했습니다." };
