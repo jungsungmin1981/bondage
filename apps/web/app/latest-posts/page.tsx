@@ -6,6 +6,7 @@ import {
   getLatestPublicPosts,
   getLatestPublicPostsCount,
   getPostLikesStateForPostIds,
+  getBunnyGroupLikeStates,
 } from "@workspace/db";
 import Link from "next/link";
 import { LatestPostsGrid } from "./latest-posts-grid";
@@ -47,12 +48,26 @@ export default async function LatestPostsPage({
   const safePage = Math.min(page, totalPages);
 
   const postIds = posts.map((p) => p.postId);
-  const likeMap = postIds.length > 0
-    ? await getPostLikesStateForPostIds(postIds, session.user.id)
-    : new Map();
+  const riggerPostIds = posts.filter((p) => p.authorType === "rigger").map((p) => p.postId);
+  const bunnyPostIds = posts.filter((p) => p.authorType === "bunny").map((p) => p.postId);
+
+  const [riggerLikeMap, bunnyLikeMap] = await Promise.all([
+    riggerPostIds.length > 0
+      ? getPostLikesStateForPostIds(riggerPostIds, session.user.id)
+      : Promise.resolve(new Map()),
+    bunnyPostIds.length > 0
+      ? getBunnyGroupLikeStates(bunnyPostIds, session.user.id)
+      : Promise.resolve(new Map()),
+  ]);
 
   const likeStates: Record<string, { count: number; liked: boolean }> = {};
-  for (const [id, state] of likeMap) {
+  for (const id of postIds) {
+    likeStates[id] = { count: 0, liked: false };
+  }
+  for (const [id, state] of riggerLikeMap) {
+    likeStates[id] = { count: state.count, liked: state.liked };
+  }
+  for (const [id, state] of bunnyLikeMap) {
     likeStates[id] = { count: state.count, liked: state.liked };
   }
 

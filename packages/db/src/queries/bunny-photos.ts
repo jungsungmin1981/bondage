@@ -174,6 +174,79 @@ export async function getBunnyPhotoLikesStateForPhotoIds(
   return map;
 }
 
+export type BunnyGroupLikeState = { groupPostId: string; count: number; liked: boolean };
+
+/** 버니 포스트 그룹에서 대표 사진 ID 반환 (created_at 오름차순 첫 번째) */
+export async function getRepresentativeBunnyPhotoId(groupPostId: string): Promise<string | null> {
+  const rows = await db
+    .select({ id: schema.bunnyPhotos.id })
+    .from(schema.bunnyPhotos)
+    .where(or(eq(schema.bunnyPhotos.postId, groupPostId), eq(schema.bunnyPhotos.id, groupPostId)))
+    .orderBy(asc(schema.bunnyPhotos.createdAt))
+    .limit(1);
+  return rows[0]?.id ?? null;
+}
+
+/**
+ * 버니 포스트 그룹 단위 좋아요 수 + 내가 눌렀는지 일괄 조회.
+ * bunny_photo_likes ↔ bunny_photos 조인 후 COALESCE(post_id, id) 기준 집계.
+ */
+export async function getBunnyGroupLikeStates(
+  bunnyGroupPostIds: string[],
+  userId: string,
+): Promise<Map<string, BunnyGroupLikeState>> {
+  const map = new Map<string, BunnyGroupLikeState>();
+  if (bunnyGroupPostIds.length === 0) return map;
+  const unique = [...new Set(bunnyGroupPostIds)];
+  for (const id of unique) {
+    map.set(id, { groupPostId: id, count: 0, liked: false });
+  }
+
+  const result = await db.execute(sql`
+    SELECT
+      COALESCE(bp.post_id, bp.id)       AS group_post_id,
+      COUNT(bpl.id)::int                AS count,
+      BOOL_OR(bpl.user_id = ${userId})  AS liked
+    FROM bunny_photo_likes bpl
+    JOIN bunny_photos bp ON bp.id = bpl.photo_id
+    WHERE COALESCE(bp.post_id, bp.id) = ANY(${unique})
+    GROUP BY COALESCE(bp.post_id, bp.id)
+  `);
+
+  for (const row of Array.from(result as Iterable<Record<string, unknown>>)) {
+    const groupPostId = row["group_post_id"] as string;
+    map.set(groupPostId, {
+      groupPostId,
+      count: Number(row["count"]),
+      liked: Boolean(row["liked"]),
+    });
+  }
+  return map;
+}
+
+/** 버니 포스트 그룹에서 userId의 모든 좋아요 삭제 */
+export async function deleteBunnyGroupLikes(groupPostId: string, userId: string): Promise<void> {
+  await db.execute(sql`
+    DELETE FROM bunny_photo_likes
+    WHERE user_id = ${userId}
+      AND photo_id IN (
+        SELECT id FROM bunny_photos WHERE COALESCE(post_id, id) = ${groupPostId}
+      )
+  `);
+}
+
+/** 버니 포스트 그룹 전체 좋아요 수 반환 */
+export async function getBunnyGroupLikeCount(groupPostId: string): Promise<number> {
+  const result = await db.execute(sql`
+    SELECT COUNT(bpl.id)::int AS count
+    FROM bunny_photo_likes bpl
+    JOIN bunny_photos bp ON bp.id = bpl.photo_id
+    WHERE COALESCE(bp.post_id, bp.id) = ${groupPostId}
+  `);
+  const row = Array.from(result as Iterable<Record<string, unknown>>)[0];
+  return Number(row?.["count"] ?? 0);
+}
+
 export type BunnyPhotoLikerRow = {
   userId: string;
   name: string | null;

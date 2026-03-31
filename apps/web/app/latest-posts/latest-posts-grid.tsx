@@ -139,9 +139,9 @@ export function LatestPostsGrid({ posts, likeStates: initialLikeStates }: Props)
   const openModal = useCallback((post: LatestPublicPostItem) => setActivePost(post), []);
   const closeModal = useCallback(() => setActivePost(null), []);
 
-  const handleLike = useCallback((postId: string) => {
+  const handleLike = useCallback((postId: string, authorType: "rigger" | "bunny") => {
     startLikeTransition(async () => {
-      const result = await toggleLatestPostLike(postId);
+      const result = await toggleLatestPostLike(postId, authorType);
       if (result.ok) {
         setLikeStates((prev) => ({
           ...prev,
@@ -255,7 +255,7 @@ export function LatestPostsGrid({ posts, likeStates: initialLikeStates }: Props)
                 {/* 좋아요 버튼 */}
                 <button
                   type="button"
-                  onClick={() => handleLike(activePost.postId)}
+                  onClick={() => handleLike(activePost.postId, activePost.authorType)}
                   disabled={pendingLikes}
                   className={`flex min-h-[52px] min-w-[52px] flex-col items-center justify-center gap-1 rounded-2xl border-2 px-3 py-2 transition-all active:scale-95 ${
                     activeLike.liked
