@@ -44,91 +44,95 @@ function escapeXml(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
-async function applyWatermark(jpegBuffer: Buffer): Promise<Buffer> {
-  try {
-    const config = await getWatermarkConfig();
-    const meta = await sharp(jpegBuffer).metadata();
-    const w = meta.width ?? 1280;
-    const h = meta.height ?? 720;
-    const opacity = config.opacity ?? 0.6;
+async function applyWatermark(jpegBuffer: Buffer, config: Awaited<ReturnType<typeof getWatermarkConfig>>): Promise<Buffer> {
+  const meta = await sharp(jpegBuffer).metadata();
+  const w = meta.width ?? 1280;
+  const h = meta.height ?? 720;
+  const opacity = config.opacity ?? 0.6;
 
-    if (config.type === "image" && config.imagePath) {
-      let overlayBuf: Buffer | null = null;
-      if (config.imagePath.startsWith("http")) {
-        const res = await fetch(config.imagePath).catch(() => null);
-        if (res?.ok) overlayBuf = Buffer.from(await res.arrayBuffer());
-      } else {
-        // 로컬 public 경로 fallback
-        const { resolvePublicFileSync } = await import("@/lib/watermark-config");
-        overlayBuf = await fs.readFile(resolvePublicFileSync(config.imagePath)).catch(() => null);
-      }
-      if (!overlayBuf) {
-        console.warn("[watermark] 오버레이 이미지를 가져올 수 없습니다:", config.imagePath);
-        return jpegBuffer;
-      }
-      const scale = config.scale ?? 1;
-      const overlayW = Math.max(16, Math.round(w * 0.18 * scale));
-      const resized = await sharp(overlayBuf)
-        .resize(overlayW, null, { withoutEnlargement: false })
-        .ensureAlpha()
-        .png()
-        .toBuffer();
-
-      // alpha 채널에 opacity 적용
-      const { data, info } = await sharp(resized).raw().toBuffer({ resolveWithObject: true });
-      for (let i = 3; i < data.length; i += 4) {
-        data[i] = Math.round(data[i] * opacity);
-      }
-      const overlay = await sharp(data, {
-        raw: { width: info.width, height: info.height, channels: 4 },
-      }).png().toBuffer();
-
-      const om = await sharp(overlay).metadata();
-      const ow = om.width ?? 0;
-      const oh = om.height ?? 0;
-      const left = Math.max(0, Math.round(w * config.positionX - ow / 2));
-      const top = Math.max(0, Math.round(h * config.positionY - oh / 2));
-      return await sharp(jpegBuffer)
-        .composite([{ input: overlay, left, top, blend: "over" }])
-        .jpeg({ quality: SERVER_RESIZE.jpegQuality })
-        .toBuffer();
+  if (config.type === "image" && config.imagePath) {
+    let overlayBuf: Buffer | null = null;
+    if (config.imagePath.startsWith("http")) {
+      const res = await fetch(config.imagePath).catch(() => null);
+      if (res?.ok) overlayBuf = Buffer.from(await res.arrayBuffer());
+    } else {
+      // 로컬 public 경로 fallback
+      const { resolvePublicFileSync } = await import("@/lib/watermark-config");
+      overlayBuf = await fs.readFile(resolvePublicFileSync(config.imagePath)).catch(() => null);
     }
-
-    if (config.type === "text" && config.text?.trim()) {
-      const fontSize = Math.max(12, Math.round(22 * (config.scale ?? 1)));
-      const x = Math.round(w * config.positionX);
-      const y = Math.round(h * config.positionY);
-      const svg = `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg"><text x="${x}" y="${y}" font-size="${fontSize}" fill="white" fill-opacity="${opacity}" text-anchor="middle" dominant-baseline="middle">${escapeXml(config.text.trim())}</text></svg>`;
-      const overlay = await sharp(Buffer.from(svg)).png().toBuffer();
-      return await sharp(jpegBuffer)
-        .composite([{ input: overlay, left: 0, top: 0, blend: "over" }])
-        .jpeg({ quality: SERVER_RESIZE.jpegQuality })
-        .toBuffer();
+    if (!overlayBuf) {
+      console.warn("[watermark] 오버레이 이미지를 가져올 수 없습니다:", config.imagePath);
+      return jpegBuffer;
     }
-  } catch (e) {
-    console.warn(
-      "[watermark] 합성 중 오류 — 워터마크 없이 저장:",
-      e instanceof Error ? e.message : e,
-    );
+    const scale = config.scale ?? 1;
+    const overlayW = Math.max(16, Math.round(w * 0.18 * scale));
+    const resized = await sharp(overlayBuf)
+      .resize(overlayW, null, { withoutEnlargement: false })
+      .ensureAlpha()
+      .png()
+      .toBuffer();
+
+    // alpha 채널에 opacity 적용
+    const { data, info } = await sharp(resized).raw().toBuffer({ resolveWithObject: true });
+    for (let i = 3; i < data.length; i += 4) {
+      const alpha = data[i];
+      if (alpha !== undefined) data[i] = Math.round(alpha * opacity);
+    }
+    const overlay = await sharp(data, {
+      raw: { width: info.width, height: info.height, channels: 4 },
+    }).png().toBuffer();
+
+    const om = await sharp(overlay).metadata();
+    const ow = om.width ?? 0;
+    const oh = om.height ?? 0;
+    const left = Math.min(w - ow, Math.max(0, Math.round(w * config.positionX - ow / 2)));
+    const top = Math.min(h - oh, Math.max(0, Math.round(h * config.positionY - oh / 2)));
+    return await sharp(jpegBuffer)
+      .composite([{ input: overlay, left, top, blend: "over" }])
+      .jpeg({ quality: SERVER_RESIZE.jpegQuality })
+      .toBuffer();
   }
+
+  if (config.type === "text" && config.text?.trim()) {
+    const fontSize = Math.max(12, Math.round(22 * (config.scale ?? 1)));
+    const halfFont = Math.round(fontSize * config.text.trim().length * 0.35);
+    const x = Math.min(w - halfFont, Math.max(halfFont, Math.round(w * config.positionX)));
+    const y = Math.min(h - fontSize, Math.max(fontSize, Math.round(h * config.positionY)));
+    const svg = `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg"><text x="${x}" y="${y}" font-size="${fontSize}" fill="white" fill-opacity="${opacity}" text-anchor="middle" dominant-baseline="middle">${escapeXml(config.text.trim())}</text></svg>`;
+    const overlay = await sharp(Buffer.from(svg)).png().toBuffer();
+    return await sharp(jpegBuffer)
+      .composite([{ input: overlay, left: 0, top: 0, blend: "over" }])
+      .jpeg({ quality: SERVER_RESIZE.jpegQuality })
+      .toBuffer();
+  }
+
   return jpegBuffer;
 }
 
 async function processImage(
   input: Buffer,
   originalExt: string,
+  config: Awaited<ReturnType<typeof getWatermarkConfig>>,
 ): Promise<{ buffer: Buffer; ext: string }> {
+  let resized: Buffer;
   try {
     const size = SERVER_RESIZE.maxWidthOrHeight;
-    let out = await sharp(input)
+    resized = await sharp(input)
       .rotate()
       .resize(size, size, { fit: "inside", withoutEnlargement: true })
       .jpeg({ quality: SERVER_RESIZE.jpegQuality })
       .toBuffer();
-    out = await applyWatermark(out);
-    return { buffer: out, ext: ".jpg" };
-  } catch {
+  } catch (e) {
+    console.error("[processImage] resize 실패:", e instanceof Error ? e.message : e);
     return { buffer: input, ext: originalExt };
+  }
+
+  try {
+    const watermarked = await applyWatermark(resized, config);
+    return { buffer: watermarked, ext: ".jpg" };
+  } catch (e) {
+    console.error("[processImage] 워터마크 실패:", e instanceof Error ? e.message : e);
+    return { buffer: resized, ext: ".jpg" };
   }
 }
 
@@ -224,11 +228,12 @@ export async function uploadPhoto(
     const captionTrim = caption.slice(0, 30).trim() || null;
     const postId = randomUUID();
 
+    const wmConfig = await getWatermarkConfig();
     for (const file of files) {
       const originalExt = getExt(file);
       const arrayBuffer = await file.arrayBuffer();
       const inputBuffer = Buffer.from(arrayBuffer);
-      const { buffer: outputBuffer, ext } = await processImage(inputBuffer, originalExt);
+      const { buffer: outputBuffer, ext } = await processImage(inputBuffer, originalExt, wmConfig);
 
       const fileName = `${Date.now()}-${randomUUID()}${ext}`;
       const s3Key = `uploads/rigger/${riggerId}/${fileName}`;

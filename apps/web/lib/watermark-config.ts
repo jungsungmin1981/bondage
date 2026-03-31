@@ -51,10 +51,12 @@ export async function saveWatermarkConfigToDB(config: WatermarkConfig): Promise<
 // ---------------------------------------------------------------------------
 // 하위 호환: public 디렉터리 경로 관련 유틸 (이미지 워터마크 로컬 fallback용)
 // ---------------------------------------------------------------------------
-import fs from "fs";
-import path from "path";
 
 export function getPublicDirSync(): string {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const fs = require("fs") as typeof import("fs");
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const path = require("path") as typeof import("path");
   const cwd = process.cwd();
   const candidates = [
     path.join(cwd, "public"),
@@ -70,6 +72,8 @@ export function getPublicDirSync(): string {
 }
 
 export function resolvePublicFileSync(rel: string): string {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const path = require("path") as typeof import("path");
   const clean = rel.replace(/^\//, "");
   return path.join(getPublicDirSync(), clean);
 }
