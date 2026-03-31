@@ -285,6 +285,7 @@ export type LatestPublicPostItem = {
   authorProfileId: string | null;
   authorNickname: string | null;
   imagePath: string;
+  imagePaths: string[];
   caption: string | null;
   effectiveDate: Date;
 };
@@ -296,6 +297,7 @@ export type LatestPublicPostItem = {
  */
 export async function getLatestPublicPosts(
   limit: number,
+  offset = 0,
 ): Promise<LatestPublicPostItem[]> {
   const result = await db.execute(sql`
     SELECT * FROM (
@@ -306,6 +308,7 @@ export async function getLatestPublicPosts(
         rp.rigger_id                              AS author_profile_id,
         mp.nickname                               AS author_nickname,
         MIN(rp.image_path)                        AS image_path,
+        ARRAY_AGG(rp.image_path ORDER BY rp.created_at ASC) AS image_paths,
         MIN(rp.caption)                           AS caption,
         COALESCE(MAX(ba.updated_at), MIN(rp.created_at)) AS effective_date
       FROM rigger_photos rp
@@ -325,6 +328,7 @@ export async function getLatestPublicPosts(
         bp.bunny_profile_id                       AS author_profile_id,
         mp.nickname                               AS author_nickname,
         MIN(bp.image_path)                        AS image_path,
+        ARRAY_AGG(bp.image_path ORDER BY bp.created_at ASC) AS image_paths,
         MIN(bp.caption)                           AS caption,
         MIN(bp.created_at)                        AS effective_date
       FROM bunny_photos bp
@@ -333,21 +337,48 @@ export async function getLatestPublicPosts(
       GROUP BY COALESCE(bp.post_id, bp.id), bp.bunny_profile_id, mp.nickname
     ) combined
     ORDER BY effective_date DESC
-    LIMIT ${limit}
+    LIMIT ${limit} OFFSET ${offset}
   `);
 
-  return Array.from(result as Iterable<Record<string, unknown>>).map((r) => ({
-    postId: r["post_id"] as string,
-    authorType: (r["author_type"] as string) === "bunny" ? "bunny" : "rigger",
-    authorProfileId: (r["author_profile_id"] as string | null) ?? null,
-    authorNickname: (r["author_nickname"] as string | null) ?? null,
-    imagePath: r["image_path"] as string,
-    caption: (r["caption"] as string | null) ?? null,
-    effectiveDate:
-      r["effective_date"] instanceof Date
-        ? r["effective_date"]
-        : new Date(r["effective_date"] as string),
-  }));
+  return Array.from(result as Iterable<Record<string, unknown>>).map((r) => {
+    const rawPaths = r["image_paths"];
+    const imagePaths: string[] = Array.isArray(rawPaths)
+      ? (rawPaths as string[]).filter(Boolean)
+      : [r["image_path"] as string].filter(Boolean);
+    return {
+      postId: r["post_id"] as string,
+      authorType: (r["author_type"] as string) === "bunny" ? "bunny" : "rigger",
+      authorProfileId: (r["author_profile_id"] as string | null) ?? null,
+      authorNickname: (r["author_nickname"] as string | null) ?? null,
+      imagePath: imagePaths[0] ?? (r["image_path"] as string),
+      imagePaths,
+      caption: (r["caption"] as string | null) ?? null,
+      effectiveDate:
+        r["effective_date"] instanceof Date
+          ? r["effective_date"]
+          : new Date(r["effective_date"] as string),
+    };
+  });
+}
+
+/** 리거(public) + 버니 게시물 전체 게시 수 반환 */
+export async function getLatestPublicPostsCount(): Promise<number> {
+  const result = await db.execute(sql`
+    SELECT COUNT(*) AS total FROM (
+      SELECT COALESCE(rp.post_id, rp.id) AS post_id
+      FROM rigger_photos rp
+      WHERE rp.visibility = 'public'
+      GROUP BY COALESCE(rp.post_id, rp.id), rp.rigger_id
+
+      UNION ALL
+
+      SELECT COALESCE(bp.post_id, bp.id) AS post_id
+      FROM bunny_photos bp
+      GROUP BY COALESCE(bp.post_id, bp.id), bp.bunny_profile_id
+    ) combined
+  `);
+  const row = Array.from(result as Iterable<Record<string, unknown>>)[0];
+  return Number(row?.["total"] ?? 0);
 }
 
 /** @deprecated use getLatestPublicPosts */

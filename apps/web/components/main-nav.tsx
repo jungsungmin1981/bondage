@@ -22,6 +22,7 @@ import {
 
 const navItems = [
   { label: "월간 핫픽", href: "/showoff" },
+  { label: "최신 게시물", href: "/latest-posts" },
   {
     label: "클래스",
     sub: [
@@ -35,7 +36,6 @@ const navItems = [
   { label: "게시판", href: "/board", showWhen: "board" as const },
   { label: "버니 게시판", href: "/bunnies/board" },
   { label: "승인 요청", href: "/bunny-approvals" },
-  { label: "기타", href: "/etc" },
   { label: "쪽지", href: "/notes" },
 ] as const;
 
@@ -180,7 +180,10 @@ export function MainNav({
                           pathname.startsWith("/board")) ||
                         (!onlyHref &&
                           item.href === "/bunnies/board" &&
-                          pathname.startsWith("/bunnies/board"))) &&
+                          pathname.startsWith("/bunnies/board")) ||
+                        (!onlyHref &&
+                          item.href === "/latest-posts" &&
+                          pathname.startsWith("/latest-posts"))) &&
                         "bg-muted font-semibold",
                     )}
                   >
@@ -295,7 +298,10 @@ export function MainNav({
                     pathname.startsWith("/board")) ||
                   (!onlyHref &&
                     item.href === "/bunnies/board" &&
-                    pathname.startsWith("/bunnies/board"))) &&
+                    pathname.startsWith("/bunnies/board")) ||
+                  (!onlyHref &&
+                    item.href === "/latest-posts" &&
+                    pathname.startsWith("/latest-posts"))) &&
                   "bg-muted",
               )}
               asChild
