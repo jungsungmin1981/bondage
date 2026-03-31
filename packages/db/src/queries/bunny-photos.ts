@@ -202,6 +202,9 @@ export async function getBunnyGroupLikeStates(
     map.set(id, { groupPostId: id, count: 0, liked: false });
   }
 
+  // sql.join 으로 IN 절 파라미터 생성 (= ANY 는 JS 배열을 PG 배열로 인식 못함)
+  const inClause = sql.join(unique.map((id) => sql`${id}`), sql`, `);
+
   const result = await db.execute(sql`
     SELECT
       COALESCE(bp.post_id, bp.id)       AS group_post_id,
@@ -209,7 +212,7 @@ export async function getBunnyGroupLikeStates(
       BOOL_OR(bpl.user_id = ${userId})  AS liked
     FROM bunny_photo_likes bpl
     JOIN bunny_photos bp ON bp.id = bpl.photo_id
-    WHERE COALESCE(bp.post_id, bp.id) = ANY(${unique})
+    WHERE COALESCE(bp.post_id, bp.id) IN (${inClause})
     GROUP BY COALESCE(bp.post_id, bp.id)
   `);
 
