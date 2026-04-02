@@ -11,6 +11,7 @@ import {
   saveRiggerOverride,
   type RiggerOverride,
 } from "@/lib/rigger-overrides";
+import { sendTelegramNotification } from "@/lib/telegram";
 
 export async function saveRiggerProfile(
   riggerId: string,
@@ -74,6 +75,9 @@ export async function requestRiggerApprovalAgainAction(
   }
   const result = await requestRiggerApprovalAgain(riggerId);
   if (result.ok) {
+    await sendTelegramNotification(
+      `🔔 <b>리거 승인 재요청</b>\n리거 ID: ${riggerId}\n👉 /admin/riggers`,
+    );
     revalidatePath(`/rigger/${encodeURIComponent(riggerId)}`);
   }
   return result;

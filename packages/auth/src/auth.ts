@@ -253,6 +253,51 @@ export const auth = betterAuth({
       };
     }),
     after: createAuthMiddleware(async (ctx) => {
+      // ── 운영진 로그인 알람 ─────────────────────────────────────────────────
+      if (ctx.path.includes("sign-in/email")) {
+        const body = ctx.body as Record<string, unknown> | undefined;
+        const email = typeof body?.email === "string" ? body.email.trim() : "";
+        if (email) {
+          try {
+            const [user] = await db
+              .select({ id: schema.users.id, memberType: schema.users.memberType })
+              .from(schema.users)
+              .where(eq(schema.users.email, email))
+              .limit(1);
+            if (user?.memberType === "operator") {
+              const [profile] = await db
+                .select({ nickname: schema.memberProfiles.nickname })
+                .from(schema.memberProfiles)
+                .where(eq(schema.memberProfiles.userId, user.id))
+                .limit(1);
+              const token = process.env.TELEGRAM_BOT_TOKEN?.trim() ?? "";
+              const chatId = process.env.TELEGRAM_CHAT_ID?.trim() ?? "";
+              if (token && chatId) {
+                const now = new Date().toLocaleString("ko-KR", {
+                  timeZone: "Asia/Seoul",
+                  year: "numeric",
+                  month: "2-digit",
+                  day: "2-digit",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                });
+                const nickname = profile?.nickname ?? email;
+                const message = `🔐 <b>운영진 로그인</b>\n닉네임: ${nickname}\n시간: ${now}`;
+                void fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ chat_id: chatId, text: message, parse_mode: "HTML" }),
+                }).catch(() => {});
+              }
+            }
+          } catch {
+            // 알람 실패가 로그인에 영향 없도록
+          }
+        }
+        return;
+      }
+
+      // ── 회원가입 후처리 ───────────────────────────────────────────────────
       if (!ctx.path.includes("sign-up/email")) return;
       const c = ctx.context as Record<string, unknown> | undefined;
       const body = (ctx.body ?? c?.body) as Record<string, unknown> | undefined;

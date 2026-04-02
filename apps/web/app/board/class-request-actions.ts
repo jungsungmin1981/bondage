@@ -17,6 +17,7 @@ import { revalidatePath } from "next/cache";
 import { isPrimaryAdmin } from "@/lib/admin";
 import { uploadBufferToS3 } from "@/lib/s3-upload";
 import { resizeToJpeg } from "@/lib/image/resize";
+import { sendTelegramNotification } from "@/lib/telegram";
 
 async function getSession() {
   return auth.api.getSession({ headers: await headers() });
@@ -93,6 +94,15 @@ export async function createClassRequestAction(
     quantity,
     imageUrls,
   });
+
+  const levelLabel: Record<string, string> = {
+    beginner: "초급",
+    intermediate: "중급",
+    advanced: "고급",
+  };
+  await sendTelegramNotification(
+    `📝 <b>새 클래스 요청</b>\n제목: ${title}\n난이도: ${levelLabel[level] ?? level}\n작성자: ${authorNickname}\n👉 /board/suggestion`,
+  );
 
   revalidatePath("/board/suggestion");
   return { ok: true };

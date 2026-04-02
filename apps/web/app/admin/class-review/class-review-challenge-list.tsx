@@ -206,7 +206,7 @@ export function ClassReviewChallengeList({
     try {
       const result = await updateChallengeStatusAction(challengeId, "approved", {
         comment: approveComment.trim() || undefined,
-      });
+      }, modal.row.level);
       if (result.ok) {
         closeModal();
         router.refresh();
@@ -237,7 +237,7 @@ export function ClassReviewChallengeList({
         rejectionNote: note,
       };
       if (imageUrls.length > 0) payload.rejectionImageUrls = imageUrls;
-      const result = await updateChallengeStatusAction(challengeId, "rejected", payload);
+      const result = await updateChallengeStatusAction(challengeId, "rejected", payload, modal.row.level);
       if (result.ok) {
         closeModal();
         router.refresh();

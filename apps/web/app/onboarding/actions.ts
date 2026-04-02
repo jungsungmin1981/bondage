@@ -10,6 +10,7 @@ import {
   setUserMemberType,
 } from "@workspace/db";
 import { revalidatePath } from "next/cache";
+import { sendTelegramNotification } from "@/lib/telegram";
 
 function parseProfileFormData(formData: FormData): {
   nickname: string;
@@ -65,6 +66,9 @@ export async function submitBunnyProfile(
   const result = await createBunnyProfile(session.user.id, data);
   if (!result.ok) return result;
   await setUserMemberType(session.user.id, "bunny");
+  await sendTelegramNotification(
+    `🐰 <b>버니 회원 가입 완료</b>\n닉네임: ${data.nickname}\n성별: ${data.gender ?? "-"}\n지역: ${data.activityRegion ?? "-"}`,
+  );
   revalidatePath("/", "layout");
   revalidatePath("/bunnies");
   redirect("/");
@@ -95,6 +99,9 @@ export async function submitRiggerProfile(
   const result = await createRiggerProfile(session.user.id, data);
   if (!result.ok) return result;
   await setUserMemberType(session.user.id, "rigger");
+  await sendTelegramNotification(
+    `🔔 <b>리거 승인 요청 (신규)</b>\n닉네임: ${data.nickname}\n👉 /admin/riggers`,
+  );
   revalidatePath("/", "layout");
   revalidatePath("/rigger");
   redirect(`/rigger/${result.profileId}`);
