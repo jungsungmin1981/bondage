@@ -21,6 +21,7 @@ import {
 } from "@workspace/db";
 import { MessageIcon } from "@/components/message-icon";
 import { SessionRevokedGuard } from "@/components/session-revoked-guard";
+import { OperatorInactivityGuard } from "@/components/operator-inactivity-guard";
 import { HeaderGuard } from "./header-guard";
 
 function getCachedMemberProfile(userId: string) {
@@ -223,6 +224,7 @@ export default async function RootLayout({
       >
         <ThemeProvider>
           <SessionRevokedGuard isLoggedIn={!!session} />
+          <OperatorInactivityGuard isOperator={isAdminUser} />
           <div className="flex min-h-[100dvh] flex-col">
             <HeaderGuard operatorPending={operatorPending}>
               <header
