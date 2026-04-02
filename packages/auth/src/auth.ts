@@ -254,32 +254,50 @@ export const auth = betterAuth({
     }),
     after: createAuthMiddleware(async (ctx) => {
       // ── 운영진·관리자 로그인 알람 ─────────────────────────────────────────────
-      if (ctx.path.includes("sign-in/email")) {
-        const body = ctx.body as Record<string, unknown> | undefined;
-        const email = typeof body?.email === "string" ? body.email.trim() : "";
-        if (email) {
-          try {
-            const adminEmail = process.env.ADMIN_EMAIL?.trim() ?? "";
-            const adminUsername = process.env.ADMIN_USERNAME?.trim() ?? "";
-            const [user] = await db
-              .select({ id: schema.users.id, memberType: schema.users.memberType, username: schema.users.username })
-              .from(schema.users)
-              .where(eq(schema.users.email, email))
-              .limit(1);
+      const isEmailSignIn = ctx.path.includes("sign-in/email");
+      const isUsernameSignIn = ctx.path.includes("sign-in/username");
+      if (isEmailSignIn || isUsernameSignIn) {
+        try {
+          const body = ctx.body as Record<string, unknown> | undefined;
+          const adminEmail = process.env.ADMIN_EMAIL?.trim() ?? "";
+          const adminUsername = process.env.ADMIN_USERNAME?.trim() ?? "";
 
+          let user: { id: string; memberType: string | null; username: string | null; email: string } | undefined;
+
+          if (isUsernameSignIn) {
+            const loginUsername = typeof body?.username === "string" ? body.username.trim() : "";
+            if (loginUsername) {
+              const [row] = await db
+                .select({ id: schema.users.id, memberType: schema.users.memberType, username: schema.users.username, email: schema.users.email })
+                .from(schema.users)
+                .where(eq(schema.users.username, loginUsername))
+                .limit(1);
+              user = row;
+            }
+          } else {
+            const loginEmail = typeof body?.email === "string" ? body.email.trim() : "";
+            if (loginEmail) {
+              const [row] = await db
+                .select({ id: schema.users.id, memberType: schema.users.memberType, username: schema.users.username, email: schema.users.email })
+                .from(schema.users)
+                .where(eq(schema.users.email, loginEmail))
+                .limit(1);
+              user = row;
+            }
+          }
+
+          if (user) {
             const isPrimaryAdminUser =
-              (adminEmail.length > 0 && email === adminEmail) ||
-              (adminUsername.length > 0 && user?.username === adminUsername);
-            const isOperator = user?.memberType === "operator";
+              (adminEmail.length > 0 && user.email === adminEmail) ||
+              (adminUsername.length > 0 && user.username === adminUsername);
+            const isOperator = user.memberType === "operator";
 
             if (isPrimaryAdminUser || isOperator) {
-              const [profile] = user
-                ? await db
-                    .select({ nickname: schema.memberProfiles.nickname })
-                    .from(schema.memberProfiles)
-                    .where(eq(schema.memberProfiles.userId, user.id))
-                    .limit(1)
-                : [];
+              const [profile] = await db
+                .select({ nickname: schema.memberProfiles.nickname })
+                .from(schema.memberProfiles)
+                .where(eq(schema.memberProfiles.userId, user.id))
+                .limit(1);
               const token = process.env.TELEGRAM_BOT_TOKEN?.trim() ?? "";
               const chatId = process.env.TELEGRAM_CHAT_ID?.trim() ?? "";
               if (token && chatId) {
@@ -291,7 +309,7 @@ export const auth = betterAuth({
                   hour: "2-digit",
                   minute: "2-digit",
                 });
-                const nickname = profile?.nickname ?? email;
+                const nickname = profile?.nickname ?? user.username ?? user.email;
                 const label = isPrimaryAdminUser ? "관리자" : "운영진";
                 const message = `🔐 <b>${label} 로그인</b>\n닉네임: ${nickname}\n시간: ${now}`;
                 void fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
@@ -301,9 +319,9 @@ export const auth = betterAuth({
                 }).catch(() => {});
               }
             }
-          } catch {
-            // 알람 실패가 로그인에 영향 없도록
           }
+        } catch {
+          // 알람 실패가 로그인에 영향 없도록
         }
         return;
       }
