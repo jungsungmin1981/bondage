@@ -253,23 +253,33 @@ export const auth = betterAuth({
       };
     }),
     after: createAuthMiddleware(async (ctx) => {
-      // ── 운영진 로그인 알람 ─────────────────────────────────────────────────
+      // ── 운영진·관리자 로그인 알람 ─────────────────────────────────────────────
       if (ctx.path.includes("sign-in/email")) {
         const body = ctx.body as Record<string, unknown> | undefined;
         const email = typeof body?.email === "string" ? body.email.trim() : "";
         if (email) {
           try {
+            const adminEmail = process.env.ADMIN_EMAIL?.trim() ?? "";
+            const adminUsername = process.env.ADMIN_USERNAME?.trim() ?? "";
             const [user] = await db
-              .select({ id: schema.users.id, memberType: schema.users.memberType })
+              .select({ id: schema.users.id, memberType: schema.users.memberType, username: schema.users.username })
               .from(schema.users)
               .where(eq(schema.users.email, email))
               .limit(1);
-            if (user?.memberType === "operator") {
-              const [profile] = await db
-                .select({ nickname: schema.memberProfiles.nickname })
-                .from(schema.memberProfiles)
-                .where(eq(schema.memberProfiles.userId, user.id))
-                .limit(1);
+
+            const isPrimaryAdminUser =
+              (adminEmail.length > 0 && email === adminEmail) ||
+              (adminUsername.length > 0 && user?.username === adminUsername);
+            const isOperator = user?.memberType === "operator";
+
+            if (isPrimaryAdminUser || isOperator) {
+              const [profile] = user
+                ? await db
+                    .select({ nickname: schema.memberProfiles.nickname })
+                    .from(schema.memberProfiles)
+                    .where(eq(schema.memberProfiles.userId, user.id))
+                    .limit(1)
+                : [];
               const token = process.env.TELEGRAM_BOT_TOKEN?.trim() ?? "";
               const chatId = process.env.TELEGRAM_CHAT_ID?.trim() ?? "";
               if (token && chatId) {
@@ -282,7 +292,8 @@ export const auth = betterAuth({
                   minute: "2-digit",
                 });
                 const nickname = profile?.nickname ?? email;
-                const message = `🔐 <b>운영진 로그인</b>\n닉네임: ${nickname}\n시간: ${now}`;
+                const label = isPrimaryAdminUser ? "관리자" : "운영진";
+                const message = `🔐 <b>${label} 로그인</b>\n닉네임: ${nickname}\n시간: ${now}`;
                 void fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
