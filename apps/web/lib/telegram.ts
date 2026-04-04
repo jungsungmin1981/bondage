@@ -1,4 +1,14 @@
 /**
+ * 텔레그램 sendMessage parse_mode=HTML 시 사용자 입력(닉네임 등) 때문에 400 나지 않도록
+ */
+export function escapeTelegramHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+/**
  * 텔레그램 알람 유틸
  * TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID 환경변수가 설정된 경우에만 동작.
  * 알람 실패가 본 기능에 영향을 주지 않도록 내부에서 catch 처리함.

@@ -1,6 +1,6 @@
 import { db, schema, eq, and, gt, isNull, lt, sql } from "@workspace/db";
 import { betterAuth } from "better-auth";
-import { createAuthMiddleware, APIError, isAPIError } from "better-auth/api";
+import { createAuthMiddleware, APIError } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { genericOAuth, username } from "better-auth/plugins";
 import { nextCookies } from "better-auth/next-js";
@@ -42,27 +42,6 @@ function escapeHtml(s: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
-}
-
-/** 텔레그램 sendMessage parse_mode=HTML 시 사용자 입력(닉네임 등) 때문에 400 나지 않도록 */
-function escapeTelegramHtml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-
-/**
- * better-auth 로그인 성공 응답은 `{ token, user: { id, ... } }` 형태.
- * - `token`만 보던 조건은 일부 클라이언트/프록시 조합에서 빗나갈 수 있어 `user.id`를 기준으로 함.
- * - 모바일·인앱 브라우저에서 `after` 훅의 `ctx.body`가 비는 경우가 있어, 본문 대신 여기서 id를 쓴다.
- */
-function getCredentialSignInUserId(returned: unknown): string | undefined {
-  if (returned == null || typeof returned !== "object" || isAPIError(returned)) return undefined;
-  const u = (returned as { user?: unknown }).user;
-  if (!u || typeof u !== "object") return undefined;
-  const id = (u as { id?: unknown }).id;
-  return typeof id === "string" && id.length > 0 ? id : undefined;
 }
 
 /** 비밀번호 재설정 메일 HTML */
@@ -274,105 +253,8 @@ export const auth = betterAuth({
       };
     }),
     after: createAuthMiddleware(async (ctx) => {
-      // ── 운영진·관리자 로그인 알람 ─────────────────────────────────────────────
-      const isEmailSignIn = ctx.path.includes("sign-in/email");
-      const isUsernameSignIn = ctx.path.includes("sign-in/username");
-      if (isEmailSignIn || isUsernameSignIn) {
-        try {
-          const returned = ctx.context?.returned;
-          if (returned != null && isAPIError(returned)) {
-            return;
-          }
-
-          const body = ctx.body as Record<string, unknown> | undefined;
-          const adminEmail = (process.env.ADMIN_EMAIL?.trim() ?? "").toLowerCase();
-          const adminUsername = (process.env.ADMIN_USERNAME?.trim() ?? "").toLowerCase();
-
-          let user: { id: string; memberType: string | null; username: string | null; email: string } | undefined;
-
-          const userIdFromResponse = getCredentialSignInUserId(returned);
-          if (userIdFromResponse) {
-            const [row] = await db
-              .select({
-                id: schema.users.id,
-                memberType: schema.users.memberType,
-                username: schema.users.username,
-                email: schema.users.email,
-              })
-              .from(schema.users)
-              .where(eq(schema.users.id, userIdFromResponse))
-              .limit(1);
-            user = row;
-          }
-
-          if (!user && isUsernameSignIn) {
-            const loginUsername =
-              typeof body?.username === "string" ? body.username.trim().toLowerCase() : "";
-            if (loginUsername) {
-              const [row] = await db
-                .select({ id: schema.users.id, memberType: schema.users.memberType, username: schema.users.username, email: schema.users.email })
-                .from(schema.users)
-                .where(eq(schema.users.username, loginUsername))
-                .limit(1);
-              user = row;
-            }
-          } else if (!user && isEmailSignIn) {
-            const loginEmail =
-              typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
-            if (loginEmail) {
-              const [row] = await db
-                .select({ id: schema.users.id, memberType: schema.users.memberType, username: schema.users.username, email: schema.users.email })
-                .from(schema.users)
-                .where(eq(schema.users.email, loginEmail))
-                .limit(1);
-              user = row;
-            }
-          }
-
-          if (!user) {
-            return;
-          }
-
-          const userEmailLower = user.email.trim().toLowerCase();
-          const userUsernameLower = user.username?.trim().toLowerCase() ?? "";
-          const isPrimaryAdminUser =
-            (adminEmail.length > 0 && userEmailLower === adminEmail) ||
-            (adminUsername.length > 0 && userUsernameLower === adminUsername);
-          const isOperator = user.memberType === "operator";
-
-          if (isPrimaryAdminUser || isOperator) {
-            const [profile] = await db
-              .select({ nickname: schema.memberProfiles.nickname })
-              .from(schema.memberProfiles)
-              .where(eq(schema.memberProfiles.userId, user.id))
-              .limit(1);
-            const token = process.env.TELEGRAM_BOT_TOKEN?.trim() ?? "";
-            const chatId = process.env.TELEGRAM_CHAT_ID?.trim() ?? "";
-            if (token && chatId) {
-              const now = new Date().toLocaleString("ko-KR", {
-                timeZone: "Asia/Seoul",
-                year: "numeric",
-                month: "2-digit",
-                day: "2-digit",
-                hour: "2-digit",
-                minute: "2-digit",
-              });
-              const nicknameRaw = profile?.nickname ?? user.username ?? user.email;
-              const nickname = escapeTelegramHtml(nicknameRaw);
-              const label = isPrimaryAdminUser ? "관리자" : "운영진";
-              const message = `🔐 <b>${label} 로그인</b>\n닉네임: ${nickname}\n시간: ${now}`;
-              // 서버리스에서는 void fetch가 응답 반환 후 끊겨 알람이 누락될 수 있어 await로 완료까지 대기
-              await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ chat_id: chatId, text: message, parse_mode: "HTML" }),
-                signal: AbortSignal.timeout(12_000),
-              }).catch(() => {});
-            }
-          }
-        } catch {
-          // 알람 실패가 로그인에 영향 없도록
-        }
+      /** 운영진/관리자 알림은 비밀번호 로그인이 아니라 OTP 검증 성공 시 한 번만 전송 (`/api/otp/verify`). */
+      if (ctx.path.includes("sign-in/email") || ctx.path.includes("sign-in/username")) {
         return;
       }
 

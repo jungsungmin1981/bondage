@@ -9,7 +9,13 @@ import {
   createOtpVerifiedCookieValue,
   OTP_VERIFIED_COOKIE_NAME,
   OTP_VERIFIED_COOKIE_MAX_AGE,
+  verifyOtpVerifiedCookie,
 } from "@/lib/otp-verified-cookie";
+import {
+  escapeTelegramHtml,
+  nowKST,
+  sendTelegramNotification,
+} from "@/lib/telegram";
 
 /**
  * POST /api/otp/verify - 로그인 후 OTP 코드 검증. 성공 시 otp_verified 쿠키 설정.
@@ -31,6 +37,15 @@ export async function POST(request: Request) {
       { error: "승인된 운영진 또는 관리자만 OTP 검증을 사용할 수 있습니다." },
       { status: 403 },
     );
+  }
+
+  const headerList = await headers();
+  const cookieHeader = headerList.get("cookie") ?? "";
+  const existingOtpMatch = cookieHeader.match(
+    new RegExp(`${OTP_VERIFIED_COOKIE_NAME}=([^;]+)`),
+  );
+  if (verifyOtpVerifiedCookie(existingOtpMatch?.[1]?.trim(), session.user.id)) {
+    return NextResponse.json({ ok: true });
   }
 
   let body: { code?: string };
@@ -81,6 +96,16 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
+
+  const nicknameRaw =
+    profile?.nickname?.trim() ||
+    session.user.name?.trim() ||
+    session.user.email?.trim() ||
+    "알 수 없음";
+  const nickname = escapeTelegramHtml(nicknameRaw);
+  const label = isPrimaryAdminUser ? "관리자" : "운영진";
+  const message = `🔐 <b>${label} 로그인</b>\n2단계 인증(OTP) 완료\n닉네임: ${nickname}\n시간: ${nowKST()}`;
+  await sendTelegramNotification(message);
 
   const cookieValue = createOtpVerifiedCookieValue(session.user.id);
   const res = NextResponse.json({ ok: true });
