@@ -16,6 +16,7 @@ export async function sendTelegramNotification(message: string): Promise<void> {
       text: message,
       parse_mode: "HTML",
     }),
+    signal: AbortSignal.timeout(12_000),
   }).catch(() => {});
 }
 

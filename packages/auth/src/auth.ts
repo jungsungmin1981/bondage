@@ -1,6 +1,6 @@
 import { db, schema, eq, and, gt, isNull, lt, sql } from "@workspace/db";
 import { betterAuth } from "better-auth";
-import { createAuthMiddleware, APIError } from "better-auth/api";
+import { createAuthMiddleware, APIError, isAPIError } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { genericOAuth, username } from "better-auth/plugins";
 import { nextCookies } from "better-auth/next-js";
@@ -42,6 +42,23 @@ function escapeHtml(s: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+/** 텔레그램 sendMessage parse_mode=HTML 시 사용자 입력(닉네임 등) 때문에 400 나지 않도록 */
+function escapeTelegramHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function isSuccessfulCredentialSignIn(returned: unknown): returned is { token: string } {
+  return (
+    typeof returned === "object" &&
+    returned !== null &&
+    "token" in returned &&
+    typeof (returned as { token: unknown }).token === "string"
+  );
 }
 
 /** 비밀번호 재설정 메일 HTML */
@@ -258,14 +275,23 @@ export const auth = betterAuth({
       const isUsernameSignIn = ctx.path.includes("sign-in/username");
       if (isEmailSignIn || isUsernameSignIn) {
         try {
+          const returned = ctx.context?.returned;
+          if (returned != null && isAPIError(returned)) {
+            return;
+          }
+          if (!isSuccessfulCredentialSignIn(returned)) {
+            return;
+          }
+
           const body = ctx.body as Record<string, unknown> | undefined;
-          const adminEmail = process.env.ADMIN_EMAIL?.trim() ?? "";
-          const adminUsername = process.env.ADMIN_USERNAME?.trim() ?? "";
+          const adminEmail = (process.env.ADMIN_EMAIL?.trim() ?? "").toLowerCase();
+          const adminUsername = (process.env.ADMIN_USERNAME?.trim() ?? "").toLowerCase();
 
           let user: { id: string; memberType: string | null; username: string | null; email: string } | undefined;
 
           if (isUsernameSignIn) {
-            const loginUsername = typeof body?.username === "string" ? body.username.trim() : "";
+            const loginUsername =
+              typeof body?.username === "string" ? body.username.trim().toLowerCase() : "";
             if (loginUsername) {
               const [row] = await db
                 .select({ id: schema.users.id, memberType: schema.users.memberType, username: schema.users.username, email: schema.users.email })
@@ -275,7 +301,8 @@ export const auth = betterAuth({
               user = row;
             }
           } else {
-            const loginEmail = typeof body?.email === "string" ? body.email.trim() : "";
+            const loginEmail =
+              typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
             if (loginEmail) {
               const [row] = await db
                 .select({ id: schema.users.id, memberType: schema.users.memberType, username: schema.users.username, email: schema.users.email })
@@ -287,9 +314,11 @@ export const auth = betterAuth({
           }
 
           if (user) {
+            const userEmailLower = user.email.trim().toLowerCase();
+            const userUsernameLower = user.username?.trim().toLowerCase() ?? "";
             const isPrimaryAdminUser =
-              (adminEmail.length > 0 && user.email === adminEmail) ||
-              (adminUsername.length > 0 && user.username === adminUsername);
+              (adminEmail.length > 0 && userEmailLower === adminEmail) ||
+              (adminUsername.length > 0 && userUsernameLower === adminUsername);
             const isOperator = user.memberType === "operator";
 
             if (isPrimaryAdminUser || isOperator) {
@@ -309,13 +338,16 @@ export const auth = betterAuth({
                   hour: "2-digit",
                   minute: "2-digit",
                 });
-                const nickname = profile?.nickname ?? user.username ?? user.email;
+                const nicknameRaw = profile?.nickname ?? user.username ?? user.email;
+                const nickname = escapeTelegramHtml(nicknameRaw);
                 const label = isPrimaryAdminUser ? "관리자" : "운영진";
                 const message = `🔐 <b>${label} 로그인</b>\n닉네임: ${nickname}\n시간: ${now}`;
-                void fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+                // 서버리스에서는 void fetch가 응답 반환 후 끊겨 알람이 누락될 수 있어 await로 완료까지 대기
+                await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ chat_id: chatId, text: message, parse_mode: "HTML" }),
+                  signal: AbortSignal.timeout(12_000),
                 }).catch(() => {});
               }
             }
