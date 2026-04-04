@@ -1,18 +1,17 @@
-import { headers } from "next/headers";
-import { auth } from "@workspace/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { listThreadsForUser } from "@workspace/db";
+import { getAuthSession } from "@/lib/server-session";
+import { getCachedDmThreadsForUser } from "@/lib/cached-dm-threads";
 
 export default async function MessagesPage({
   searchParams,
 }: {
   searchParams: Promise<{ list?: string }>;
 }) {
-  const session = await auth.api.getSession({ headers: await headers() });
+  const session = await getAuthSession();
   if (!session) redirect("/login");
 
-  const threads = await listThreadsForUser(session.user.id);
+  const threads = await getCachedDmThreadsForUser(session.user.id);
   const first = threads[0]?.threadId ?? null;
   const params = await searchParams;
   // list=1 이면 스레드 목록만 보여 주고 리다이렉트하지 않음 (무한 리다이렉트 방지)

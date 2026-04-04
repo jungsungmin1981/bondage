@@ -1,7 +1,6 @@
-import { auth } from "@workspace/auth";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { isAdmin } from "@/lib/admin";
+import { getAuthSession } from "@/lib/server-session";
 import { ShowoffAdminNav } from "./showoff-admin-nav";
 
 export default async function ShowoffLayout({
@@ -9,9 +8,7 @@ export default async function ShowoffLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  const session = await getAuthSession();
   if (!session) redirect("/login");
 
   return (

@@ -1,4 +1,3 @@
-import { auth } from "@workspace/auth";
 import {
   getMemberProfileByUserId,
   getInviteKeyMemberTypeByUserId,
@@ -7,8 +6,8 @@ import {
   getLatestPublicPosts,
   type HotpickRankRow,
 } from "@workspace/db";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { getAuthSession } from "@/lib/server-session";
 import Link from "next/link";
 import { getMainBackgroundUrl } from "@/lib/main-background-config";
 import { unstable_cache } from "next/cache";
@@ -76,7 +75,7 @@ function PodiumCard({ item }: { item: HotpickRankRow }) {
 }
 
 export default async function MainPage() {
-  const session = await auth.api.getSession({ headers: await headers() });
+  const session = await getAuthSession();
   if (!session) redirect("/login");
 
   const profile = await getMemberProfileByUserId(session.user.id);

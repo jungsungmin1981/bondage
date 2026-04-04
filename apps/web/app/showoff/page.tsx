@@ -1,6 +1,5 @@
-import { auth } from "@workspace/auth";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { getAuthSession } from "@/lib/server-session";
 import { unstable_cache } from "next/cache";
 import {
   getSubmissionByUserAndMonth,
@@ -35,9 +34,7 @@ function getCachedHotpickPublicData(monthKey: string) {
 }
 
 export default async function ShowoffRegisterPage() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  const session = await getAuthSession();
   if (!session) redirect("/login");
 
   const monthKey = getMonthKey();

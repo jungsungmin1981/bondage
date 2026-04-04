@@ -1,13 +1,12 @@
 import Link from "next/link";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { auth } from "@workspace/auth";
+import { getAuthSession } from "@/lib/server-session";
 import { getInviteKeyMemberTypeByUserId } from "@workspace/db";
 import { UserCircle, Users } from "lucide-react";
 import { Button } from "@workspace/ui/components/button";
 
 export default async function OnboardingPage() {
-  const session = await auth.api.getSession({ headers: await headers() });
+  const session = await getAuthSession();
   let inviteKeyType: "rigger" | "bunny" | "operator" | null = null;
   if (session?.user?.id) {
     inviteKeyType = await getInviteKeyMemberTypeByUserId(session.user.id);

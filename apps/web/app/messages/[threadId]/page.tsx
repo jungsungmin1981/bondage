@@ -1,7 +1,7 @@
-import { headers } from "next/headers";
-import { auth } from "@workspace/auth";
 import { redirect } from "next/navigation";
-import { getThreadMessages, listThreadsForUser, markThreadRead } from "@workspace/db";
+import { getThreadMessages, markThreadRead } from "@workspace/db";
+import { getAuthSession } from "@/lib/server-session";
+import { getCachedDmThreadsForUser } from "@/lib/cached-dm-threads";
 import {
   getBunnyDefaultCardUrl,
   resolveBunnyCardUrl,
@@ -13,7 +13,7 @@ export default async function ThreadPage({
 }: {
   params: Promise<{ threadId: string }>;
 }) {
-  const session = await auth.api.getSession({ headers: await headers() });
+  const session = await getAuthSession();
   if (!session) redirect("/login");
 
   const { threadId } = await params;
@@ -27,7 +27,7 @@ export default async function ThreadPage({
   }
 
   // 상단 헤더용 상대 정보 — listThreadsForUser에서 markImageUrl 포함
-  const threads = await listThreadsForUser(session.user.id);
+  const threads = await getCachedDmThreadsForUser(session.user.id);
   const meta = threads.find((t) => t.threadId === decoded);
 
   let otherMarkImageUrl: string | null = null;

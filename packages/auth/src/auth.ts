@@ -52,13 +52,17 @@ function escapeTelegramHtml(text: string): string {
     .replace(/>/g, "&gt;");
 }
 
-function isSuccessfulCredentialSignIn(returned: unknown): returned is { token: string } {
-  return (
-    typeof returned === "object" &&
-    returned !== null &&
-    "token" in returned &&
-    typeof (returned as { token: unknown }).token === "string"
-  );
+/**
+ * better-auth 로그인 성공 응답은 `{ token, user: { id, ... } }` 형태.
+ * - `token`만 보던 조건은 일부 클라이언트/프록시 조합에서 빗나갈 수 있어 `user.id`를 기준으로 함.
+ * - 모바일·인앱 브라우저에서 `after` 훅의 `ctx.body`가 비는 경우가 있어, 본문 대신 여기서 id를 쓴다.
+ */
+function getCredentialSignInUserId(returned: unknown): string | undefined {
+  if (returned == null || typeof returned !== "object" || isAPIError(returned)) return undefined;
+  const u = (returned as { user?: unknown }).user;
+  if (!u || typeof u !== "object") return undefined;
+  const id = (u as { id?: unknown }).id;
+  return typeof id === "string" && id.length > 0 ? id : undefined;
 }
 
 /** 비밀번호 재설정 메일 HTML */
@@ -279,9 +283,6 @@ export const auth = betterAuth({
           if (returned != null && isAPIError(returned)) {
             return;
           }
-          if (!isSuccessfulCredentialSignIn(returned)) {
-            return;
-          }
 
           const body = ctx.body as Record<string, unknown> | undefined;
           const adminEmail = (process.env.ADMIN_EMAIL?.trim() ?? "").toLowerCase();
@@ -289,7 +290,22 @@ export const auth = betterAuth({
 
           let user: { id: string; memberType: string | null; username: string | null; email: string } | undefined;
 
-          if (isUsernameSignIn) {
+          const userIdFromResponse = getCredentialSignInUserId(returned);
+          if (userIdFromResponse) {
+            const [row] = await db
+              .select({
+                id: schema.users.id,
+                memberType: schema.users.memberType,
+                username: schema.users.username,
+                email: schema.users.email,
+              })
+              .from(schema.users)
+              .where(eq(schema.users.id, userIdFromResponse))
+              .limit(1);
+            user = row;
+          }
+
+          if (!user && isUsernameSignIn) {
             const loginUsername =
               typeof body?.username === "string" ? body.username.trim().toLowerCase() : "";
             if (loginUsername) {
@@ -300,7 +316,7 @@ export const auth = betterAuth({
                 .limit(1);
               user = row;
             }
-          } else {
+          } else if (!user && isEmailSignIn) {
             const loginEmail =
               typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
             if (loginEmail) {
@@ -313,43 +329,45 @@ export const auth = betterAuth({
             }
           }
 
-          if (user) {
-            const userEmailLower = user.email.trim().toLowerCase();
-            const userUsernameLower = user.username?.trim().toLowerCase() ?? "";
-            const isPrimaryAdminUser =
-              (adminEmail.length > 0 && userEmailLower === adminEmail) ||
-              (adminUsername.length > 0 && userUsernameLower === adminUsername);
-            const isOperator = user.memberType === "operator";
+          if (!user) {
+            return;
+          }
 
-            if (isPrimaryAdminUser || isOperator) {
-              const [profile] = await db
-                .select({ nickname: schema.memberProfiles.nickname })
-                .from(schema.memberProfiles)
-                .where(eq(schema.memberProfiles.userId, user.id))
-                .limit(1);
-              const token = process.env.TELEGRAM_BOT_TOKEN?.trim() ?? "";
-              const chatId = process.env.TELEGRAM_CHAT_ID?.trim() ?? "";
-              if (token && chatId) {
-                const now = new Date().toLocaleString("ko-KR", {
-                  timeZone: "Asia/Seoul",
-                  year: "numeric",
-                  month: "2-digit",
-                  day: "2-digit",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                });
-                const nicknameRaw = profile?.nickname ?? user.username ?? user.email;
-                const nickname = escapeTelegramHtml(nicknameRaw);
-                const label = isPrimaryAdminUser ? "관리자" : "운영진";
-                const message = `🔐 <b>${label} 로그인</b>\n닉네임: ${nickname}\n시간: ${now}`;
-                // 서버리스에서는 void fetch가 응답 반환 후 끊겨 알람이 누락될 수 있어 await로 완료까지 대기
-                await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ chat_id: chatId, text: message, parse_mode: "HTML" }),
-                  signal: AbortSignal.timeout(12_000),
-                }).catch(() => {});
-              }
+          const userEmailLower = user.email.trim().toLowerCase();
+          const userUsernameLower = user.username?.trim().toLowerCase() ?? "";
+          const isPrimaryAdminUser =
+            (adminEmail.length > 0 && userEmailLower === adminEmail) ||
+            (adminUsername.length > 0 && userUsernameLower === adminUsername);
+          const isOperator = user.memberType === "operator";
+
+          if (isPrimaryAdminUser || isOperator) {
+            const [profile] = await db
+              .select({ nickname: schema.memberProfiles.nickname })
+              .from(schema.memberProfiles)
+              .where(eq(schema.memberProfiles.userId, user.id))
+              .limit(1);
+            const token = process.env.TELEGRAM_BOT_TOKEN?.trim() ?? "";
+            const chatId = process.env.TELEGRAM_CHAT_ID?.trim() ?? "";
+            if (token && chatId) {
+              const now = new Date().toLocaleString("ko-KR", {
+                timeZone: "Asia/Seoul",
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+              });
+              const nicknameRaw = profile?.nickname ?? user.username ?? user.email;
+              const nickname = escapeTelegramHtml(nicknameRaw);
+              const label = isPrimaryAdminUser ? "관리자" : "운영진";
+              const message = `🔐 <b>${label} 로그인</b>\n닉네임: ${nickname}\n시간: ${now}`;
+              // 서버리스에서는 void fetch가 응답 반환 후 끊겨 알람이 누락될 수 있어 await로 완료까지 대기
+              await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ chat_id: chatId, text: message, parse_mode: "HTML" }),
+                signal: AbortSignal.timeout(12_000),
+              }).catch(() => {});
             }
           }
         } catch {

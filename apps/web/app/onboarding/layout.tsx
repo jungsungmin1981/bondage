@@ -1,6 +1,5 @@
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { auth } from "@workspace/auth";
+import { getAuthSession } from "@/lib/server-session";
 import { getMemberProfileByUserId } from "@workspace/db";
 import { isAdmin } from "@/lib/admin";
 
@@ -9,7 +8,7 @@ export default async function OnboardingLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth.api.getSession({ headers: await headers() });
+  const session = await getAuthSession();
   if (!session) {
     redirect("/login");
   }

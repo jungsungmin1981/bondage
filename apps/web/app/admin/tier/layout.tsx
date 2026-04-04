@@ -1,7 +1,7 @@
-import { auth } from "@workspace/auth";
-import { getMemberProfileByUserId, getOperatorAllowedTabIds } from "@workspace/db";
-import { headers } from "next/headers";
+import { getOperatorAllowedTabIds } from "@workspace/db";
 import { isAdmin } from "@/lib/admin";
+import { getAuthSession } from "@/lib/server-session";
+import { getMemberProfileForRequest } from "@/lib/cached-member-profile-request";
 import { getAllowedSubHrefsForTab } from "@/lib/admin-operator-permissions";
 import { AdminTierTabs } from "./admin-tier-tabs";
 
@@ -10,10 +10,10 @@ export default async function AdminTierLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth.api.getSession({ headers: await headers() });
+  const session = await getAuthSession();
   const isAdminUser = session ? isAdmin(session) : false;
   const memberProfile = session
-    ? await getMemberProfileByUserId(session.user.id)
+    ? await getMemberProfileForRequest(session.user.id)
     : null;
   const isApprovedOperator =
     memberProfile?.memberType === "operator" && memberProfile?.status === "approved";

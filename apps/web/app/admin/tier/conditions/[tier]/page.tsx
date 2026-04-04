@@ -1,11 +1,11 @@
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
-import { auth } from "@workspace/auth";
 import {
-  getMemberProfileByUserId,
   getOperatorAllowedTabIds,
   getTierConditionsByTier,
 } from "@workspace/db";
+import { getAuthSession } from "@/lib/server-session";
+import { getMemberProfileForRequest } from "@/lib/cached-member-profile-request";
 import { isAdmin } from "@/lib/admin";
 import { isOperatorAllowedPath } from "@/lib/admin-operator-permissions";
 import { TierConditionsClient } from "../tier-conditions-client";
@@ -29,10 +29,10 @@ export default async function AdminTierConditionsTierPage({
   if (!VALID_TIERS.includes(tier as ValidTier)) notFound();
   const validTier = tier as ValidTier;
 
-  const session = await auth.api.getSession({ headers: await headers() });
+  const session = await getAuthSession();
   if (!session) return <AccessDenied />;
   if (!isAdmin(session)) {
-    const profile = await getMemberProfileByUserId(session.user.id);
+    const profile = await getMemberProfileForRequest(session.user.id);
     const isOperator = profile?.memberType === "operator" && profile?.status === "approved";
     const pathname = (await headers()).get("x-pathname") ?? `/admin/tier/conditions/${tier}`;
     const allowedIds = isOperator ? await getOperatorAllowedTabIds(session.user.id) : [];

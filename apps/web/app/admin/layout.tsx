@@ -1,8 +1,8 @@
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { auth } from "@workspace/auth";
 import { isAdmin, isPrimaryAdmin } from "@/lib/admin";
-import { getMemberProfileByUserId, getOperatorAllowedTabIds, hasPendingRiggerProfiles, getPendingChallengeCountsByLevel } from "@workspace/db";
+import { getOperatorAllowedTabIds, hasPendingRiggerProfiles, getPendingChallengeCountsByLevel } from "@workspace/db";
+import { getAuthSession } from "@/lib/server-session";
+import { getMemberProfileForRequest } from "@/lib/cached-member-profile-request";
 import { AdminTabs } from "./admin-tabs";
 import { AdminOperatorRedirect } from "./admin-operator-redirect";
 import { AdminLayoutContent } from "./admin-layout-content";
@@ -12,11 +12,11 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth.api.getSession({ headers: await headers() });
+  const session = await getAuthSession();
   if (!session) redirect("/login");
 
   const isAdminUser = isAdmin(session);
-  const memberProfile = await getMemberProfileByUserId(session.user.id);
+  const memberProfile = await getMemberProfileForRequest(session.user.id);
   const isApprovedOperator =
     memberProfile?.memberType === "operator" && memberProfile?.status === "approved";
   const isPendingOperator =

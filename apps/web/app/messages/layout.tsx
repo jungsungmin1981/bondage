@@ -1,8 +1,7 @@
 import type { ReactNode } from "react";
-import { headers } from "next/headers";
-import { auth } from "@workspace/auth";
 import { redirect } from "next/navigation";
-import { listThreadsForUser } from "@workspace/db";
+import { getAuthSession } from "@/lib/server-session";
+import { getCachedDmThreadsForUser } from "@/lib/cached-dm-threads";
 import {
   getBunnyDefaultCardUrl,
   resolveBunnyCardUrl,
@@ -14,10 +13,10 @@ export default async function MessagesLayout({
 }: {
   children: ReactNode;
 }) {
-  const session = await auth.api.getSession({ headers: await headers() });
+  const session = await getAuthSession();
   if (!session) redirect("/login");
 
-  const baseThreads = await listThreadsForUser(session.user.id);
+  const baseThreads = await getCachedDmThreadsForUser(session.user.id);
   const threads = baseThreads.map((t) => {
     if (t.otherMemberType === "rigger") {
       const mark = t.otherMarkImageUrl?.trim() || "/default-rigger-mark.png";

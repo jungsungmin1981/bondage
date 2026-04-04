@@ -1,6 +1,5 @@
-import { headers } from "next/headers";
-import { auth } from "@workspace/auth";
 import { redirect } from "next/navigation";
+import { getAuthSession } from "@/lib/server-session";
 import { ensureOneToOneThread, getUserIdByMemberProfileId } from "@workspace/db";
 
 export default async function NewMessagePage({
@@ -8,7 +7,7 @@ export default async function NewMessagePage({
 }: {
   searchParams: Promise<{ to?: string }>;
 }) {
-  const session = await auth.api.getSession({ headers: await headers() });
+  const session = await getAuthSession();
   if (!session) redirect("/login");
 
   const { to } = await searchParams;

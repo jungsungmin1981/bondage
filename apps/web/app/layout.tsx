@@ -10,8 +10,8 @@ import { cn } from "@workspace/ui/lib/utils";
 import { UserMenu } from "./user-menu";
 import { MainNav } from "@/components/main-nav";
 import { headers } from "next/headers";
-import { auth } from "@workspace/auth";
 import { isPrimaryAdmin } from "@/lib/admin";
+import { getAuthSession } from "@/lib/server-session";
 import {
   getAllPendingApprovalsCount,
   getPendingApprovalsCountForBunny,
@@ -131,7 +131,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const headersList = await headers();
-  const session = await auth.api.getSession({ headers: headersList });
+  const session = await getAuthSession();
   // isPrimaryAdmin만 session으로 확인 (cookieCache로 memberType이 누락될 수 있으므로)
   const isPrimaryAdminUser = session ? isPrimaryAdmin(session) : false;
 

@@ -1,6 +1,5 @@
-import { auth } from "@workspace/auth";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { getAuthSession } from "@/lib/server-session";
 import {
   getMonthKey,
   getPhase,
@@ -11,9 +10,7 @@ import { RedirectWhenExpired } from "@/components/redirect-when-expired";
 import { ShowoffVoteContent } from "./showoff-vote-content";
 
 export default async function ShowoffVotePage() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  const session = await getAuthSession();
   if (!session) redirect("/login");
 
   const monthKey = getMonthKey();
