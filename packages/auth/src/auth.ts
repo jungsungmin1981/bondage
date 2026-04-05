@@ -44,6 +44,42 @@ function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
+/** apps/web `otp_verified` 와 동일 이름·속성 (로그인마다 OTP 요구 시 새 세션에서 제거) */
+const OTP_VERIFIED_COOKIE_NAME = "otp_verified";
+
+/**
+ * 새 세션이 발급된 직후(로그인·OAuth 콜백·이메일 가입)에만 호출.
+ * `/get-session` 갱신 등에는 `newSession`이 없거나 경로가 달라 동작하지 않음.
+ */
+async function clearOtpVerifiedCookieOnFreshSession(ctx: {
+  path: string;
+  setCookie?: (
+    name: string,
+    value: string,
+    options: Record<string, unknown>,
+  ) => void | Promise<void> | string;
+  context: { newSession?: unknown };
+}) {
+  if (!ctx.context.newSession) return;
+  const p = ctx.path;
+  const isFreshSessionAuth =
+    p.includes("sign-in/username") ||
+    p.includes("sign-in/email") ||
+    p.startsWith("/callback/") ||
+    p.startsWith("/oauth2/callback/") ||
+    p.includes("sign-up/email");
+  if (!isFreshSessionAuth) return;
+  if (typeof ctx.setCookie !== "function") return;
+  const authBase = process.env.BETTER_AUTH_URL ?? "";
+  await ctx.setCookie(OTP_VERIFIED_COOKIE_NAME, "", {
+    httpOnly: true,
+    secure: authBase.startsWith("https://"),
+    sameSite: "lax",
+    path: "/",
+    maxAge: 0,
+  });
+}
+
 /** 비밀번호 재설정 메일 HTML */
 function buildResetPasswordEmailHtml(resetUrl: string): string {
   const safeUrl = escapeHtml(resetUrl);
@@ -253,6 +289,8 @@ export const auth = betterAuth({
       };
     }),
     after: createAuthMiddleware(async (ctx) => {
+      await clearOtpVerifiedCookieOnFreshSession(ctx);
+
       /** 운영진/관리자 알림은 비밀번호 로그인이 아니라 OTP 검증 성공 시 한 번만 전송 (`/api/otp/verify`). */
       if (ctx.path.includes("sign-in/email") || ctx.path.includes("sign-in/username")) {
         return;
