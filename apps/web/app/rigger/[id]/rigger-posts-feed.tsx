@@ -36,6 +36,7 @@ import { loadMoreRiggerPosts } from "./post-feed-actions";
 import { PostLikeButton } from "./post-like-button";
 import { PostCommentBlock } from "./post-comment-block";
 import { deleteOwnRiggerPost, updateOwnRiggerPostVisibility } from "./post-edit-actions";
+import { PostThumbnailCover } from "@/components/post-thumbnail-cover";
 
 /** 게시물 상세 다이얼로그 내 이미지 캐러셀 (2장 이상일 때만 사용) */
 function PostDetailCarouselSlides({
@@ -248,67 +249,51 @@ function PostCard({
           aria-label="게시물 상세 보기"
         >
           <div className="relative h-52 w-full shrink-0 overflow-hidden rounded-xl bg-muted sm:h-60">
-            <div className="h-full w-full">
+            <div className="h-full min-h-0 w-full">
               {post.photos.length === 3 ? (
-                <div className="grid h-full grid-cols-2 grid-rows-2 gap-0.5">
-                  <div className="relative row-span-2 min-h-0 overflow-hidden bg-muted">
+                <div className="grid h-full min-h-0 grid-cols-2 grid-rows-2 gap-0.5">
+                  <div className="relative row-span-2 min-h-0 min-w-0 overflow-hidden bg-muted">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={post.photos[0]!.imagePath}
                       alt={post.caption ?? "등록된 사진"}
-                      className="h-full w-full object-cover"
+                      className="absolute inset-0 h-full w-full object-cover"
+                      loading="lazy"
+                      decoding="async"
                     />
                   </div>
-                  <div className="relative min-h-0 overflow-hidden bg-muted">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={post.photos[1]!.imagePath}
-                      alt={post.caption ?? "등록된 사진"}
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
-                  <div className="relative min-h-0 overflow-hidden bg-muted">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={post.photos[2]!.imagePath}
-                      alt={post.caption ?? "등록된 사진"}
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
-                </div>
-              ) : post.photos.length === 1 ? (
-                <div className="relative h-full min-h-0 overflow-hidden">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={post.photos[0]!.imagePath}
+                  <PostThumbnailCover
+                    src={post.photos[1]!.imagePath}
                     alt={post.caption ?? "등록된 사진"}
-                    className="h-full w-full object-cover"
+                  />
+                  <PostThumbnailCover
+                    src={post.photos[2]!.imagePath}
+                    alt={post.caption ?? "등록된 사진"}
                   />
                 </div>
+              ) : post.photos.length === 1 ? (
+                <PostThumbnailCover
+                  src={post.photos[0]!.imagePath}
+                  alt={post.caption ?? "등록된 사진"}
+                />
               ) : post.photos.length === 2 ? (
-                <div className="grid h-full grid-cols-2 gap-0.5">
+                <div className="grid h-full min-h-0 grid-cols-2 grid-rows-1 gap-0.5">
                   {post.photos.map((photo) => (
-                    <div key={photo.id} className="relative min-h-0 overflow-hidden bg-muted">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={photo.imagePath}
-                        alt={post.caption ?? "등록된 사진"}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
+                    <PostThumbnailCover
+                      key={photo.id}
+                      src={photo.imagePath}
+                      alt={post.caption ?? "등록된 사진"}
+                    />
                   ))}
                 </div>
               ) : (
-                <div className="grid h-full grid-cols-2 grid-rows-2 gap-0.5">
+                <div className="grid h-full min-h-0 grid-cols-2 grid-rows-2 gap-0.5">
                   {post.photos.map((photo) => (
-                    <div key={photo.id} className="relative min-h-0 overflow-hidden bg-muted">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={photo.imagePath}
-                        alt={post.caption ?? "등록된 사진"}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
+                    <PostThumbnailCover
+                      key={photo.id}
+                      src={photo.imagePath}
+                      alt={post.caption ?? "등록된 사진"}
+                    />
                   ))}
                 </div>
               )}

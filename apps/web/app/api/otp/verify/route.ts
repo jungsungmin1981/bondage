@@ -1,5 +1,5 @@
 import { headers } from "next/headers";
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { auth } from "@workspace/auth";
 import { db, schema, eq } from "@workspace/db";
 import { verify } from "otplib";
@@ -16,6 +16,9 @@ import {
   nowKST,
   sendTelegramNotification,
 } from "@/lib/telegram";
+
+/** 텔레그램 재시도 포함 백그라운드 전송 시간 확보 (플랫폼이 허용하는 경우) */
+export const maxDuration = 60;
 
 /**
  * POST /api/otp/verify - 로그인 후 OTP 코드 검증. 성공 시 otp_verified 쿠키 설정.
@@ -105,7 +108,6 @@ export async function POST(request: Request) {
   const nickname = escapeTelegramHtml(nicknameRaw);
   const label = isPrimaryAdminUser ? "관리자" : "운영진";
   const message = `🔐 <b>${label} 로그인</b>\n2단계 인증(OTP) 완료\n닉네임: ${nickname}\n시간: ${nowKST()}`;
-  await sendTelegramNotification(message);
 
   const cookieValue = createOtpVerifiedCookieValue(session.user.id);
   const res = NextResponse.json({ ok: true });
@@ -119,5 +121,9 @@ export async function POST(request: Request) {
     path: "/",
     maxAge: OTP_VERIFIED_COOKIE_MAX_AGE,
   });
+
+  // 응답을 먼저 보낸 뒤 전송: 모바일/느린 네트워크에서 연결 종료로 인한 누락·타임아웃 완화
+  after(() => sendTelegramNotification(message));
+
   return res;
 }
